@@ -1,0 +1,71 @@
+"use client";
+import { type InputHTMLAttributes } from "react";
+
+interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "id"> {
+  label?: string;
+  error?: string;
+  id?: string;
+  bg?: string;
+}
+
+export function Input({ label, error, className = "", id: providedId, bg, ...props }: InputProps) {
+  const inputId = providedId ?? (label ? label.toLowerCase().replace(/\s+/g, "-") : undefined);
+
+  return (
+    <div className="space-y-1.5">
+      {label && (
+        <label htmlFor={inputId} className="block text-sm font-semibold text-[#564337]">
+          {label}
+        </label>
+      )}
+      <input
+        id={inputId}
+        className={`
+          w-full px-8 py-3.5 input-radius border text-[#564337]
+          ${bg ?? "bg-white"} placeholder-[#a89888]
+          focus:outline-none focus:ring-2 focus:ring-[#a23f00]/30 focus:border-[#a23f00]
+          transition-colors
+          ${error ? "border-red-400 focus:ring-red-300" : "border-[#e0d4bc]"}
+          ${className}
+        `}
+        {...props}
+      />
+      {error && (
+        <p className="text-sm text-red-600">{error}</p>
+      )}
+    </div>
+  );
+}
+
+interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
+  label?: string;
+  error?: string;
+  bg?: string;
+}
+
+export function Textarea({ label, error, className = "", id, bg, ...props }: TextareaProps) {
+  const textareaId = id ?? (label ? label.toLowerCase().replace(/\s+/g, "-") : undefined);
+
+  return (
+    <div className="space-y-1.5">
+      {label && (
+        <label htmlFor={textareaId} className="block text-sm font-semibold text-[#564337]">
+          {label}
+        </label>
+      )}
+      <textarea
+        id={textareaId}
+        className={`
+          w-full px-8 py-3.5 rounded-[24px] border text-[#564337]
+          ${bg ?? "bg-white"} placeholder-[#a89888]
+          focus:outline-none focus:ring-2 focus:ring-[#a23f00]/30 focus:border-[#a23f00]
+          transition-colors resize-none
+          ${error ? "border-red-400 focus:ring-red-300" : "border-[#e0d4bc]"}
+          ${className}
+        `}
+        {...props}
+      />
+      {error && <p className="text-sm text-red-600">{error}</p>}
+    </div>
+  );
+}
