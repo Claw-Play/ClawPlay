@@ -41,8 +41,6 @@
 
 * {
   border-color: var(--border);
-  writing-mode: horizontal-tb;
-  text-orientation: mixed;
 }
 
 body {

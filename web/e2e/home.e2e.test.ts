@@ -6,7 +6,7 @@ test.describe("Home page", () => {
     await page.goto("/");
     await expect(page.getByText(/build the future/i)).toBeVisible();
     await expect(
-      page.getByText(/community hub for x claw social/i)
+      page.getByText(/community hub for x claw social/i).first()
     ).toBeVisible();
     const ctaBtn = page.getByRole("link", { name: /start for free/i });
     await expect(ctaBtn).toBeVisible();
@@ -39,7 +39,7 @@ test.describe("Home page", () => {
 
   test("footer renders with all four columns and links", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByText("About")).toBeVisible();
+    await expect(page.getByText("About").first()).toBeVisible();
     await expect(page.getByText("Resources")).toBeVisible();
     await expect(page.getByText("Skill Authoring Guide")).toBeVisible();
     await expect(page.getByRole("link", { name: "Terms" })).toHaveAttribute("href", "/terms");
@@ -68,8 +68,9 @@ test.describe("Home page", () => {
     await page.goto("/");
     const heading = page.getByRole("heading", { name: /why clawplay/i });
     await expect(heading).toBeVisible();
-    // 6 feature cards
-    const cards = page.locator("section").filter({ hasText: /unified multimodal|api key protection|free tier/i });
-    await expect(cards).toHaveCount(1);
+    // 6 feature cards — each has an emoji div
+    const featuresSection = page.locator("section").filter({ hasText: /why clawplay/i });
+    const emojis = featuresSection.locator("div.text-3xl");
+    await expect(emojis).toHaveCount(6);
   });
 });

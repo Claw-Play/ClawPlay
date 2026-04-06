@@ -52,8 +52,10 @@ test.describe("Admin moderation flow", () => {
 
   test("regular user is redirected away from /admin", async ({ page }) => {
     await page.goto("/login");
-    await page.getByLabel("Email").fill(USER_EMAIL);
-    await page.getByLabel("Password").fill(USER_PASSWORD);
+    // Default tab is 手机号 — switch to 邮箱
+    await page.getByRole("button", { name: "邮箱" }).click();
+    await page.getByLabel("邮箱").fill(USER_EMAIL);
+    await page.getByLabel("密码").fill(USER_PASSWORD);
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL("/dashboard", { timeout: 15_000 });
 
@@ -65,8 +67,9 @@ test.describe("Admin moderation flow", () => {
   test("admin approves a skill → appears in public /skills list", async ({ page }) => {
     // Submit skill as regular user
     await page.goto("/login");
-    await page.getByLabel("Email").fill(USER_EMAIL);
-    await page.getByLabel("Password").fill(USER_PASSWORD);
+    await page.getByRole("button", { name: "邮箱" }).click();
+    await page.getByLabel("邮箱").fill(USER_EMAIL);
+    await page.getByLabel("密码").fill(USER_PASSWORD);
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL("/dashboard", { timeout: 15_000 });
 
@@ -78,8 +81,9 @@ test.describe("Admin moderation flow", () => {
 
     // Login as admin
     await page.goto("/login");
-    await page.getByLabel("Email").fill(ADMIN_EMAIL);
-    await page.getByLabel("Password").fill(ADMIN_PASSWORD);
+    await page.getByRole("button", { name: "邮箱" }).click();
+    await page.getByLabel("邮箱").fill(ADMIN_EMAIL);
+    await page.getByLabel("密码").fill(ADMIN_PASSWORD);
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL("/dashboard", { timeout: 15_000 });
 
@@ -102,8 +106,9 @@ test.describe("Admin moderation flow", () => {
 
   test("admin rejects a skill with reason", async ({ page }) => {
     await page.goto("/login");
-    await page.getByLabel("Email").fill(ADMIN_EMAIL);
-    await page.getByLabel("Password").fill(ADMIN_PASSWORD);
+    await page.getByRole("button", { name: "邮箱" }).click();
+    await page.getByLabel("邮箱").fill(ADMIN_EMAIL);
+    await page.getByLabel("密码").fill(ADMIN_PASSWORD);
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL("/dashboard", { timeout: 15_000 });
 
@@ -133,8 +138,9 @@ test.describe("Admin moderation flow", () => {
 
   test("approved skill does not appear in admin review queue", async ({ page }) => {
     await page.goto("/login");
-    await page.getByLabel("Email").fill(ADMIN_EMAIL);
-    await page.getByLabel("Password").fill(ADMIN_PASSWORD);
+    await page.getByRole("button", { name: "邮箱" }).click();
+    await page.getByLabel("邮箱").fill(ADMIN_EMAIL);
+    await page.getByLabel("密码").fill(ADMIN_PASSWORD);
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL("/dashboard", { timeout: 15_000 });
 

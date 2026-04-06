@@ -10,24 +10,25 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
-  const body = await request.json();
+  const body = await request.json().catch(() => ({}));
   const { tokenId } = body as { tokenId?: string };
 
+  // If no tokenId provided, revoke the user's current active token
+  let token;
   if (!tokenId) {
-    return NextResponse.json(
-      { error: "tokenId is required." },
-      { status: 400 }
-    );
+    token = await db.query.userTokens.findFirst({
+      where: (t, { and, eq, isNull }) =>
+        and(eq(t.userId, auth.userId), isNull(t.revokedAt)),
+    });
+  } else {
+    token = await db.query.userTokens.findFirst({
+      where: and(
+        eq(userTokens.id, tokenId),
+        eq(userTokens.userId, auth.userId),
+        isNull(userTokens.revokedAt)
+      ),
+    });
   }
-
-  // Verify token belongs to this user and is not already revoked
-  const token = await db.query.userTokens.findFirst({
-    where: and(
-      eq(userTokens.id, tokenId),
-      eq(userTokens.userId, auth.userId),
-      isNull(userTokens.revokedAt)
-    ),
-  });
 
   if (!token) {
     return NextResponse.json(
@@ -39,7 +40,7 @@ export async function POST(request: NextRequest) {
   await db
     .update(userTokens)
     .set({ revokedAt: new Date() })
-    .where(eq(userTokens.id, tokenId));
+    .where(eq(userTokens.id, token.id));
 
   return NextResponse.json({ message: "Token revoked." });
 }

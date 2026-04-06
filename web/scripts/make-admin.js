@@ -40,10 +40,16 @@ if (!email) {
   process.exit(1);
 }
 
-const result = db.prepare("UPDATE users SET role = 'admin' WHERE LOWER(email) = LOWER(?)").run(email);
-if (result.changes === 0) {
+// New schema: email is in user_identities (provider='email', provider_account_id=email)
+// Find user_id from user_identities, then update users.role
+const identity = db.prepare(
+  "SELECT user_id FROM user_identities WHERE provider = 'email' AND LOWER(provider_account_id) = LOWER(?)"
+).get(email);
+
+if (!identity) {
   console.error(`No user found with email: ${email}`);
   process.exit(1);
-} else {
-  console.log(`✅ User ${email} is now an admin`);
 }
+
+db.prepare("UPDATE users SET role = 'admin' WHERE id = ?").run(identity.user_id);
+console.log(`✅ User ${email} (id=${identity.user_id}) is now an admin`);

@@ -48,6 +48,8 @@ export async function POST() {
 
   return NextResponse.json({
     token: encrypted,
+    tokenId,
     command: `export CLAWPLAY_TOKEN=${encrypted}`,
+    createdAt: new Date().toISOString(),
   });
 }

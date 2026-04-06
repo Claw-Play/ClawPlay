@@ -247,9 +247,3 @@ See [ROADMAP.md](./ROADMAP.md) for full details.
 4. Or open an issue / discussion
 
 All Skills are human-reviewed before publication to protect X Claw users.
-
----
-
-## License
-
-MIT

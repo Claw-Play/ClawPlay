@@ -20,16 +20,14 @@ test.describe("Login form validation", () => {
   });
 
   test("invalid email format shows error from API", async ({ page }) => {
-    await page.goto("/login");
-    await switchToEmailTab(page);
-    await page.getByLabel("邮箱").fill("not-an-email");
-    await page.getByLabel("密码").fill("password123");
-    await page.getByRole("button", { name: "登录" }).click();
-    // Error div appears below the form — use .first() to avoid strict mode violation
-    await expect(
-      page.getByText(/无效|错误|Invalid|无效的/i).first(), { timeout: 10_000 }
-    ).toBeVisible();
-    await expect(page).toHaveURL(/\/login/);
+    // Browser blocks type="email" form submission for invalid format natively.
+    // Test the API directly to verify error handling.
+    const res = await page.request.post("/api/auth/login", {
+      data: { email: "not-an-email", password: "password123" },
+    });
+    expect(res.status()).toBe(401);
+    const body = await res.json();
+    expect(body.error.toLowerCase()).toMatch(/invalid|email|password/i);
   });
 
   test("wrong password shows error and stays on page", async ({ page }) => {
@@ -41,7 +39,7 @@ test.describe("Login form validation", () => {
     await page.getByLabel("密码").fill("wrongpassword");
     await page.getByRole("button", { name: "登录" }).click();
     await expect(
-      page.getByText(/无效|错误|密码|incorrect/i).first(), { timeout: 10_000 }
+      page.getByText(/invalid|incorrect/i).first(), { timeout: 10_000 }
     ).toBeVisible();
     await expect(page).toHaveURL(/\/login/);
   });

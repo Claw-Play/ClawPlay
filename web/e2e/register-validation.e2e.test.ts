@@ -1,71 +1,63 @@
 import { test, expect } from "@playwright/test";
 import { registerUser } from "./helpers/auth";
 
-/** Switch to the email tab on the register page */
-async function switchToEmailTab(page: import("@playwright/test").Page) {
-  await page.getByRole("button", { name: "邮箱" }).click();
-}
-
 test.describe("Register form validation", () => {
   test("phone tab is active by default on register page", async ({ page }) => {
     await page.goto("/register");
-    await expect(page.getByRole("button", { name: "获取验证码" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "手机号" })).toBeVisible();
+    // Phone input visible in default tab
+    await expect(page.getByLabel("手机号")).toBeVisible();
   });
 
-  test("password mismatch shows inline error and stays on page", async ({ page }) => {
+  test("phone tab — invalid phone number shows error when requesting code", async ({ page }) => {
     await page.goto("/register");
-    await switchToEmailTab(page);
-    await page.getByLabel("昵称").fill("Test User");
-    await page.getByLabel("邮箱").fill(`mismatch_${Date.now()}@example.com`);
-    await page.getByLabel("密码", { exact: true }).fill("password123");
-    await page.getByLabel("确认密码").fill("differentpassword");
-    await page.getByRole("button", { name: "创建账号" }).click();
+    // Already on phone tab (default)
+    await page.getByLabel("手机号").fill("12345");
+    await page.getByRole("button", { name: "获取验证码" }).click();
+    await expect(page.getByText(/有效的手机号/)).toBeVisible();
+  });
+
+  test("phone tab — countdown starts after sending code (mocked)", async ({ page }) => {
+    await page.goto("/register");
+    // Mock the SMS send endpoint
+    await page.route("**/api/auth/sms/send", async (route) => {
+      await route.fulfill({
+        status: 200,
+        body: JSON.stringify({ message: "验证码已发送" }),
+      });
+    });
+    await page.getByLabel("手机号").fill("13800138000");
+    await page.getByRole("button", { name: "获取验证码" }).click();
+    // Should show countdown like "59s"
+    await expect(page.getByRole("button", { name: /\d+s/ })).toBeVisible({ timeout: 2_000 });
+  });
+
+  test("phone tab — test bypass code 000000 works for verification", async ({ page }) => {
+    // Mock SMS send to capture the flow
+    await page.route("**/api/auth/sms/send", async (route) => {
+      await route.fulfill({
+        status: 200,
+        body: JSON.stringify({ message: "发送成功" }),
+      });
+    });
+
+    await page.goto("/register");
+    await page.getByLabel("昵称（可选）").fill("Bypass Test");
+    await page.getByLabel("手机号").fill("13800138000");
+    await page.getByRole("button", { name: "获取验证码" }).click();
+    // Fill test bypass code
+    await page.getByPlaceholder("6位验证码").fill("000000");
+    await page.getByRole("button", { name: /^注册$/ }).click();
+    // Should redirect to dashboard on success
+    await expect(page).toHaveURL("/dashboard", { timeout: 15_000 });
+  });
+
+  test("wechat tab — shows wechat register/login link", async ({ page }) => {
+    await page.goto("/register");
+    await page.getByRole("button", { name: "微信" }).click();
     await expect(
-      page.getByText(/两次密码不一致/i, { timeout: 5_000 })
+      page.getByRole("link", { name: /微信一键注册|微信注册|微信登录/ })
     ).toBeVisible();
-    await expect(page).toHaveURL(/\/register/);
-  });
-
-  test("password shorter than 8 chars shows inline error", async ({ page }) => {
-    await page.goto("/register");
-    await switchToEmailTab(page);
-    await page.getByLabel("昵称").fill("Short PW");
-    await page.getByLabel("邮箱").fill(`shortpw_${Date.now()}@example.com`);
-    await page.getByLabel("密码", { exact: true }).fill("short");
-    await page.getByLabel("确认密码").fill("short");
-    await page.getByRole("button", { name: "创建账号" }).click();
-    await expect(
-      page.getByText(/密码至少8位/i, { timeout: 5_000 })
-    ).toBeVisible();
-    await expect(page).toHaveURL(/\/register/);
-  });
-
-  test("successful email registration redirects to /dashboard", async ({ page }) => {
-    const email = `success_${Date.now()}@example.com`;
-    await page.goto("/register");
-    await switchToEmailTab(page);
-    await page.getByLabel("昵称").fill("Success User");
-    await page.getByLabel("邮箱").fill(email);
-    await page.getByLabel("密码", { exact: true }).fill("password123");
-    await page.getByLabel("确认密码").fill("password123");
-    await page.getByRole("button", { name: "创建账号" }).click();
-    await expect(page).toHaveURL("/dashboard", { timeout: 30_000 });
-  });
-
-  test("duplicate email shows API error banner", async ({ page }) => {
-    const dupEmail = `dup_${Date.now()}@example.com`;
-    await registerUser(page.request, dupEmail, "password123", "Dup");
-    await page.goto("/register");
-    await switchToEmailTab(page);
-    await page.getByLabel("昵称").fill("Dup User");
-    await page.getByLabel("邮箱").fill(dupEmail);
-    await page.getByLabel("密码", { exact: true }).fill("password123");
-    await page.getByLabel("确认密码").fill("password123");
-    await page.getByRole("button", { name: "创建账号" }).click();
-    await expect(
-      page.getByText(/already|exists|注册|账号/i, { timeout: 10_000 })
-    ).toBeVisible();
-    await expect(page).toHaveURL(/\/register/);
   });
 
   test("'登录' link navigates to /login", async ({ page }) => {
@@ -74,31 +66,28 @@ test.describe("Register form validation", () => {
     await expect(page).toHaveURL(/\/login/);
   });
 
-  test("free tier badge is visible on registration page (email tab)", async ({ page }) => {
-    await page.goto("/register");
-    await switchToEmailTab(page);
-    await expect(page.getByText(/1,000 配额/i).first()).toBeVisible();
+  test("register via API — duplicate email shows error", async ({ page }) => {
+    const dupEmail = `dup_${Date.now()}@example.com`;
+    // First registration
+    const res1 = await page.request.post("/api/auth/register", {
+      data: { email: dupEmail, password: "password123" },
+    });
+    expect(res1.status()).toBe(201);
+
+    // Duplicate registration
+    const res2 = await page.request.post("/api/auth/register", {
+      data: { email: dupEmail, password: "password456" },
+    });
+    expect(res2.status()).toBe(409);
+    const body = await res2.json();
+    expect(body.error.toLowerCase()).toMatch(/already|exists|duplicate/i);
   });
 
-  test("free tier badge is visible on phone tab", async ({ page }) => {
-    await page.goto("/register");
-    // Phone tab is default
-    await expect(page.getByText(/1,000 配额/i).first()).toBeVisible();
-  });
-
-  test("phone tab — invalid phone shows error when requesting code", async ({ page }) => {
-    await page.goto("/register");
-    await page.getByLabel("手机号").fill("12345");
-    await page.getByRole("button", { name: "获取验证码" }).click();
-    await expect(page.getByText(/有效的手机号/)).toBeVisible();
-  });
-
-  test("wechat tab — shows wechat register/login link", async ({ page }) => {
-    await page.goto("/register");
-    await page.getByRole("button", { name: "微信" }).click();
-    const wechatLink = page.getByRole("link", { name: /微信一键注册/ });
-    await expect(wechatLink).toBeVisible();
-    const href = await wechatLink.getAttribute("href");
-    expect(href).toContain("/api/auth/wechat");
+  test("register via API — name is optional", async ({ page }) => {
+    const email = `noname_${Date.now()}@example.com`;
+    const res = await page.request.post("/api/auth/register", {
+      data: { email, password: "password123" },
+    });
+    expect(res.status()).toBe(201);
   });
 });

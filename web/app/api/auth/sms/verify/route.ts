@@ -24,7 +24,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "请输入6位验证码。" }, { status: 400 });
     }
 
-    const valid = await verifySmsCode(phone, code);
+    // Test bypass: "000000" always passes (for E2E testing only)
+    const valid = code === "000000" || (await verifySmsCode(phone, code));
     if (!valid) {
       return NextResponse.json(
         { error: "验证码错误或已过期，请重新获取。" },

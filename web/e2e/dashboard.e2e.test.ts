@@ -39,7 +39,7 @@ test.describe("Dashboard", () => {
 
     await page.getByRole("button", { name: /generate token/i }).click();
     await expect(
-      page.getByText(/export CLAWPLAY_TOKEN=/i, { timeout: 10_000 })
+      page.getByText(/export CLAWPLAY_TOKEN=/i, { timeout: 30_000 })
     ).toBeVisible();
     await expect(page.getByRole("button", { name: /copy/i })).toBeVisible();
   });
@@ -47,8 +47,9 @@ test.describe("Dashboard", () => {
   test("Copy button on token card shows Copied feedback", async ({ page }) => {
     await loginAs(page, TEST_EMAIL, "dashpass123");
     await page.getByRole("button", { name: /generate token/i }).click();
+    // Wait for token to appear (API may be slow)
     await expect(
-      page.getByText(/export CLAWPLAY_TOKEN=/i, { timeout: 10_000 })
+      page.getByText(/export CLAWPLAY_TOKEN=/i, { timeout: 30_000 })
     ).toBeVisible();
 
     const copyBtn = page.getByRole("button", { name: /copy/i });

@@ -42,14 +42,14 @@ export default async function HomePage() {
               href="/skills"
               className="text-sm font-medium text-[#7a6a5a] hover:text-[#a23f00] transition-colors font-body"
             >
-              Explore Skills
+              探索 Skill
             </Link>
             {auth ? (
               <Link
                 href="/dashboard"
                 className="px-5 py-2.5 bg-gradient-to-r from-[#a23f00] to-[#fa7025] hover:opacity-90 text-white text-sm font-semibold btn-pill shadow-[0_6px_24px_rgba(162,63,0,0.2)] transition-all font-heading"
               >
-                Dashboard
+                控制台
               </Link>
             ) : (
               <>
@@ -57,13 +57,13 @@ export default async function HomePage() {
                   href="/login"
                   className="text-sm font-medium text-[#7a6a5a] hover:text-[#a23f00] transition-colors font-body"
                 >
-                  Sign in
+                  登录
                 </Link>
                 <Link
                   href="/register"
                   className="px-5 py-2.5 bg-gradient-to-r from-[#a23f00] to-[#fa7025] hover:opacity-90 text-white text-sm font-semibold btn-pill shadow-[0_6px_24px_rgba(162,63,0,0.2)] transition-all font-heading"
                 >
-                  Get started
+                  立即开始
                 </Link>
               </>
             )}
@@ -77,18 +77,17 @@ export default async function HomePage() {
           {/* Badge */}
           <div className="inline-flex items-center gap-2 bg-[#fffdf7] border border-[#e8dfc8] rounded-full px-5 py-2 text-sm text-[#7a6a5a] shadow-sm font-body">
             <span>✨</span>
-            <span>Open-source AI Skills Ecosystem</span>
+            <span>开源 AI Skills 生态系统</span>
           </div>
 
           <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-extrabold font-heading text-[#564337] leading-[1.05] tracking-tight">
-            Build the future of{" "}
-            <span className="bg-gradient-to-r from-[#a23f00] to-[#fa7025] bg-clip-text text-transparent">AI Social</span> play
+            为{" "}
+            <span className="bg-gradient-to-r from-[#a23f00] to-[#fa7025] bg-clip-text text-transparent">X Claw</span>{" "}
+            智能体构建技能生态
           </h1>
 
           <p className="text-xl md:text-2xl text-[#7a6a5a] max-w-2xl mx-auto leading-relaxed font-body">
-            ClawPlay is the community hub for X Claw social &amp; entertainment Skills.
-            Share your creativity, discover amazing Skills, and power your X Claw with
-            unified multimodal capabilities.
+            ClawPlay 是 X Claw 社交娱乐 Skills 的开源社区枢纽。分享创意、发现优质技能，让你的 AI 智能体拥有统一的多模态能力。
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
@@ -96,13 +95,13 @@ export default async function HomePage() {
               href="/register"
               className="px-8 py-4 bg-gradient-to-r from-[#a23f00] to-[#fa7025] hover:opacity-90 text-white text-base font-semibold btn-pill shadow-[0_6px_24px_rgba(162,63,0,0.2)] transition-all font-heading"
             >
-              Start for free
+              免费开始使用
             </Link>
             <Link
               href="/skills"
               className="px-8 py-4 bg-white hover:bg-[#faf3d0] text-[#a23f00] text-base font-semibold rounded-[40px] border-2 border-[#a23f00] transition-colors font-heading"
             >
-              Browse Skills
+              浏览 Skills
             </Link>
           </div>
         </div>
@@ -115,7 +114,7 @@ export default async function HomePage() {
       <section className="py-16 md:py-20 px-6">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-2xl md:text-3xl font-bold font-heading text-[#564337] text-center mb-12">
-            Why ClawPlay?
+            为什么选择 ClawPlay？
           </h2>
           <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-6">
             {FEATURES.map((f) => (
@@ -139,17 +138,17 @@ export default async function HomePage() {
             <div className="flex items-center justify-between mb-8">
               <div>
                 <span className="text-xs font-semibold font-heading text-[#fa7025] uppercase tracking-wider mb-1 block">
-                  Handpicked for you
+                  精选推荐
                 </span>
                 <h2 className="text-2xl md:text-3xl font-bold font-heading text-[#564337]">
-                  Featured Skills
+                  热门 Skills
                 </h2>
               </div>
               <Link
                 href="/skills"
                 className="text-sm font-medium text-[#a23f00] hover:text-[#c45000] transition-colors font-body"
               >
-                View all skills →
+                查看全部 →
               </Link>
             </div>
             <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-5">
@@ -162,13 +161,13 @@ export default async function HomePage() {
                   <div className="flex items-start justify-between">
                     <span className="text-3xl">{s.iconEmoji}</span>
                     <span className="inline-block px-2 py-0.5 bg-[#d8e6a6]/60 text-[#586330] text-xs font-semibold rounded-full font-body">
-                      Free
+                      免费
                     </span>
                   </div>
                   <div>
                     <h3 className="font-semibold font-heading text-[#564337] text-base">{s.name}</h3>
                     <p className="text-xs text-[#7a6a5a] line-clamp-2 mt-1 font-body">
-                      {s.summary || "No description yet."}
+                      {s.summary || "暂无描述。"}
                     </p>
                   </div>
                 </Link>
@@ -182,17 +181,16 @@ export default async function HomePage() {
       <section className="py-20 md:py-28 px-6">
         <div className="max-w-2xl mx-auto text-center space-y-6">
           <h2 className="text-3xl md:text-4xl font-bold font-heading text-[#564337]">
-            Ready to build something fun?
+            准备好开始构建了吗？
           </h2>
           <p className="text-lg text-[#7a6a5a] font-body">
-            Join the community and start creating or using Skills today.
-            Free tier includes 1,000 quota units.
+            加入社区，今天就开始创建或使用 Skills。免费套餐包含 1,000 配额。
           </p>
           <Link
             href="/register"
             className="inline-block px-8 py-4 bg-gradient-to-r from-[#a23f00] to-[#fa7025] hover:opacity-90 text-white font-semibold btn-pill shadow-[0_6px_24px_rgba(162,63,0,0.2)] transition-all font-heading"
           >
-            Create your account
+            创建你的账号
           </Link>
         </div>
       </section>
@@ -208,13 +206,13 @@ export default async function HomePage() {
                 <span className="text-base font-bold font-heading text-[#564337]">ClawPlay</span>
               </div>
               <p className="text-sm text-[#7a6a5a] font-body leading-relaxed">
-                The community hub for X Claw social &amp; entertainment Skills. Open source, human-reviewed, privacy-first.
+                X Claw 社交娱乐 Skills 的开源社区枢纽。开源、人工审核、隐私优先。
               </p>
             </div>
 
             {/* About */}
             <div className="space-y-3">
-              <h4 className="text-xs font-semibold font-heading text-[#564337] uppercase tracking-wider">About</h4>
+              <h4 className="text-xs font-semibold font-heading text-[#564337] uppercase tracking-wider">关于</h4>
               <ul className="space-y-2">
                 {FOOTER_ABOUT.map((link) => (
                   <li key={link.href}>
@@ -228,7 +226,7 @@ export default async function HomePage() {
 
             {/* Resources */}
             <div className="space-y-3">
-              <h4 className="text-xs font-semibold font-heading text-[#564337] uppercase tracking-wider">Resources</h4>
+              <h4 className="text-xs font-semibold font-heading text-[#564337] uppercase tracking-wider">资源</h4>
               <ul className="space-y-2">
                 {FOOTER_RESOURCES.map((link) => (
                   <li key={link.href}>
@@ -242,7 +240,7 @@ export default async function HomePage() {
 
             {/* Social */}
             <div className="space-y-3">
-              <h4 className="text-xs font-semibold font-heading text-[#564337] uppercase tracking-wider">Connect</h4>
+              <h4 className="text-xs font-semibold font-heading text-[#564337] uppercase tracking-wider">联系我们</h4>
               <div className="flex gap-3">
                 {SOCIAL_LINKS.map((s) => (
                   <a
@@ -258,7 +256,7 @@ export default async function HomePage() {
                 ))}
               </div>
               <p className="text-xs text-[#a89888] font-body">
-                Built with intention. © {new Date().getFullYear()} ClawPlay.
+                用心构建。© {new Date().getFullYear()} ClawPlay。
               </p>
             </div>
           </div>
@@ -266,11 +264,11 @@ export default async function HomePage() {
           {/* Bottom bar */}
           <div className="border-t border-[#e8dfc8] pt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
             <p className="text-xs text-[#a89888] font-body">
-              © {new Date().getFullYear()} ClawPlay. Created with intention.
+              © {new Date().getFullYear()} ClawPlay。用心构建。
             </p>
             <div className="flex gap-5">
-              <Link href="/terms" className="text-xs text-[#a89888] hover:text-[#a23f00] transition-colors font-body">Terms</Link>
-              <Link href="/privacy" className="text-xs text-[#a89888] hover:text-[#a23f00] transition-colors font-body">Privacy Policy</Link>
+              <Link href="/terms" className="text-xs text-[#a89888] hover:text-[#a23f00] transition-colors font-body">服务条款</Link>
+              <Link href="/privacy" className="text-xs text-[#a89888] hover:text-[#a23f00] transition-colors font-body">隐私政策</Link>
             </div>
           </div>
         </div>
@@ -282,48 +280,48 @@ export default async function HomePage() {
 const FEATURES = [
   {
     icon: "🖼️",
-    title: "Unified Multimodal CLI",
-    desc: "One command to generate images, synthesize speech, and more. No more managing multiple API keys.",
+    title: "统一多模态 CLI",
+    desc: "一行命令生成图片、合成语音，无需管理多个 API 密钥。",
   },
   {
     icon: "🛡️",
-    title: "API Key Protection",
-    desc: "Your provider API keys stay secure on our server. Skill developers only get encrypted tokens.",
+    title: "API 密钥保护",
+    desc: "你的服务商密钥安全地存储在服务端，Skill 开发者只能使用加密令牌。",
   },
   {
     icon: "🎁",
-    title: "Free Tier Included",
-    desc: "Every account gets 1,000 free quota units. Generous enough to explore, simple enough to start.",
+    title: "免费配额",
+    desc: "每个账号赠送 1,000 配额，足以探索体验，无需绑定信用卡。",
   },
   {
     icon: "🤖",
-    title: "Human Review",
-    desc: "All Skills are reviewed before publication. Quality and safety guaranteed for X Claw users.",
+    title: "人工审核",
+    desc: "所有 Skills 上线前均经过人工审核，确保质量和安全。",
   },
   {
     icon: "⚡",
-    title: "One-click Setup",
-    desc: "Copy one command to your X Claw environment. No configuration needed.",
+    title: "一键安装",
+    desc: "复制一条命令即可完成 X Claw 环境配置，无需任何配置。",
   },
   {
     icon: "🌍",
-    title: "Open Source",
-    desc: "Built in the open, for the community. Fork, contribute, and shape the future of AI Skills.",
+    title: "开源透明",
+    desc: "代码开源、社区共建。Fork、贡献，一起塑造 AI Skills 的未来。",
   },
 ];
 
 const FOOTER_ABOUT = [
-  { label: "About", href: "/about" },
-  { label: "Documentation", href: "/docs" },
-  { label: "Blog", href: "/blog" },
-  { label: "Careers", href: "/careers" },
+  { label: "关于我们", href: "/about" },
+  { label: "文档", href: "/docs" },
+  { label: "博客", href: "/blog" },
+  { label: "加入我们", href: "/careers" },
 ];
 
 const FOOTER_RESOURCES = [
-  { label: "Skill Authoring Guide", href: "/docs/skill-authoring" },
-  { label: "CLI Reference", href: "/docs/cli" },
-  { label: "API Docs", href: "/docs/api" },
-  { label: "Community", href: "/community" },
+  { label: "Skill 编写指南", href: "/docs/skill-authoring" },
+  { label: "CLI 命令参考", href: "/docs/cli" },
+  { label: "API 文档", href: "/docs/api" },
+  { label: "社区", href: "/community" },
 ];
 
 const SOCIAL_LINKS = [

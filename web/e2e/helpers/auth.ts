@@ -12,10 +12,11 @@ export async function loginAs(page: Page, email: string, password: string) {
   await page.getByLabel("密码").fill(password);
   await page.keyboard.press("Enter");
   await page.waitForURL("/dashboard", { timeout: 15_000 });
-  // Wait for client-side /api/user/me fetch to complete before interacting
-  await page.waitForLoadState("networkidle", { timeout: 10_000 }).catch(() => {
-    // Fallback: small delay for JS to execute
-  });
+  // Wait for dashboard client component to fetch + render user data
+  await page.waitForFunction(
+    () => document.body.innerText.includes("USR-") || document.body.innerText.includes("Generate Token"),
+    { timeout: 15_000 }
+  );
 }
 
 /**
