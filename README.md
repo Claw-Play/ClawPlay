@@ -2,6 +2,8 @@
 
 # ClawPlay
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+
 **Open-source community hub for X Claw social & entertainment Skills.**
 
 ClawPlay lets AI Agents (via X Claw) generate images, analyze vision, and synthesize speech — without managing API keys. Developers submit Skills to a human-reviewed registry; users get a unified CLI and free quota.
