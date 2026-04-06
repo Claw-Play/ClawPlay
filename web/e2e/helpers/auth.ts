@@ -6,8 +6,10 @@ import type { Page, APIRequestContext } from "@playwright/test";
  */
 export async function loginAs(page: Page, email: string, password: string) {
   await page.goto("/login");
-  await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password").fill(password);
+  // Default tab is 手机号 — switch to 邮箱 tab
+  await page.getByRole("button", { name: "邮箱" }).click();
+  await page.getByLabel("邮箱").fill(email);
+  await page.getByLabel("密码").fill(password);
   await page.keyboard.press("Enter");
   await page.waitForURL("/dashboard", { timeout: 15_000 });
 }

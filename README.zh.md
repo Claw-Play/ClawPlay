@@ -152,40 +152,40 @@ pnpm dev
 
 ```
 ClawPlay/
-├── web/                      # Next.js 14 应用
+├── web/                          # Next.js 14 应用
 │   ├── app/
-│   │   ├── (auth)/           # 登录/注册页
-│   │   ├── (app)/            # 认证后页面（Dashboard、Skills、Submit）
-│   │   ├── (admin)/          # 管理员审核面板
-│   │   ├── api/              # API 路由（22 个）
-│   │   └── page.tsx          # 首页
-│   ├── components/            # 共享 React 组件
+│   │   ├── (auth)/               # 登录/注册页
+│   │   ├── (app)/                # 认证后页面（Dashboard、Skills、Submit）
+│   │   ├── (admin)/              # 管理员审核面板
+│   │   ├── api/                  # API 路由（22 个）
+│   │   └── page.tsx              # 首页
+│   ├── components/               # 共享 React 组件
 │   └── lib/
-│       ├── db/               # Drizzle ORM + SQLite Schema
-│       ├── auth.ts           # JWT helpers
-│       ├── token.ts          # AES-256-GCM Token 加解密
-│       ├── redis.ts          # Upstash Redis 配额 helpers
-│       └── providers/         # 多 Provider 集成（Ark、Gemini）
-│           ├── image/        # 图像生成
-│           ├── vision/       # 视觉分析
-│           └── llm/          # 文本生成
-├── cli/                      # Shell CLI
-│   ├── clawplay              # 主入口（子命令路由）
+│       ├── db/                   # Drizzle ORM + SQLite Schema
+│       ├── auth.ts               # JWT helpers
+│       ├── token.ts              # AES-256-GCM Token 加解密
+│       ├── redis.ts              # Upstash Redis 配额 helpers
+│       └── providers/            # 多 Provider 集成（Ark、Gemini）
+│           ├── image/            # 图像生成
+│           ├── vision/           # 视觉分析
+│           └── llm/              # 文本生成
+├── cli/                          # Shell CLI
+│   ├── clawplay                  # 主入口（子命令路由）
 │   ├── lib/
-│   │   ├── token.sh          # Token 读取 + 本地解密
-│   │   ├── image.sh          # 图像生成 Relay 客户端
-│   │   ├── vision.sh         # 视觉分析 Relay 客户端
-│   │   ├── llm.sh            # LLM 生成 Relay 客户端
-│   │   └── api.sh            # HTTP 调用 helpers
-│   └── skill/                # Skill 开发工具集
-│       ├── lint.mjs          # SKILL.md 语法校验
-│       ├── diagram.mjs       # 生成 Mermaid 流程图
-│       └── types.mjs         # TypeScript 类型检查
-├── docs/                     # 文档
-│   ├── clawplay-commands.md  # CLI 命令速查 + Bash 工具集
+│   │   ├── token.sh              # Token 读取 + 本地解密
+│   │   ├── image.sh              # 图像生成 Relay 客户端
+│   │   ├── vision.sh             # 视觉分析 Relay 客户端
+│   │   ├── llm.sh                # LLM 生成 Relay 客户端
+│   │   └── api.sh                # HTTP 调用 helpers
+│   └── skill/                    # Skill 开发工具集
+│       ├── lint.mjs              # SKILL.md 语法校验
+│       ├── diagram.mjs           # 生成 Mermaid 流程图
+│       └── types.mjs             # TypeScript 类型检查
+├── docs/                         # 文档
+│   ├── clawplay-commands.md      # CLI 命令速查 + Bash 工具集
 │   ├── skill-authoring-guide.md  # Skill 进阶开发指南
-│   └── providers/            # Provider API 参考文档
-└── data/                     # SQLite DB（已 gitignore）
+│   └── providers/                # Provider API 参考文档
+└── data/                         # SQLite DB（已 gitignore）
 ```
 
 ### 数据库

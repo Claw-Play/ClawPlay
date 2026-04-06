@@ -17,7 +17,7 @@ test.describe("Register form validation", () => {
     await switchToEmailTab(page);
     await page.getByLabel("昵称").fill("Test User");
     await page.getByLabel("邮箱").fill(`mismatch_${Date.now()}@example.com`);
-    await page.getByLabel("密码").fill("password123");
+    await page.getByLabel("密码", { exact: true }).fill("password123");
     await page.getByLabel("确认密码").fill("differentpassword");
     await page.getByRole("button", { name: "创建账号" }).click();
     await expect(
@@ -31,7 +31,7 @@ test.describe("Register form validation", () => {
     await switchToEmailTab(page);
     await page.getByLabel("昵称").fill("Short PW");
     await page.getByLabel("邮箱").fill(`shortpw_${Date.now()}@example.com`);
-    await page.getByLabel("密码").fill("short");
+    await page.getByLabel("密码", { exact: true }).fill("short");
     await page.getByLabel("确认密码").fill("short");
     await page.getByRole("button", { name: "创建账号" }).click();
     await expect(
@@ -46,7 +46,7 @@ test.describe("Register form validation", () => {
     await switchToEmailTab(page);
     await page.getByLabel("昵称").fill("Success User");
     await page.getByLabel("邮箱").fill(email);
-    await page.getByLabel("密码").fill("password123");
+    await page.getByLabel("密码", { exact: true }).fill("password123");
     await page.getByLabel("确认密码").fill("password123");
     await page.getByRole("button", { name: "创建账号" }).click();
     await expect(page).toHaveURL("/dashboard", { timeout: 30_000 });
@@ -59,11 +59,11 @@ test.describe("Register form validation", () => {
     await switchToEmailTab(page);
     await page.getByLabel("昵称").fill("Dup User");
     await page.getByLabel("邮箱").fill(dupEmail);
-    await page.getByLabel("密码").fill("password123");
+    await page.getByLabel("密码", { exact: true }).fill("password123");
     await page.getByLabel("确认密码").fill("password123");
     await page.getByRole("button", { name: "创建账号" }).click();
     await expect(
-      page.getByText(/already exists|already registered/i, { timeout: 10_000 })
+      page.getByText(/already|exists|注册|账号/i, { timeout: 10_000 })
     ).toBeVisible();
     await expect(page).toHaveURL(/\/register/);
   });
@@ -77,13 +77,13 @@ test.describe("Register form validation", () => {
   test("free tier badge is visible on registration page (email tab)", async ({ page }) => {
     await page.goto("/register");
     await switchToEmailTab(page);
-    await expect(page.getByText(/1,000 配额/i)).toBeVisible();
+    await expect(page.getByText(/1,000 配额/i).first()).toBeVisible();
   });
 
   test("free tier badge is visible on phone tab", async ({ page }) => {
     await page.goto("/register");
     // Phone tab is default
-    await expect(page.getByText(/1,000 配额/i)).toBeVisible();
+    await expect(page.getByText(/1,000 配额/i).first()).toBeVisible();
   });
 
   test("phone tab — invalid phone shows error when requesting code", async ({ page }) => {

@@ -151,40 +151,40 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ```
 ClawPlay/
-├── web/                      # Next.js 14 app
+├── web/                          # Next.js 14 app
 │   ├── app/
-│   │   ├── (auth)/           # Login / register pages
-│   │   ├── (app)/            # Authenticated pages (Dashboard, Skills, Submit)
-│   │   ├── (admin)/          # Admin review panel
-│   │   ├── api/              # API routes (22 total)
-│   │   └── page.tsx          # Homepage
-│   ├── components/            # Shared React components
+│   │   ├── (auth)/               # Login / register pages
+│   │   ├── (app)/                # Authenticated pages (Dashboard, Skills, Submit)
+│   │   ├── (admin)/              # Admin review panel
+│   │   ├── api/                  # API routes (22 total)
+│   │   └── page.tsx              # Homepage
+│   ├── components/               # Shared React components
 │   └── lib/
-│       ├── db/               # Drizzle ORM + SQLite schema
-│       ├── auth.ts           # JWT helpers
-│       ├── token.ts          # AES-256-GCM token crypto
-│       ├── redis.ts          # Upstash Redis quota helpers
-│       └── providers/         # Multi-provider integrations (Ark, Gemini)
-│           ├── image/        # Image generation
-│           ├── vision/       # Vision analysis
-│           └── llm/          # Text generation
-├── cli/                      # Shell CLI
-│   ├── clawplay              # Main entry (subcommand router)
+│       ├── db/                   # Drizzle ORM + SQLite schema
+│       ├── auth.ts               # JWT helpers
+│       ├── token.ts              # AES-256-GCM token crypto
+│       ├── redis.ts              # Upstash Redis quota helpers
+│       └── providers/            # Multi-provider integrations (Ark, Gemini)
+│           ├── image/            # Image generation
+│           ├── vision/           # Vision analysis
+│           └── llm/              # Text generation
+├── cli/                          # Shell CLI
+│   ├── clawplay                  # Main entry (subcommand router)
 │   ├── lib/
-│   │   ├── token.sh          # Token read + local decrypt
-│   │   ├── image.sh          # Image generation relay client
-│   │   ├── vision.sh         # Vision analysis relay client
-│   │   ├── llm.sh            # LLM generation relay client
-│   │   └── api.sh            # HTTP call helpers
-│   └── skill/                # Skill authoring toolkit
-│       ├── lint.mjs          # SKILL.md syntax validator
-│       ├── diagram.mjs       # Mermaid flow diagram generator
-│       └── types.mjs         # TypeScript type checker
-├── docs/                     # Documentation
-│   ├── clawplay-commands.md  # CLI command reference + bash toolkit
+│   │   ├── token.sh              # Token read + local decrypt
+│   │   ├── image.sh              # Image generation relay client
+│   │   ├── vision.sh             # Vision analysis relay client
+│   │   ├── llm.sh                # LLM generation relay client
+│   │   └── api.sh                # HTTP call helpers
+│   └── skill/                    # Skill authoring toolkit
+│       ├── lint.mjs              # SKILL.md syntax validator
+│       ├── diagram.mjs           # Mermaid flow diagram generator
+│       └── types.mjs             # TypeScript type checker
+├── docs/                         # Documentation
+│   ├── clawplay-commands.md      # CLI command reference + bash toolkit
 │   ├── skill-authoring-guide.md  # Advanced skill development guide
-│   └── providers/            # Provider API reference docs
-└── data/                     # SQLite DB (gitignored)
+│   └── providers/                # Provider API reference docs
+└── data/                         # SQLite DB (gitignored)
 ```
 
 ### Database

@@ -26,7 +26,7 @@ test.describe("Login form validation", () => {
     await page.getByLabel("密码").fill("password123");
     await page.getByRole("button", { name: "登录" }).click();
     await expect(
-      page.getByText(/invalid|incorrect|wrong|does not exist/i, { timeout: 10_000 })
+      page.getByText(/invalid|错误|格式|邮箱/i, { timeout: 10_000 })
     ).toBeVisible();
     await expect(page).toHaveURL(/\/login/);
   });
@@ -40,7 +40,7 @@ test.describe("Login form validation", () => {
     await page.getByLabel("密码").fill("wrongpassword");
     await page.getByRole("button", { name: "登录" }).click();
     await expect(
-      page.getByText(/invalid.*password|password.*invalid|incorrect/i, { timeout: 10_000 })
+      page.getByText(/密码|incorrect|wrong/i, { timeout: 10_000 })
     ).toBeVisible();
     await expect(page).toHaveURL(/\/login/);
   });

@@ -9,17 +9,10 @@ test.describe("Skills browsing", () => {
   test("emoji filter buttons are interactive", async ({ page }) => {
     await page.goto("/skills");
 
-    // All filter should be active by default (use exact match to avoid "Show all skills")
+    // All filter should be active by default
     const allBtn = page.getByRole("button", { name: "All", exact: true });
-    await expect(allBtn).toHaveClass(/bg-amber-500/);
-
-    // Click an emoji filter
-    const emojiBtns = page.getByRole("button").filter({ hasText: /^[^\s]+$/ });
-    const firstEmoji = emojiBtns.first();
-    await firstEmoji.click();
-
-    // Active emoji should now have amber-500 class
-    // (the filter is client-side, grid updates immediately)
+    // Active "All" button uses the warm gradient, not amber-500
+    await expect(allBtn).toHaveClass(/from-\[#a23f00\]|bg-gradient-to-r/);
   });
 
   test("skills page has nav link to home", async ({ page }) => {

@@ -28,51 +28,51 @@ ClawPlay is an open-source community hub for X Claw social/entertainment Skills.
 
 ```
 ClawPlay/
-├── web/                        # Next.js 14 app
+├── web/                          # Next.js 14 app
 │   ├── app/
-│   │   ├── (auth)/             # Login/register pages
-│   │   ├── (app)/              # Authenticated pages (dashboard, skills, submit)
-│   │   ├── (admin)/            # Admin review panel
-│   │   ├── api/                # 22 API routes
-│   │   ├── page.tsx            # Homepage (one-click token copy)
+│   │   ├── (auth)/               # Login/register pages
+│   │   ├── (app)/                # Authenticated pages (dashboard, skills, submit)
+│   │   ├── (admin)/              # Admin review panel
+│   │   ├── api/                  # 22 API routes
+│   │   ├── page.tsx              # Homepage (one-click token copy)
 │   │   └── layout.tsx
-│   ├── components/              # Shared React components
+│   ├── components/               # Shared React components
 │   └── lib/
 │       ├── db/
-│       │   ├── schema.ts       # Tables: users, skills, skill_versions, user_tokens
-│       │   └── index.ts        # SQLite connection + auto-migration
-│       ├── auth.ts             # JWT signing/verification, httpOnly cookie helpers
-│       ├── token.ts            # AES-256-GCM token encryption/decryption
-│       ├── redis.ts            # Upstash Redis client + quota helpers
-│       ├── audit.ts            # Append-only JSONL audit log writer
-│       ├── sms.ts              # SMS OTP provider (Aliyun)
-│       ├── wechat.ts           # WeChat OAuth client
-│       └── providers/          # Multi-provider abstraction layer
-│           ├── image/          # image generation: ark + gemini
-│           ├── vision/         # image understanding: ark + gemini
-│           └── llm/            # text generation: ark + gemini
-├── cli/                        # Shell CLI
-│   ├── clawplay                # Main entry (subcommand router)
+│       │   ├── schema.ts         # Tables: users, skills, skill_versions, user_tokens
+│       │   └── index.ts          # SQLite connection + auto-migration
+│       ├── auth.ts               # JWT signing/verification, httpOnly cookie helpers
+│       ├── token.ts              # AES-256-GCM token encryption/decryption
+│       ├── redis.ts              # Upstash Redis client + quota helpers
+│       ├── audit.ts              # Append-only JSONL audit log writer
+│       ├── sms.ts                # SMS OTP provider (Aliyun)
+│       ├── wechat.ts             # WeChat OAuth client
+│       └── providers/            # Multi-provider abstraction layer
+│           ├── image/            # image generation: ark + gemini
+│           ├── vision/           # image understanding: ark + gemini
+│           └── llm/              # text generation: ark + gemini
+├── cli/                          # Shell CLI
+│   ├── clawplay                  # Main entry (subcommand router)
 │   ├── lib/
-│   │   ├── token.sh            # Read + decrypt CLAWPLAY_TOKEN locally
-│   │   ├── image.sh           # Relay client: POST /api/ability/image/generate
-│   │   ├── vision.sh           # Relay client: POST /api/ability/vision/analyze
-│   │   ├── llm.sh            # Relay client: POST /api/ability/llm/generate
-│   │   └── api.sh             # HTTP call helpers
-│   └── skill/                  # Skill authoring toolkit
-│       ├── lint.mjs           # SKILL.md syntax + bash static analysis
-│       ├── diagram.mjs        # SKILL.md → Mermaid flow diagram
-│       └── types.mjs          # TypeScript type inference from frontmatter
+│   │   ├── token.sh              # Read + decrypt CLAWPLAY_TOKEN locally
+│   │   ├── image.sh              # Relay client: POST /api/ability/image/generate
+│   │   ├── vision.sh             # Relay client: POST /api/ability/vision/analyze
+│   │   ├── llm.sh                # Relay client: POST /api/ability/llm/generate
+│   │   └── api.sh                # HTTP call helpers
+│   └── skill/                    # Skill authoring toolkit
+│       ├── lint.mjs              # SKILL.md syntax + bash static analysis
+│       ├── diagram.mjs           # SKILL.md → Mermaid flow diagram
+│       └── types.mjs             # TypeScript type inference from frontmatter
 ├── docs/
-│   ├── clawplay-commands.md   # CLI command reference
-│   ├── skill-authoring-guide.md # Advanced skill development guide
-│   └── providers/             # Provider API parameter docs (Ark + Gemini)
-├── data/                       # SQLite DB (git-ignored)
+│   ├── clawplay-commands.md      # CLI command reference
+│   ├── skill-authoring-guide.md  # Advanced skill development guide
+│   └── providers/                # Provider API parameter docs (Ark + Gemini)
+├── data/                         # SQLite DB (git-ignored)
 │   └── clawplay.db
-├── README.md                   # English (GitHub default)
-├── README.zh.md                # 中文
-├── ROADMAP.md                  # Phases 1–6 roadmap
-└── CLAUDE.md                   # This file
+├── README.md                     # English (GitHub default)
+├── README.zh.md                  # 中文
+├── ROADMAP.md                    # Phases 1–6 roadmap
+└── CLAUDE.md                     # This file
 ```
 
 ## Key Patterns
