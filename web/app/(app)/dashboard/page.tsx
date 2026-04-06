@@ -30,10 +30,6 @@ function formatRelativeTime(date: Date): string {
   return `${days} 天前`;
 }
 
-const NAV_ITEMS = [
-  { label: "概览", href: "/dashboard", icon: "📊", active: true },
-];
-
 export default function DashboardPage() {
   const router = useRouter();
   const [user, setUser] = useState<UserInfo | null>(null);
@@ -136,98 +132,7 @@ export default function DashboardPage() {
     : "—";
 
   return (
-    <div className="min-h-screen bg-[#fefae0] flex flex-col">
-      {/* Top Navigation */}
-      <header className="bg-[#fefae0] border-b border-[#e8dfc8] sticky top-0 z-50">
-        <div className="max-w-[1536px] mx-auto px-8 py-4 flex items-center justify-between">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 group">
-            <span className="text-2xl">🦐</span>
-            <span className="text-xl font-bold font-heading text-[#a23f00] group-hover:text-[#c45000] transition-colors">
-              ClawPlay
-            </span>
-          </Link>
-
-          {/* Nav Links */}
-          <nav className="flex items-center gap-8">
-            {[
-              { label: "控制台", href: "/dashboard", active: true },
-              { label: "社区", href: "/community", active: false },
-              { label: "Skills", href: "/skills", active: false },
-              { label: "Token", href: "/dashboard", active: false },
-            ].map(({ label, href, active }) => (
-              <Link
-                key={label}
-                href={href}
-                className={`text-sm font-semibold transition-colors font-body ${
-                  active
-                    ? "text-[#a23f00] border-b-2 border-[#a23f00] pb-1"
-                    : "text-[#586330] hover:text-[#a23f00]"
-                }`}
-              >
-                {label}
-              </Link>
-            ))}
-          </nav>
-
-          {/* Actions */}
-          <div className="flex items-center gap-4">
-            <Link
-              href="/dashboard"
-              className="px-6 py-2 bg-gradient-to-r from-[#a23f00] to-[#fa7025] hover:opacity-90 text-white text-sm font-semibold rounded-full shadow-[0_6px_24px_rgba(162,63,0,0.2)] transition-all font-heading"
-            >
-              生成 Token
-            </Link>
-            <div className="w-10 h-10 rounded-full bg-[#faf3d0] border-2 border-[#e8dfc8] flex items-center justify-center text-lg">
-              🦐
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Layout */}
-      <div className="flex flex-1 max-w-[1536px] mx-auto w-full p-8 gap-8">
-        {/* Left Sidebar */}
-        <aside className="w-[180px] shrink-0">
-          <div className="bg-[#f8f4db] rounded-[32px] shadow-[8px_0px_24px_rgba(86,67,55,0.06)] p-6 flex flex-col gap-6 h-full">
-            {/* Brand */}
-            <div>
-              <p className="text-sm font-bold text-[#a23f00] font-heading mb-1">Creator Hub</p>
-              <p className="text-xs text-[#586330] opacity-70 font-body">活跃成员</p>
-            </div>
-
-            {/* Nav */}
-            <nav className="flex-1 flex flex-col gap-1">
-              {NAV_ITEMS.map(({ label, href, icon, active }) => (
-                <Link
-                  key={label}
-                  href={href}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-full text-sm font-medium font-body transition-colors ${
-                    active
-                      ? "bg-[#a23f00] text-white"
-                      : "text-[#586330] hover:bg-[#ede9cf]"
-                  }`}
-                >
-                  <span>{icon}</span>
-                  <span>{label}</span>
-                </Link>
-              ))}
-            </nav>
-
-            {/* Bottom actions */}
-            <div className="flex flex-col gap-2">
-              <form action="/api/auth/logout" method="POST">
-                <button className="w-full flex items-center justify-center gap-2 py-3 rounded-full text-[#586330] text-sm font-medium font-body hover:bg-[#ede9cf] transition-colors">
-                  <span>🚪</span>
-                  <span>退出登录</span>
-                </button>
-              </form>
-            </div>
-          </div>
-        </aside>
-
-        {/* Main Content */}
-        <main className="flex-1 flex flex-col gap-8">
+    <div className="max-w-[1536px] mx-auto w-full p-8 flex flex-col gap-8">
           {/* Welcome header */}
           <div className="space-y-2">
             <h1 className="text-5xl font-extrabold font-heading text-[#1d1c0d] tracking-tight">
@@ -402,8 +307,6 @@ export default function DashboardPage() {
               提交 Skill
             </Link>
           </div>
-        </main>
       </div>
-    </div>
-  );
+    );
 }
