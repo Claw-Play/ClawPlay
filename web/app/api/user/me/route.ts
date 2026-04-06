@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthFromCookies } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { users, userIdentities, userTokens } from "@/lib/db/schema";
-import { eq, isNull } from "drizzle-orm";
+import { users, userIdentities } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
 import { getQuota } from "@/lib/redis";
 import { decryptToken, type TokenPayload } from "@/lib/token";
 
