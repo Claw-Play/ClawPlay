@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { decryptToken, type TokenPayload } from "@/lib/token";
+import { decryptToken } from "@/lib/token";
 import { getLLMProvider, type LLMGenerateRequest } from "@/lib/providers/llm";
 
 /**
@@ -17,9 +17,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Authorization required." }, { status: 401 });
   }
 
-  let _payload: TokenPayload;
   try {
-    _payload = decryptToken(token);
+    decryptToken(token);
   } catch {
     return NextResponse.json({ error: "Invalid token." }, { status: 401 });
   }

@@ -23,6 +23,7 @@ export default function DashboardPage() {
   const [user, setUser] = useState<UserInfo | null>(null);
   const [quota, setQuota] = useState<QuotaInfo | null>(null);
   const [loading, setLoading] = useState(true);
+  const [redirecting, setRedirecting] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [token, setToken] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -38,15 +39,20 @@ export default function DashboardPage() {
         setQuota(data.quota);
       })
       .catch(() => {
+        setRedirecting(true);
         router.push("/login");
-        setLoading(false);
       })
-      .finally(() => {
-        // Only set loading false if user was set (otherwise catch already handled it)
-        setUser((u) => { if (!u) {} return u; });
-        setLoading(false);
-      });
+      .finally(() => setLoading(false));
   }, [router]);
+
+  // Guard: show loading spinner while redirecting (prevents dashboard UI flash)
+  if (loading || redirecting) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#faf3d0]">
+        <div className="text-[#7a6a5a] animate-pulse font-body">Loading...</div>
+      </div>
+    );
+  }
 
   async function generateToken() {
     setGenerating(true);

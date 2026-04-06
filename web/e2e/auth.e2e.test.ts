@@ -21,11 +21,12 @@ test.describe("Auth flow", () => {
     await page.getByRole("button", { name: "创建账号" }).click();
 
     await expect(page).toHaveURL("/dashboard", { timeout: 30_000 });
-    await expect(page.getByText(/USR-/i)).toBeVisible({ timeout: 5_000 });
+    // Wait for dashboard client component to fetch user data
+    await expect(page.getByText(/USR-/i)).toBeVisible({ timeout: 15_000 });
     await expect(page.getByRole("button", { name: /generate token/i })).toBeVisible();
 
     // Logout — dashboard shows "Revoke Access & Sign out"
-    await page.getByRole("button", { name: /sign out/i }).click();
+    await page.getByText("Revoke Access & Sign out").click();
     await expect(page).toHaveURL("/", { timeout: 5_000 });
   });
 
@@ -40,7 +41,7 @@ test.describe("Auth flow", () => {
     await page.getByRole("button", { name: "创建账号" }).click();
     await expect(page).toHaveURL("/dashboard", { timeout: 30_000 });
 
-    await page.getByRole("button", { name: /sign out/i }).click();
+    await page.getByText("Revoke Access & Sign out").click();
     await expect(page).toHaveURL("/", { timeout: 5_000 });
 
     // Log back in
@@ -59,7 +60,7 @@ test.describe("Auth flow", () => {
     await page.getByLabel("密码").fill("wrongpassword");
     await page.getByRole("button", { name: "登录" }).click();
     await expect(
-      page.getByText(/无效|错误|登录失败/i, { timeout: 15_000 })
+      page.getByText(/invalid email or password/i, { timeout: 15_000 })
     ).toBeVisible();
   });
 

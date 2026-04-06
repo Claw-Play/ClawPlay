@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
   let provider;
   try {
     provider = getImageProvider();
-  } catch (_err) {
+  } catch {
     return NextResponse.json(
       { error: "Image generation not configured on server." },
       { status: 503 }

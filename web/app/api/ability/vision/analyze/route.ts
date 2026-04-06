@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
   let visionProvider;
   try {
     visionProvider = getVisionProvider(provider);
-  } catch (_err) {
+  } catch {
     return NextResponse.json(
       { error: "Vision provider not configured on server." },
       { status: 503 }
