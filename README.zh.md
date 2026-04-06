@@ -2,6 +2,8 @@
 
 # ClawPlay
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+
 **X Claw 社交娱乐 Skill 的开源社区枢纽。**
 
 ClawPlay 让 AI Agent（通过 X Claw）无需管理 API 密钥即可生成图像、视觉分析、语音合成。开发者将 Skill 提交到经过人工审核的社区注册表；用户获得统一 CLI 和免费配额。
@@ -246,9 +248,3 @@ pnpm test:all
 4. 或提 Issue / Discussion
 
 所有 Skill 在发布前均经过人工审核，保护 X Claw 用户安全。
-
----
-
-## License
-
-MIT
