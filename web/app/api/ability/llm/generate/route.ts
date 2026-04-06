@@ -17,9 +17,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Authorization required." }, { status: 401 });
   }
 
-  let payload: TokenPayload;
+  let _payload: TokenPayload;
   try {
-    payload = decryptToken(token);
+    _payload = decryptToken(token);
   } catch {
     return NextResponse.json({ error: "Invalid token." }, { status: 401 });
   }

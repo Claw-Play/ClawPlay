@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-const TEST_EMAIL = `testuser_${Date.now()}@example.com`;
+const TEST_EMAIL = `testuser_${Date.now()}_${Math.random().toString(36).slice(2)}@example.com`;
 const TEST_PASSWORD = "testpassword123";
 
 /** Switch to the email tab on login/register pages */
@@ -15,15 +15,16 @@ test.describe("Auth flow", () => {
 
     await page.getByLabel("昵称").fill("Test User");
     await page.getByLabel("邮箱").fill(TEST_EMAIL);
-    await page.getByLabel("密码").fill(TEST_PASSWORD);
+    // Use exact: true — register page has both "密码" and "确认密码" fields
+    await page.getByLabel("密码", { exact: true }).fill(TEST_PASSWORD);
     await page.getByLabel("确认密码").fill(TEST_PASSWORD);
     await page.getByRole("button", { name: "创建账号" }).click();
 
     await expect(page).toHaveURL("/dashboard", { timeout: 30_000 });
-    await expect(page.getByText(/user id/i)).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText(/USR-/i)).toBeVisible({ timeout: 5_000 });
     await expect(page.getByRole("button", { name: /generate token/i })).toBeVisible();
 
-    // Logout
+    // Logout — dashboard shows "Revoke Access & Sign out"
     await page.getByRole("button", { name: /sign out/i }).click();
     await expect(page).toHaveURL("/", { timeout: 5_000 });
   });
@@ -34,7 +35,7 @@ test.describe("Auth flow", () => {
     await switchToEmailTab(page);
     await page.getByLabel("昵称").fill("Test User");
     await page.getByLabel("邮箱").fill(TEST_EMAIL);
-    await page.getByLabel("密码").fill(TEST_PASSWORD);
+    await page.getByLabel("密码", { exact: true }).fill(TEST_PASSWORD);
     await page.getByLabel("确认密码").fill(TEST_PASSWORD);
     await page.getByRole("button", { name: "创建账号" }).click();
     await expect(page).toHaveURL("/dashboard", { timeout: 30_000 });
@@ -58,7 +59,7 @@ test.describe("Auth flow", () => {
     await page.getByLabel("密码").fill("wrongpassword");
     await page.getByRole("button", { name: "登录" }).click();
     await expect(
-      page.getByText(/invalid|incorrect|wrong|already|exists/i, { timeout: 15_000 })
+      page.getByText(/无效|错误|登录失败/i, { timeout: 15_000 })
     ).toBeVisible();
   });
 
@@ -71,8 +72,9 @@ test.describe("Auth flow", () => {
   });
 
   test("register with email — name is optional (API returns 201)", async ({ page }) => {
+    const email = `noname_${Date.now()}_${Math.random().toString(36).slice(2)}@example.com`;
     const res = await page.request.post("/api/auth/register", {
-      data: { email: "noname@example.com", password: "password123" },
+      data: { email, password: "password123" },
     });
     expect(res.status()).toBe(201);
   });
@@ -100,7 +102,8 @@ test.describe("Auth flow", () => {
   test("register page — branding panel visible on desktop viewport", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto("/register");
-    await expect(page.getByText("加入 ClawPlay 社区")).toBeVisible();
+    // "加入 ClawPlay 社区" appears in heading AND as page title — use first()
+    await expect(page.getByText("加入 ClawPlay 社区").first()).toBeVisible();
   });
 
   test("phone tab — send code button visible after switching to 手机号", async ({ page }) => {

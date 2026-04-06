@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getAuthFromCookies } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { users, userTokens } from "@/lib/db/schema";
-import { eq, and, isNull } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { encryptToken, hashToken, type TokenPayload } from "@/lib/token";
 import { initQuota } from "@/lib/redis";
 // Simple uuid-like generator (no external dep needed)

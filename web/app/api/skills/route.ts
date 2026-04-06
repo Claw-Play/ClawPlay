@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { skills, skillVersions } from "@/lib/db/schema";
-import { eq, and, isNull, desc } from "drizzle-orm";
+import { skills } from "@/lib/db/schema";
+import { eq, and, isNull } from "drizzle-orm";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
   const sort = searchParams.get("sort") ?? "newest";
 
   try {
-    let query = db
+    const query = db
       .select({
         id: skills.id,
         slug: skills.slug,

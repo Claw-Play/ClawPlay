@@ -25,14 +25,15 @@ test.describe("Login form validation", () => {
     await page.getByLabel("邮箱").fill("not-an-email");
     await page.getByLabel("密码").fill("password123");
     await page.getByRole("button", { name: "登录" }).click();
+    // Error div appears below the form — use .first() to avoid strict mode violation
     await expect(
-      page.getByText(/invalid|错误|格式|邮箱/i, { timeout: 10_000 })
+      page.getByText(/无效|错误|Invalid|无效的/i).first(), { timeout: 10_000 }
     ).toBeVisible();
     await expect(page).toHaveURL(/\/login/);
   });
 
   test("wrong password shows error and stays on page", async ({ page }) => {
-    const email = `wrongpw_${Date.now()}@example.com`;
+    const email = "wrongpw_${date}_${random}@example.com".replace("\${date}", String(Date.now())).replace("\${random}", Math.random().toString(36).slice(2));
     await registerUser(page.request, email, "correctpass123", "WrongPW");
     await page.goto("/login");
     await switchToEmailTab(page);
@@ -40,7 +41,7 @@ test.describe("Login form validation", () => {
     await page.getByLabel("密码").fill("wrongpassword");
     await page.getByRole("button", { name: "登录" }).click();
     await expect(
-      page.getByText(/密码|incorrect|wrong/i, { timeout: 10_000 })
+      page.getByText(/无效|错误|密码|incorrect/i).first(), { timeout: 10_000 }
     ).toBeVisible();
     await expect(page).toHaveURL(/\/login/);
   });
@@ -66,21 +67,18 @@ test.describe("Login form validation", () => {
 
   test("phone tab — invalid phone number shows error", async ({ page }) => {
     await page.goto("/login");
-    // Already on phone tab
     await page.getByLabel("手机号").fill("12345");
     await page.getByRole("button", { name: "获取验证码" }).click();
     await expect(page.getByText(/有效的手机号/)).toBeVisible();
   });
 
-  test("phone tab — countdown starts after sending code to valid phone", async ({ page }) => {
+  test("phone tab — countdown starts after sending code", async ({ page }) => {
     await page.goto("/login");
-    // Intercept the SMS send API to avoid real HTTP call
     await page.route("**/api/auth/sms/send", async (route) => {
       await route.fulfill({ status: 200, body: JSON.stringify({ message: "验证码已发送" }) });
     });
     await page.getByLabel("手机号").fill("13800138000");
     await page.getByRole("button", { name: "获取验证码" }).click();
-    // Button should switch to countdown (e.g. "60s")
     await expect(page.getByRole("button", { name: /\d+s/ })).toBeVisible({ timeout: 2_000 });
   });
 

@@ -3,7 +3,6 @@ import { db } from "@/lib/db";
 import { users, userTokens } from "@/lib/db/schema";
 import { eq, and, isNull } from "drizzle-orm";
 import { encryptToken, hashToken, decryptToken, type TokenPayload } from "@/lib/token";
-import { initQuota } from "@/lib/redis";
 
 function genId() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);

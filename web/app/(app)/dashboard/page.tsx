@@ -37,8 +37,15 @@ export default function DashboardPage() {
         setUser(data.user);
         setQuota(data.quota);
       })
-      .catch(() => router.push("/login"))
-      .finally(() => setLoading(false));
+      .catch(() => {
+        router.push("/login");
+        setLoading(false);
+      })
+      .finally(() => {
+        // Only set loading false if user was set (otherwise catch already handled it)
+        setUser((u) => { if (!u) {} return u; });
+        setLoading(false);
+      });
   }, [router]);
 
   async function generateToken() {

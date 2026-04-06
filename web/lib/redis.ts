@@ -30,7 +30,6 @@ export const ABILITY_COSTS: Record<string, number> = {
 
 // Default free tier quota
 export const DEFAULT_QUOTA_FREE = 1000;
-const QUOTA_RESET_HOUR_UTC = 0; // Midnight UTC
 
 export interface QuotaInfo {
   used: number;
