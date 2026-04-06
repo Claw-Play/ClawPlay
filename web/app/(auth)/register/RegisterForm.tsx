@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
 
@@ -9,6 +10,7 @@ type Tab = "phone" | "wechat";
 
 export function RegisterForm() {
   const router = useRouter();
+  const t = useTranslations("auth");
   const [tab, setTab] = useState<Tab>("phone");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -37,7 +39,7 @@ export function RegisterForm() {
   async function sendCode() {
     setError("");
     if (!/^1[3-9]\d{9}$/.test(phone)) {
-      setError("请输入有效的手机号。");
+      setError(t("invalid_phone"));
       return;
     }
     try {
@@ -47,10 +49,10 @@ export function RegisterForm() {
         body: JSON.stringify({ phone }),
       });
       const data = await res.json();
-      if (!res.ok) { setError(data.error ?? "发送失败。"); return; }
+      if (!res.ok) { setError(data.error ?? t("send_failed")); return; }
       startCountdown();
     } catch {
-      setError("网络错误，请稍后重试。");
+      setError(t("network_error"));
     }
   }
 
@@ -65,19 +67,19 @@ export function RegisterForm() {
         body: JSON.stringify({ phone, code, name: phoneName }),
       });
       const data = await res.json();
-      if (!res.ok) { setError(data.error ?? "验证失败。"); return; }
+      if (!res.ok) { setError(data.error ?? t("register_failed")); return; }
       router.push("/dashboard");
       router.refresh();
     } catch {
-      setError("网络错误，请稍后重试。");
+      setError(t("network_error"));
     } finally {
       setLoading(false);
     }
   }
 
   const tabs: { key: Tab; label: string }[] = [
-    { key: "phone", label: "手机号" },
-    { key: "wechat", label: "微信" },
+    { key: "phone", label: t("phone") },
+    { key: "wechat", label: t("wechat") },
   ];
 
   return (
@@ -99,23 +101,23 @@ export function RegisterForm() {
           <div className="max-w-md text-center space-y-6">
             <div className="text-6xl mb-4">🦐</div>
             <h2 className="text-4xl font-extrabold font-heading text-[#564337] leading-tight">
-              加入 ClawPlay 社区
+              {t("join_community")}
             </h2>
             <p className="text-lg text-[#7a6a5a] font-body leading-relaxed">
-              为 X Claw 智能体（OpenClaw / QClaw / KClaw）构建、分享和发现 AI Skill。免费领取 1,000 配额。
+              {t("join_desc")}
             </p>
             <div className="pt-4 space-y-3">
               <div className="inline-flex items-center gap-2 bg-white/80 rounded-full px-5 py-2.5 text-sm text-[#7a6a5a] border border-[#e8dfc8] font-body">
                 <span>🖼️</span>
-                <span>一行命令生成图片</span>
+                <span>{t("feature_image")}</span>
               </div>
               <div className="inline-flex items-center gap-2 bg-white/80 rounded-full px-5 py-2.5 text-sm text-[#7a6a5a] border border-[#e8dfc8] font-body">
                 <span>🎙️</span>
-                <span>文字转语音合成</span>
+                <span>{t("feature_tts")}</span>
               </div>
               <div className="inline-flex items-center gap-2 bg-white/80 rounded-full px-5 py-2.5 text-sm text-[#7a6a5a] border border-[#e8dfc8] font-body">
                 <span>🛡️</span>
-                <span>API 密钥加密，安全无忧</span>
+                <span>{t("feature_secure")}</span>
               </div>
             </div>
           </div>
@@ -127,8 +129,8 @@ export function RegisterForm() {
 
             <div className="bg-[#fffdf7] rounded-3xl p-6 border border-[#e8dfc8] shadow-lg space-y-5">
               <div className="text-center space-y-1">
-                <h1 className="text-2xl font-bold font-heading text-[#564337]">创建账号</h1>
-                <p className="text-[#7a6a5a] text-sm font-body">加入 ClawPlay 社区</p>
+                <h1 className="text-2xl font-bold font-heading text-[#564337]">{t("create_account")}</h1>
+                <p className="text-[#7a6a5a] text-sm font-body">{t("register_subtitle")}</p>
               </div>
 
               {/* Tab switcher */}
@@ -157,15 +159,15 @@ export function RegisterForm() {
               {tab === "phone" && (
                 <form onSubmit={handlePhoneRegister} className="space-y-3">
                   <Input
-                    label="昵称（可选）"
+                    label={t("nickname")}
                     type="text"
-                    placeholder="例如 ShrimpMaster"
+                    placeholder={t("nickname_placeholder")}
                     value={phoneName}
                     onChange={(e) => setPhoneName(e.target.value)}
                     autoComplete="name"
                   />
                   <Input
-                    label="手机号"
+                    label={t("phone")}
                     type="tel"
                     placeholder="138 0000 0000"
                     value={phone}
@@ -175,13 +177,13 @@ export function RegisterForm() {
                   />
                   <div>
                     <label className="block text-sm font-semibold text-[#564337] mb-1.5 font-body">
-                      验证码
+                      {t("verification_code")}
                     </label>
                     <div className="flex gap-2">
                       <input
                         type="text"
                         inputMode="numeric"
-                        placeholder="6位验证码"
+                        placeholder={t("code_placeholder")}
                         value={code}
                         onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
                         required
@@ -193,16 +195,16 @@ export function RegisterForm() {
                         disabled={countdown > 0}
                         className="shrink-0 px-4 py-3 rounded-full text-sm font-semibold border border-[#e0d4bc] text-[#a23f00] bg-[#faf3d0] hover:bg-[#f5ecb8] disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-body"
                       >
-                        {countdown > 0 ? `${countdown}s` : "获取验证码"}
+                        {countdown > 0 ? `${countdown}s` : t("get_code")}
                       </button>
                     </div>
                   </div>
                   <div className="bg-[#faf3d0] border border-[#e8dfc8] rounded-2xl px-4 py-2.5 text-sm text-[#7a6a5a] font-body">
                     <span className="text-[#fa7025] mr-1">✨</span>
-                    免费赠送 <strong className="text-[#564337]">1,000 配额</strong>，无需绑定信用卡。
+                    {t("free_quota")}
                   </div>
                   <Button type="submit" className="w-full" loading={loading}>
-                    注册
+                    {t("register_btn")}
                   </Button>
                 </form>
               )}
@@ -216,30 +218,30 @@ export function RegisterForm() {
                     <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current" aria-hidden="true">
                       <path d="M8.691 2.188C3.891 2.188 0 5.476 0 9.53c0 2.212 1.17 4.203 3.002 5.55a.59.59 0 0 1 .213.665l-.39 1.48c-.019.07-.048.141-.048.213 0 .163.13.295.29.295a.326.326 0 0 0 .167-.054l1.903-1.114a.864.864 0 0 1 .717-.098 10.16 10.16 0 0 0 2.837.403c.276 0 .543-.027.811-.05-.857-2.578.157-4.972 1.932-6.446 1.703-1.415 3.882-1.98 5.853-1.838-.576-3.583-3.825-6.348-7.596-6.348zM5.785 5.991c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 0 1-1.162 1.178A1.17 1.17 0 0 1 4.623 7.17c0-.651.52-1.18 1.162-1.18zm5.813 0c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 0 1-1.162 1.178 1.17 1.17 0 0 1-1.162-1.178c0-.651.52-1.18 1.162-1.18zm5.34 2.867c-1.797-.052-3.746.512-5.28 1.786-1.72 1.428-2.687 3.72-1.78 6.22.942 2.453 3.666 4.229 6.884 4.229.826 0 1.622-.12 2.361-.336a.722.722 0 0 1 .598.082l1.584.926a.272.272 0 0 0 .14.047c.134 0 .24-.111.24-.247 0-.06-.023-.12-.038-.177l-.327-1.233a.582.582 0 0 1-.023-.156.49.49 0 0 1 .201-.398C23.024 18.48 24 16.82 24 14.98c0-3.21-2.931-5.837-7.062-6.122zm-3.74 2.704c.532 0 .963.441.963.983a.963.963 0 0 1-.963.983.963.963 0 0 1-.963-.983c0-.542.43-.983.963-.983zm4.848 0c.533 0 .963.441.963.983a.963.963 0 0 1-.963.983.963.963 0 0 1-.963-.983c0-.542.43-.983.963-.983z"/>
                     </svg>
-                    微信一键注册/登录
+                    {t("wechat_register")}
                   </a>
                   <p className="text-xs text-center text-[#7a6a5a] font-body">
-                    需要在微信内置浏览器中打开，或扫码后在微信中完成授权。首次授权自动创建账号。
+                    {t("wechat_register_desc")}
                   </p>
                 </div>
               )}
 
               <p className="text-center text-sm text-[#7a6a5a] font-body">
-                已有账号？{" "}
+                {t("has_account")}{" "}
                 <Link
                   href="/login"
                   className="font-semibold text-[#a23f00] hover:text-[#c45000] underline transition-colors"
                 >
-                  登录
+                  {t("go_login")}
                 </Link>
               </p>
             </div>
 
             <p className="text-center text-xs text-[#7a6a5a] mt-6 font-body">
-              继续即表示同意{" "}
-              <Link href="/terms" className="underline hover:text-[#a23f00]">服务条款</Link>
+              {t("agree_terms")}{" "}
+              <Link href="/terms" className="underline hover:text-[#a23f00]">{t("terms")}</Link>
               {" "}和{" "}
-              <Link href="/privacy" className="underline hover:text-[#a23f00]">隐私政策</Link>
+              <Link href="/privacy" className="underline hover:text-[#a23f00]">{t("privacy")}</Link>
             </p>
           </div>
         </div>

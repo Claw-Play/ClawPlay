@@ -1,5 +1,6 @@
 import { render, screen, fireEvent, act } from "@testing-library/react";
-import { SkillsGrid } from "../SkillsGrid";
+import { SkillsClient } from "../SkillsClient";
+import { TestWrapper } from "../../../../test-utils";
 
 const FAKE_SKILLS = [
   {
@@ -8,7 +9,7 @@ const FAKE_SKILLS = [
     summary: "Make beautiful avatars in seconds",
     authorName: "Alice",
     iconEmoji: "🎨",
-    statsStars: 3,
+    statsStars: 300,
     createdAt: new Date("2025-01-01"),
   },
   {
@@ -16,8 +17,8 @@ const FAKE_SKILLS = [
     name: "Music Mixer",
     summary: "Mix audio tracks with AI",
     authorName: "Bob",
-    iconEmoji: "🎵",
-    statsStars: 1,
+    iconEmoji: "🎮",
+    statsStars: 100,
     createdAt: new Date("2025-02-01"),
   },
   {
@@ -31,141 +32,132 @@ const FAKE_SKILLS = [
   },
 ];
 
-const ALL_EMOJIS = ["🎨", "🎵", "🌍"];
+// Helper: count skill cards by counting h3 headings with skill names
+function skillHeadings() {
+  return screen.getAllByRole("heading", { level: 3 });
+}
 
-describe("SkillsGrid — emoji filter", () => {
-  it("renders all skills when no emoji filter is active", () => {
-    render(<SkillsGrid initialSkills={FAKE_SKILLS} allEmojis={ALL_EMOJIS} />);
-    const links = screen.getAllByRole("link");
-    expect(links.length).toBe(3);
+describe("SkillsClient — category filter", () => {
+  it("renders all skills when no category filter is active", () => {
+    render(<SkillsClient initialSkills={FAKE_SKILLS} />, { wrapper: TestWrapper });
+    expect(skillHeadings().length).toBe(3);
   });
 
-  it("renders only matching emoji skills when filter is active", () => {
-    render(<SkillsGrid initialSkills={FAKE_SKILLS} allEmojis={ALL_EMOJIS} />);
-    const emojiBtn = screen.getByRole("button", { name: "🎨" });
-    act(() => { emojiBtn.click(); });
-    const links = screen.getAllByRole("link");
-    expect(links.length).toBe(2);
+  it("renders only matching emoji skills when '艺术' filter is active", () => {
+    render(<SkillsClient initialSkills={FAKE_SKILLS} />, { wrapper: TestWrapper });
+    const artBtn = screen.getByRole("button", { name: /艺术/ });
+    act(() => { artBtn.click(); });
+    // 🎨 matches avatar-creator + photo-filter (2 cards)
+    expect(skillHeadings().length).toBe(2);
+    expect(screen.getByRole("heading", { name: "Avatar Creator" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Photo Filter" })).toBeInTheDocument();
   });
 
-  it("clicking an active emoji filter deselects it (shows all)", () => {
-    render(<SkillsGrid initialSkills={FAKE_SKILLS} allEmojis={ALL_EMOJIS} />);
-    const emojiBtn = screen.getByRole("button", { name: "🎨" });
-    act(() => { emojiBtn.click(); });
-    expect(screen.getAllByRole("link").length).toBe(2);
-    act(() => { emojiBtn.click(); });
-    expect(screen.getAllByRole("link").length).toBe(3);
-  });
+  it("clicking '全部' button shows all skills", () => {
+    render(<SkillsClient initialSkills={FAKE_SKILLS} />, { wrapper: TestWrapper });
+    const artBtn = screen.getByRole("button", { name: /艺术/ });
+    act(() => { artBtn.click(); });
+    expect(skillHeadings().length).toBe(2);
 
-  it("clicking 'All' button clears emoji filter", () => {
-    render(<SkillsGrid initialSkills={FAKE_SKILLS} allEmojis={ALL_EMOJIS} />);
-    const emojiBtn = screen.getByRole("button", { name: "🎨" });
-    act(() => { emojiBtn.click(); });
-    expect(screen.getAllByRole("link").length).toBe(2);
-    const allBtn = screen.getByRole("button", { name: "All" });
+    const allBtn = screen.getByRole("button", { name: /全部/ });
     act(() => { allBtn.click(); });
-    expect(screen.getAllByRole("link").length).toBe(3);
+    expect(skillHeadings().length).toBe(3);
   });
 
-  it("active 'All' button has gradient class", () => {
-    render(<SkillsGrid initialSkills={FAKE_SKILLS} allEmojis={ALL_EMOJIS} />);
-    const allBtn = screen.getByRole("button", { name: "All" });
+  it("active '全部' button has gradient class", () => {
+    render(<SkillsClient initialSkills={FAKE_SKILLS} />, { wrapper: TestWrapper });
+    const allBtn = screen.getByRole("button", { name: /全部/ });
     expect(allBtn.className).toContain("from-[#a23f00]");
     expect(allBtn.className).toContain("to-[#fa7025]");
   });
 
-  it("active emoji button has gradient class", () => {
-    render(<SkillsGrid initialSkills={FAKE_SKILLS} allEmojis={ALL_EMOJIS} />);
-    const emojiBtn = screen.getByRole("button", { name: "🎨" });
-    act(() => { emojiBtn.click(); });
-    expect(emojiBtn.className).toContain("from-[#a23f00]");
+  it("active category button has gradient class", () => {
+    render(<SkillsClient initialSkills={FAKE_SKILLS} />, { wrapper: TestWrapper });
+    const artBtn = screen.getByRole("button", { name: /艺术/ });
+    act(() => { artBtn.click(); });
+    expect(artBtn.className).toContain("from-[#a23f00]");
   });
 });
 
-describe("SkillsGrid — search", () => {
+describe("SkillsClient — search", () => {
   it("filters by skill name (case-insensitive)", () => {
-    render(<SkillsGrid initialSkills={FAKE_SKILLS} allEmojis={ALL_EMOJIS} />);
-    const searchInput = screen.getByPlaceholderText(/search skills/i);
+    render(<SkillsClient initialSkills={FAKE_SKILLS} />, { wrapper: TestWrapper });
+    const searchInput = screen.getByPlaceholderText(/搜索/);
     fireEvent.change(searchInput, { target: { value: "avatar" } });
-    const links = screen.getAllByRole("link");
-    expect(links.length).toBe(1);
-    expect(links[0]).toHaveAttribute("href", "/skills/avatar-creator");
+    expect(skillHeadings().length).toBe(1);
+    expect(screen.getByRole("heading", { name: "Avatar Creator" })).toBeInTheDocument();
   });
 
   it("filters by summary text", () => {
-    render(<SkillsGrid initialSkills={FAKE_SKILLS} allEmojis={ALL_EMOJIS} />);
-    const searchInput = screen.getByPlaceholderText(/search skills/i);
+    render(<SkillsClient initialSkills={FAKE_SKILLS} />, { wrapper: TestWrapper });
+    const searchInput = screen.getByPlaceholderText(/搜索/);
     fireEvent.change(searchInput, { target: { value: "audio" } });
-    const links = screen.getAllByRole("link");
-    expect(links.length).toBe(1);
-    expect(links[0]).toHaveAttribute("href", "/skills/music-mixer");
+    expect(skillHeadings().length).toBe(1);
+    expect(screen.getByRole("heading", { name: "Music Mixer" })).toBeInTheDocument();
   });
 
   it("filters by authorName", () => {
-    render(<SkillsGrid initialSkills={FAKE_SKILLS} allEmojis={ALL_EMOJIS} />);
-    const searchInput = screen.getByPlaceholderText(/search skills/i);
+    render(<SkillsClient initialSkills={FAKE_SKILLS} />, { wrapper: TestWrapper });
+    const searchInput = screen.getByPlaceholderText(/搜索/);
     fireEvent.change(searchInput, { target: { value: "Alice" } });
-    const links = screen.getAllByRole("link");
-    expect(links.length).toBe(1);
-    expect(links[0]).toHaveAttribute("href", "/skills/avatar-creator");
+    expect(skillHeadings().length).toBe(1);
+    expect(screen.getByRole("heading", { name: "Avatar Creator" })).toBeInTheDocument();
   });
 
   it("shows all skills when search is cleared", () => {
-    render(<SkillsGrid initialSkills={FAKE_SKILLS} allEmojis={ALL_EMOJIS} />);
-    const searchInput = screen.getByPlaceholderText(/search skills/i);
+    render(<SkillsClient initialSkills={FAKE_SKILLS} />, { wrapper: TestWrapper });
+    const searchInput = screen.getByPlaceholderText(/搜索/);
     fireEvent.change(searchInput, { target: { value: "avatar" } });
-    expect(screen.getAllByRole("link").length).toBe(1);
+    expect(skillHeadings().length).toBe(1);
     fireEvent.change(searchInput, { target: { value: "" } });
-    expect(screen.getAllByRole("link").length).toBe(3);
+    expect(skillHeadings().length).toBe(3);
   });
 
-  it("emoji filter and search work together", () => {
-    render(<SkillsGrid initialSkills={FAKE_SKILLS} allEmojis={ALL_EMOJIS} />);
-    const emojiBtn = screen.getByRole("button", { name: "🎨" });
-    act(() => { emojiBtn.click(); });
-    const searchInput = screen.getByPlaceholderText(/search skills/i);
+  it("category filter and search work together", () => {
+    render(<SkillsClient initialSkills={FAKE_SKILLS} />, { wrapper: TestWrapper });
+    const artBtn = screen.getByRole("button", { name: /艺术/ });
+    act(() => { artBtn.click(); });
+    const searchInput = screen.getByPlaceholderText(/搜索/);
     fireEvent.change(searchInput, { target: { value: "photo" } });
-    const links = screen.getAllByRole("link");
-    expect(links.length).toBe(1);
-    expect(links[0]).toHaveAttribute("href", "/skills/photo-filter");
+    expect(skillHeadings().length).toBe(1);
+    expect(screen.getByRole("heading", { name: "Photo Filter" })).toBeInTheDocument();
   });
 });
 
-describe("SkillsGrid — empty state", () => {
-  it("shows empty state when no skills match filters", () => {
-    render(<SkillsGrid initialSkills={FAKE_SKILLS} allEmojis={ALL_EMOJIS} />);
-    const searchInput = screen.getByPlaceholderText(/search skills/i);
+describe("SkillsClient — empty state", () => {
+  it("shows empty state when no skills match search", () => {
+    render(<SkillsClient initialSkills={FAKE_SKILLS} />, { wrapper: TestWrapper });
+    const searchInput = screen.getByPlaceholderText(/搜索/);
     fireEvent.change(searchInput, { target: { value: "xyzabc123" } });
-    expect(screen.getByText(/no results for/i)).toBeInTheDocument();
+    expect(screen.getByText(/未找到「xyzabc123」/)).toBeInTheDocument();
   });
 
-  it("shows search term in empty state message when searching", () => {
-    render(<SkillsGrid initialSkills={FAKE_SKILLS} allEmojis={ALL_EMOJIS} />);
-    const searchInput = screen.getByPlaceholderText(/search skills/i);
+  it("shows search term in empty state message", () => {
+    render(<SkillsClient initialSkills={FAKE_SKILLS} />, { wrapper: TestWrapper });
+    const searchInput = screen.getByPlaceholderText(/搜索/);
     fireEvent.change(searchInput, { target: { value: "nonexistent" } });
-    expect(screen.getByText(/no results for "nonexistent"/i)).toBeInTheDocument();
+    expect(screen.getByText(/未找到「nonexistent」/)).toBeInTheDocument();
   });
 
-  it("'Show all skills' button resets both filters", () => {
-    render(<SkillsGrid initialSkills={FAKE_SKILLS} allEmojis={ALL_EMOJIS} />);
-    const searchInput = screen.getByPlaceholderText(/search skills/i);
-    fireEvent.change(searchInput, { target: { value: "avatar" } });
-    expect(screen.getAllByRole("link").length).toBe(1);
-    const resetBtn = screen.getByRole("button", { name: /show all skills/i });
-    act(() => { resetBtn.click(); });
-    expect(screen.getAllByRole("link").length).toBe(3);
+  it("'清除搜索' button clears search and shows all skills", () => {
+    render(<SkillsClient initialSkills={FAKE_SKILLS} />, { wrapper: TestWrapper });
+    const searchInput = screen.getByPlaceholderText(/搜索/);
+    fireEvent.change(searchInput, { target: { value: "xyzabc123" } });
+    const clearBtn = screen.getByRole("button", { name: /清除搜索/ });
+    act(() => { clearBtn.click(); });
+    expect(skillHeadings().length).toBe(3);
     expect(searchInput).toHaveValue("");
   });
 });
 
-describe("SkillsGrid — card rendering", () => {
-  it("skill card links to /skills/{slug}", () => {
-    render(<SkillsGrid initialSkills={FAKE_SKILLS} allEmojis={ALL_EMOJIS} />);
-    const avatarLink = screen.getByRole("link", { name: /avatar creator/i });
-    expect(avatarLink).toHaveAttribute("href", "/skills/avatar-creator");
+describe("SkillsClient — card rendering", () => {
+  it("shows correct install command per skill", () => {
+    render(<SkillsClient initialSkills={FAKE_SKILLS} />, { wrapper: TestWrapper });
+    expect(screen.getByText("claw install avatar-creator")).toBeInTheDocument();
+    expect(screen.getByText("claw install music-mixer")).toBeInTheDocument();
   });
 
-  it("skill card shows emoji fallback to 🦐 when iconEmoji is null", () => {
+  it("skill card shows '🦐' emoji fallback when iconEmoji is null", () => {
     const skillsWithNull = [
       {
         slug: "null-emoji-skill",
@@ -177,25 +169,24 @@ describe("SkillsGrid — card rendering", () => {
         createdAt: null,
       },
     ];
-    render(<SkillsGrid initialSkills={skillsWithNull} allEmojis={[]} />);
+    render(<SkillsClient initialSkills={skillsWithNull} />, { wrapper: TestWrapper });
     expect(screen.getByText("🦐")).toBeInTheDocument();
   });
 
-  it("skill card shows 'anonymous' when authorName is null", () => {
-    render(<SkillsGrid initialSkills={FAKE_SKILLS} allEmojis={ALL_EMOJIS} />);
-    const photoCard = screen.getByRole("link", { name: /photo filter/i });
-    expect(photoCard.textContent).toContain("by anonymous");
+  it("skill card shows '匿名' when authorName is null", () => {
+    render(<SkillsClient initialSkills={FAKE_SKILLS} />, { wrapper: TestWrapper });
+    expect(screen.getByText("匿名")).toBeInTheDocument();
   });
 
-  it("skill card shows star count", () => {
-    render(<SkillsGrid initialSkills={FAKE_SKILLS} allEmojis={ALL_EMOJIS} />);
-    const avatarCard = screen.getByRole("link", { name: /avatar creator/i });
-    expect(avatarCard.textContent).toContain("⭐ 3");
+  it("skill card shows star rating (statsStars / 100)", () => {
+    render(<SkillsClient initialSkills={FAKE_SKILLS} />, { wrapper: TestWrapper });
+    // Avatar Creator: statsStars=300 → 300/100 = 3.0; rendered as "⭐ 3.0" split across text nodes
+    const spans = screen.getAllByText((_, el) => el?.tagName === "SPAN" && el?.textContent?.trim() === "⭐ 3.0");
+    expect(spans.length).toBeGreaterThan(0);
   });
 
   it("renders correct number of skill cards", () => {
-    render(<SkillsGrid initialSkills={FAKE_SKILLS} allEmojis={ALL_EMOJIS} />);
-    const cards = screen.getAllByRole("link");
-    expect(cards.length).toBe(3);
+    render(<SkillsClient initialSkills={FAKE_SKILLS} />, { wrapper: TestWrapper });
+    expect(skillHeadings().length).toBe(3);
   });
 });

@@ -291,7 +291,7 @@ describe("POST /api/auth/sms/verify", () => {
     await POST_smsSend(makeRequest("POST", "/api/auth/sms/send", { body: { phone } }));
 
     const res = await POST_smsVerify(
-      makeRequest("POST", "/api/auth/sms/verify", { body: { phone, code: "000000" } })
+      makeRequest("POST", "/api/auth/sms/verify", { body: { phone, code: "999999" } })
     );
     expect(res.status).toBe(401);
   });

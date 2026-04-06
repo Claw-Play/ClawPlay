@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
 
@@ -9,6 +10,7 @@ type Tab = "email" | "phone" | "wechat";
 
 export function LoginForm() {
   const router = useRouter();
+  const t = useTranslations("auth");
   const [tab, setTab] = useState<Tab>("phone");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -40,7 +42,7 @@ export function LoginForm() {
   async function sendCode() {
     setError("");
     if (!/^1[3-9]\d{9}$/.test(phone)) {
-      setError("请输入有效的手机号。");
+      setError(t("invalid_phone"));
       return;
     }
     try {
@@ -50,10 +52,10 @@ export function LoginForm() {
         body: JSON.stringify({ phone }),
       });
       const data = await res.json();
-      if (!res.ok) { setError(data.error ?? "发送失败。"); return; }
+      if (!res.ok) { setError(data.error ?? t("send_failed")); return; }
       startCountdown();
     } catch {
-      setError("网络错误，请稍后重试。");
+      setError(t("network_error"));
     }
   }
 
@@ -68,11 +70,11 @@ export function LoginForm() {
         body: JSON.stringify({ email, password }),
       });
       const data = await res.json();
-      if (!res.ok) { setError(data.error ?? "登录失败。"); return; }
+      if (!res.ok) { setError(data.error ?? t("login_failed")); return; }
       router.push("/dashboard");
       router.refresh();
     } catch {
-      setError("网络错误，请稍后重试。");
+      setError(t("network_error"));
     } finally {
       setLoading(false);
     }
@@ -89,20 +91,20 @@ export function LoginForm() {
         body: JSON.stringify({ phone, code }),
       });
       const data = await res.json();
-      if (!res.ok) { setError(data.error ?? "验证失败。"); return; }
+      if (!res.ok) { setError(data.error ?? t("register_failed")); return; }
       router.push("/dashboard");
       router.refresh();
     } catch {
-      setError("网络错误，请稍后重试。");
+      setError(t("network_error"));
     } finally {
       setLoading(false);
     }
   }
 
   const tabs: { key: Tab; label: string }[] = [
-    { key: "phone", label: "手机号" },
-    { key: "wechat", label: "微信" },
-    { key: "email", label: "邮箱" },
+    { key: "phone", label: t("phone") },
+    { key: "wechat", label: t("wechat") },
+    { key: "email", label: t("email") },
   ];
 
   return (
@@ -112,15 +114,15 @@ export function LoginForm() {
         <div className="max-w-md text-center space-y-6">
           <div className="text-6xl mb-4">🦐</div>
           <h2 className="text-4xl font-extrabold font-heading text-[#564337] leading-tight">
-            欢迎回到 ClawPlay
+            {t("welcome_back")}
           </h2>
           <p className="text-lg text-[#7a6a5a] font-body leading-relaxed">
-            OpenClaw / QClaw / KClaw 等智能体的 Skill 共享平台。继续构建和分享精彩体验。
+            {t("welcome_back_desc")}
           </p>
           <div className="pt-4">
             <div className="inline-flex items-center gap-2 bg-[#fffdf7]/80 rounded-full px-5 py-2.5 text-sm text-[#7a6a5a] border border-[#e8dfc8] font-body">
               <span>🛡️</span>
-              <span>API 密钥加密存储，Skill 开发者无法获取</span>
+              <span>{t("api_key_secure")}</span>
             </div>
           </div>
         </div>
@@ -137,8 +139,8 @@ export function LoginForm() {
 
           <div className="bg-[#fffdf7] card-radius p-8 md:p-10 border border-[#e8dfc8] card-shadow space-y-6">
             <div className="text-center space-y-1">
-              <h1 className="text-2xl md:text-3xl font-bold font-heading text-[#564337]">登录</h1>
-              <p className="text-[#7a6a5a] text-sm font-body">登录你的 ClawPlay 账号</p>
+              <h1 className="text-2xl md:text-3xl font-bold font-heading text-[#564337]">{t("login")}</h1>
+              <p className="text-[#7a6a5a] text-sm font-body">{t("login_subtitle")}</p>
             </div>
 
             {/* Tab switcher */}
@@ -167,7 +169,7 @@ export function LoginForm() {
             {tab === "email" && (
               <form onSubmit={handleEmailLogin} className="space-y-4">
                 <Input
-                  label="邮箱"
+                  label={t("email")}
                   type="email"
                   placeholder="you@example.com"
                   value={email}
@@ -177,7 +179,7 @@ export function LoginForm() {
                 />
                 <div className="relative">
                   <Input
-                    label="密码"
+                    label={t("password")}
                     type="password"
                     placeholder="••••••••"
                     value={password}
@@ -187,7 +189,7 @@ export function LoginForm() {
                   />
                 </div>
                 <Button type="submit" className="w-full" loading={loading}>
-                  登录
+                  {t("login_btn")}
                 </Button>
               </form>
             )}
@@ -195,7 +197,7 @@ export function LoginForm() {
             {tab === "phone" && (
               <form onSubmit={handlePhoneLogin} className="space-y-4">
                 <Input
-                  label="手机号"
+                  label={t("phone")}
                   type="tel"
                   placeholder="138 0000 0000"
                   value={phone}
@@ -205,13 +207,13 @@ export function LoginForm() {
                 />
                 <div>
                   <label className="block text-sm font-semibold text-[#564337] mb-1.5 font-body">
-                    验证码
+                    {t("verification_code")}
                   </label>
                   <div className="flex gap-2">
                     <input
                       type="text"
                       inputMode="numeric"
-                      placeholder="6位验证码"
+                      placeholder={t("code_placeholder")}
                       value={code}
                       onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
                       required
@@ -223,15 +225,15 @@ export function LoginForm() {
                       disabled={countdown > 0}
                       className="shrink-0 px-4 py-2.5 rounded-[20px] text-sm font-semibold border border-[#e8dfc8] text-[#a23f00] bg-[#faf3d0] hover:bg-[#f5ecb8] disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-body"
                     >
-                      {countdown > 0 ? `${countdown}s` : "获取验证码"}
+                      {countdown > 0 ? `${countdown}s` : t("get_code")}
                     </button>
                   </div>
                 </div>
                 <Button type="submit" className="w-full" loading={loading}>
-                  登录 / 注册
+                  {t("login_register_btn")}
                 </Button>
                 <p className="text-xs text-center text-[#7a6a5a] font-body">
-                  首次登录将自动注册账号
+                  {t("first_login_auto_register")}
                 </p>
               </form>
             )}
@@ -245,21 +247,21 @@ export function LoginForm() {
                   <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current" aria-hidden="true">
                     <path d="M8.691 2.188C3.891 2.188 0 5.476 0 9.53c0 2.212 1.17 4.203 3.002 5.55a.59.59 0 0 1 .213.665l-.39 1.48c-.019.07-.048.141-.048.213 0 .163.13.295.29.295a.326.326 0 0 0 .167-.054l1.903-1.114a.864.864 0 0 1 .717-.098 10.16 10.16 0 0 0 2.837.403c.276 0 .543-.027.811-.05-.857-2.578.157-4.972 1.932-6.446 1.703-1.415 3.882-1.98 5.853-1.838-.576-3.583-3.825-6.348-7.596-6.348zM5.785 5.991c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 0 1-1.162 1.178A1.17 1.17 0 0 1 4.623 7.17c0-.651.52-1.18 1.162-1.18zm5.813 0c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 0 1-1.162 1.178 1.17 1.17 0 0 1-1.162-1.178c0-.651.52-1.18 1.162-1.18zm5.34 2.867c-1.797-.052-3.746.512-5.28 1.786-1.72 1.428-2.687 3.72-1.78 6.22.942 2.453 3.666 4.229 6.884 4.229.826 0 1.622-.12 2.361-.336a.722.722 0 0 1 .598.082l1.584.926a.272.272 0 0 0 .14.047c.134 0 .24-.111.24-.247 0-.06-.023-.12-.038-.177l-.327-1.233a.582.582 0 0 1-.023-.156.49.49 0 0 1 .201-.398C23.024 18.48 24 16.82 24 14.98c0-3.21-2.931-5.837-7.062-6.122zm-3.74 2.704c.532 0 .963.441.963.983a.963.963 0 0 1-.963.983.963.963 0 0 1-.963-.983c0-.542.43-.983.963-.983zm4.848 0c.533 0 .963.441.963.983a.963.963 0 0 1-.963.983.963.963 0 0 1-.963-.983c0-.542.43-.983.963-.983z"/>
                   </svg>
-                  微信一键登录
+                  {t("wechat_login")}
                 </a>
                 <p className="text-xs text-center text-[#7a6a5a] font-body">
-                  需要在微信内置浏览器中打开，或扫码后在微信中完成授权
+                  {t("wechat_login_desc")}
                 </p>
               </div>
             )}
 
             <p className="text-center text-sm text-[#7a6a5a] font-body">
-              还没有账号？{" "}
+              {t("no_account")}{" "}
               <Link
                 href="/register"
                 className="font-semibold text-[#a23f00] hover:text-[#c45000] underline transition-colors"
               >
-                注册
+                {t("go_register")}
               </Link>
             </p>
           </div>

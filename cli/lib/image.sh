@@ -66,7 +66,7 @@ _image_generate() {
     exit 1
   fi
 
-  local out_file="${output:-$(mktemp /tmp/clawplay_image_XXXXXX.png)}"
+  local out_file="${output:-$(mktemp)}"
   local api_url="${CLAWPLAY_API_URL:-https://api.clawplay.example.com}"
 
   # Build JSON body

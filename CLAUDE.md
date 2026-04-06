@@ -244,6 +244,21 @@ All abilities route through a provider abstraction layer in `web/lib/providers/`
 - Gemini: base64 inline; `gemini-3.1-flash-image-preview` for images; inline media < 20MB total request body
 - Rate limit (429) from any provider: **do NOT deduct quota** (fail-open, no double-penalty)
 
+## Common Commands (Makefile)
+
+Run from the project root:
+
+| Command | Purpose |
+|---------|---------|
+| `make dev` | Clean restart — kills port 3000, clears `.next` cache, starts dev server |
+| `make restart` | Fast restart — kills process only, no cache clear |
+| `make build` | Production build (`web/`) |
+| `make test` | Unit tests (Vitest) |
+| `make e2e` | Playwright E2E tests (requires dev server) |
+| `make clean` | Full clean — removes `.next` + `node_modules`, reinstalls |
+
+> Use `make dev` whenever you see "missing required error components" or stale bundle errors.
+
 ## Key Files to Read First
 
 - `web/lib/db/schema.ts` — All table definitions
@@ -296,6 +311,8 @@ All abilities route through a provider abstraction layer in `web/lib/providers/`
 - **No real network calls in unit tests**: Mock Upstash Redis, mock Volcengine/Gemini API responses
 - **E2E tests**: Run against live dev server (`localhost:3000`); use `e2e/helpers/auth.ts` for `loginAs` + `registerUser` helpers
 - **SMS/WeChat can be mocked**: These routes exist but UI wiring and full OAuth flow may not be complete; test with mock responses
+- **CLI unit tests**: Pure bash, zero external dependencies; `curl` is mocked via function override in isolated subprocesses. Run with `bash cli/tests/run-all.sh` or via `make test`. Test files live in `cli/tests/` — one file per lib (`token`, `api`, `image`, `llm`, `vision`, `install`); shared harness in `cli/tests/helpers.sh`
+- **`make test`** runs both web unit tests (`cd web && npm test`) and CLI bash tests in sequence
 
 ## Bilingual Documentation Convention
 
@@ -327,4 +344,7 @@ When adding features, update both README files and keep them in sync.
 | 2026-04-06 | 分语言 README | GitHub 默认展示英文；中文用户通过 README.zh.md 访问 |
 | 2026-04-06 | Dashboard 页面改版 | 全宽布局 + 左侧边栏，与 Figma 设计对齐；去掉占位符卡片（Community Status / Auto-Refill / 2FA / Cloud Sync）；Token 生成时间改为从 DB 读取 |
 | 2026-04-06 | Skills 技能库页面改版 | Hero 标题 + 搜索栏 + 分类筛选 + 横向卡片布局，与 Figma 设计对齐；(app)/layout.tsx 提供 Skills 路由专用导航壳（顶部导航 + 左侧边栏） |
-| 2026-04-06 | Phase 6 国际化版本 | GitHub OAuth、Stripe、多区域部署、海外独立 Skill 社区 |
+| 2026-04-06 | Phase 2 i18n | next-intl v4 + middleware cookie locale detection; NEXT_LOCALE env var for CN/overseas default; localePrefix: never (clean URLs); zh default |
+| 2026-04-06 | CLI bash 单元测试 | 纯 bash + curl mock（函数覆盖），零外部依赖；84 个用例覆盖全部 lib（token/api/image/llm/vision/install）；`make test` 同时跑 web + CLI |
+| 2026-04-06 | mktemp 不带扩展名 | macOS BSD mktemp 要求 X 在末尾，带 .png/.zip 后缀时返回字面量路径；image.sh / install.sh 统一改用 `mktemp` |
+| 2026-04-06 | Phase 6 并入 Phase 2 | 原 Phase 6（GitHub OAuth / Stripe / 多区域部署 / 英文社区）并入 Phase 2；Phase 2 现为"社区与生态 + 国际化"；原 Phase 3/4/5 序号前移 |

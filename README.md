@@ -221,11 +221,10 @@ pnpm test:all
 | Phase | Goal | Status |
 |-------|------|--------|
 | Phase 1 | Core infrastructure (CLI, Web, Relay, Token system) | ✅ Done |
-| Phase 2 | Community & ecosystem (ClawHub integration, security scanning, install.sh) | 🔲 Planned |
-| Phase 3 | Monetization & scale (Token Plans, multi-provider failover) | 🔲 Planned |
-| Phase 4 | Social & UX (sharing, reviews, notification center) | 🔲 Planned |
-| Phase 5 | Advanced AI (Skill recovery, IP memory injection) | 🔲 Planned |
-| Phase 6 | International edition (GitHub OAuth, Stripe, multi-region deploy) | 🔲 Planned |
+| Phase 2 | Web launch + Skill ecosystem (M0: production deploy → M6: international expansion) | 🔲 In Progress |
+| Phase 3 | Social & UX (sharing, reviews, Featured carousel, notification center) | 🔲 Planned |
+| Phase 4 | Monetization & scale (Token Plans, multi-provider failover) | 🔲 Planned |
+| Phase 5 | Advanced AI — dual-track: Skill recovery + IP memory knowledge base | 🔲 Planned |
 
 See [ROADMAP.md](./ROADMAP.md) for full details.
 

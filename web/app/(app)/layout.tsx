@@ -1,21 +1,8 @@
 "use client";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
-
-const NAV_TOP = [
-  { label: "首页", href: "/" },
-  { label: "探索", href: "/skills" },
-  { label: "技能库", href: "/skills" },
-  { label: "社区", href: "/community" },
-];
-
-const NAV_SIDEBAR = [
-  { label: "全部技能", href: "/skills", icon: "grid" },
-  { label: "热门趋势", href: "/skills?sort=trending", icon: "trending" },
-  { label: "最新上线", href: "/skills?sort=new", icon: "new" },
-  { label: "我的收藏", href: "/dashboard", icon: "bookmark" },
-  { label: "设置", href: "/dashboard", icon: "settings" },
-];
+import { useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 
 function NavIcon({ name }: { name: string }) {
   if (name === "grid") return <span className="inline-block w-4 text-center text-base">⊞</span>;
@@ -28,9 +15,44 @@ function NavIcon({ name }: { name: string }) {
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() ?? "";
+  const router = useRouter();
+  const t = useTranslations("nav");
+  const tCommon = useTranslations("common");
   const isSkillsRoute = pathname.startsWith("/skills");
+  const [user, setUser] = useState<{ name?: string } | null>(null);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const sidebarItems = NAV_SIDEBAR.map((item) => ({
+  useEffect(() => {
+    fetch("/api/user/me")
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => { if (data) setUser(data.user); })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false);
+      }
+    }
+    if (dropdownOpen) document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [dropdownOpen]);
+
+  const navTop = [
+    { label: t("home"), href: "/" },
+    { label: t("skill_lib"), href: "/skills" },
+    { label: t("community"), href: "/community" },
+  ];
+
+  const sidebarItems = [
+    { label: t("all_skills"), href: "/skills", icon: "grid" as const },
+    { label: t("trending"), href: "/skills?sort=trending", icon: "trending" as const },
+    { label: t("new"), href: "/skills?sort=new", icon: "new" as const },
+    { label: t("favorites"), href: "/dashboard", icon: "bookmark" as const },
+    { label: t("settings"), href: "/dashboard", icon: "settings" as const },
+  ].map((item) => ({
     ...item,
     active:
       item.href === "/skills"
@@ -38,12 +60,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         : false,
   }));
 
+  const avatarInitial = user?.name?.[0]?.toUpperCase() ?? "?";
+
   return (
     <div className="min-h-screen bg-[#fefae0]">
-      {/* Top Navigation Bar */}
       <header className="bg-[#fefae0] border-b border-[#e8dfc8] sticky top-0 z-50">
         <div className="max-w-[1536px] mx-auto px-8 py-4 flex items-center justify-between">
-          {/* Logo */}
           <Link href="/" className="flex items-center gap-2 group">
             <span className="text-2xl">🦐</span>
             <span className="text-xl font-bold font-heading text-[#a23f00] group-hover:text-[#c45000] transition-colors">
@@ -51,13 +73,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </span>
           </Link>
 
-          {/* Nav Links */}
           <nav className="flex items-center gap-8">
-            {NAV_TOP.map(({ label, href }) => {
+            {navTop.map(({ label, href }) => {
               const active =
-                label === "技能库"
+                label === t("skill_lib")
                   ? pathname.startsWith("/skills")
-                  : false;
+                  : pathname === href;
               return (
                 <Link
                   key={label}
@@ -74,35 +95,71 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             })}
           </nav>
 
-          {/* Actions */}
           <div className="flex items-center gap-4">
-            <Link
-              href="/submit"
-              className="px-6 py-2 bg-gradient-to-r from-[#a23f00] to-[#fa7025] hover:opacity-90 text-white text-sm font-semibold rounded-full shadow-[0_6px_24px_rgba(162,63,0,0.2)] transition-all font-heading"
-            >
-              添加技能
-            </Link>
-            <div className="w-10 h-10 rounded-full bg-[#faf3d0] border-2 border-[#e8dfc8] flex items-center justify-center text-lg">
-              🦐
+            <div className="relative" ref={dropdownRef}>
+              <button
+                onClick={() => setDropdownOpen((o) => !o)}
+                className="w-10 h-10 rounded-full bg-[#faf3d0] border-2 border-[#e8dfc8] flex items-center justify-center text-sm font-bold font-heading text-[#586330] hover:border-[#a23f00] transition-all cursor-pointer"
+                title={tCommon("dashboard")}
+              >
+                {avatarInitial}
+              </button>
+
+              {dropdownOpen && (
+                <div className="absolute right-0 top-full mt-2 w-52 bg-white rounded-[24px] shadow-[0_8px_32px_rgba(86,67,55,0.12)] border border-[#e8dfc8] overflow-hidden z-50">
+                  <div className="px-4 py-3 border-b border-[#ede9cf]">
+                    <p className="text-sm font-semibold text-[#1d1c0d] font-body truncate">
+                      {user?.name || tCommon("anonymous")}
+                    </p>
+                    <p className="text-xs text-[#7a6a5a] font-body mt-0.5">{t("account_settings")}</p>
+                  </div>
+                  <div className="py-2">
+                    <Link
+                      href="/dashboard"
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-[#564337] hover:bg-[#faf3d0] font-body transition-colors"
+                      onClick={() => setDropdownOpen(false)}
+                    >
+                      <span className="text-base">⚙</span> {tCommon("dashboard")}
+                    </Link>
+                    <Link
+                      href="/submit"
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-[#564337] hover:bg-[#faf3d0] font-body transition-colors"
+                      onClick={() => setDropdownOpen(false)}
+                    >
+                      <span className="text-base">✦</span> {tCommon("submit")}
+                    </Link>
+                  </div>
+                  <div className="border-t border-[#ede9cf] py-2">
+                    <button
+                      onClick={async () => {
+                        setDropdownOpen(false);
+                        await fetch("/api/auth/logout", { method: "POST" });
+                        router.push("/");
+                        router.refresh();
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 font-body transition-colors text-left"
+                    >
+                      <span className="text-base">⊘</span> {t("logout")}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
       </header>
 
       <div className="flex">
-        {/* Left Sidebar — shown only on Skills routes */}
         {isSkillsRoute && (
           <aside className="w-[256px] shrink-0 sticky top-[73px] h-[calc(100vh-73px)] overflow-y-auto">
             <div className="bg-[#fefae0] p-4 flex flex-col gap-1">
-              {/* Sidebar header */}
               <div className="px-3 pb-4 border-b border-[#e8dfc8]">
-                <p className="text-base font-bold text-[#a23f00] font-heading">技能库</p>
+                <p className="text-base font-bold text-[#a23f00] font-heading">{t("skill_lib")}</p>
                 <p className="text-xs text-[#564337] opacity-60 font-body mt-0.5">
-                  发现精选 AI 行为
+                  {t("discover_ai_behaviors")}
                 </p>
               </div>
 
-              {/* Nav items */}
               <div className="pt-2 flex flex-col gap-1">
                 {sidebarItems.map(({ label, href, icon, active }) => (
                   <Link
@@ -120,20 +177,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 ))}
               </div>
 
-              {/* Join Workshop — bottom */}
               <div className="mt-auto pt-4 border-t border-[#e8dfc8]">
                 <Link
                   href="/submit"
                   className="block w-full text-center py-3 rounded-full bg-[#d8e6a6] text-[#5c6834] text-sm font-bold font-heading hover:bg-[#c8d896] transition-colors"
                 >
-                  加入工作坊
+                  {t("join_workshop")}
                 </Link>
               </div>
             </div>
           </aside>
         )}
 
-        {/* Main Content */}
         <main className="flex-1 min-w-0">
           {children}
         </main>

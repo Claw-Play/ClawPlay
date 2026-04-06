@@ -36,6 +36,7 @@ USAGE:
 
 COMMANDS:
   setup             - Interactive setup: paste your token, configure API URL
+  install <slug>   - Install a skill from the ClawPlay registry
   image generate   - Generate an image via ClawPlay relay
   vision analyze   - Analyze an image (describe / detect / segment)
   whoami           - Show current user info from CLAWPLAY_TOKEN
@@ -44,6 +45,8 @@ COMMANDS:
 EXAMPLES:
   clawplay setup
   clawplay whoami
+  clawplay install my-skill
+  clawplay install my-skill --version 1.2.0
   clawplay image generate --prompt "a cyberpunk shrimp"
   clawplay image generate --prompt "change style" --ref ./photo.png --size 9:16
   clawplay vision analyze --image ./photo.jpg --prompt "描述这张图片"
@@ -142,6 +145,12 @@ case "${1:-help}" in
     source "${CLI_DIR}/lib/llm.sh"
     shift
     cmd_llm "$@"
+    ;;
+  install)
+    check_deps
+    shift
+    source "${CLI_DIR}/lib/install.sh"
+    cmd_install "$@"
     ;;
   skill)
     shift

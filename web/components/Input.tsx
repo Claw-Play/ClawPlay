@@ -24,7 +24,7 @@ export function Input({ label, error, className = "", id: providedId, bg, ...pro
           w-full px-8 py-3.5 input-radius border text-[#564337]
           ${bg ?? "bg-white"} placeholder-[#a89888]
           focus:outline-none focus:ring-2 focus:ring-[#a23f00]/30 focus:border-[#a23f00]
-          transition-colors
+          transition-colors disabled:opacity-50 disabled:cursor-not-allowed
           ${error ? "border-red-400 focus:ring-red-300" : "border-[#e0d4bc]"}
           ${className}
         `}

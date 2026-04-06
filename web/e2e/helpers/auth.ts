@@ -12,11 +12,17 @@ export async function loginAs(page: Page, email: string, password: string) {
   await page.getByLabel("密码").fill(password);
   await page.keyboard.press("Enter");
   await page.waitForURL("/dashboard", { timeout: 15_000 });
-  // Wait for dashboard client component to fetch + render user data
-  await page.waitForFunction(
-    () => document.body.innerText.includes("USR-") || document.body.innerText.includes("Generate Token"),
-    { timeout: 15_000 }
-  );
+
+  // SameSite=Strict cookie may not be immediately available for fetch.
+  // Retry /api/user/me until it returns 200 (max 3 attempts, 1s apart).
+  for (let i = 0; i < 3; i++) {
+    const resp = await page.evaluate(async () => {
+      const r = await fetch("/api/user/me");
+      return { ok: r.ok, status: r.status };
+    });
+    if (resp.ok) return;
+    await page.waitForTimeout(1_000);
+  }
 }
 
 /**

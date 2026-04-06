@@ -222,11 +222,10 @@ pnpm test:all
 | 阶段 | 目标 | 状态 |
 |------|------|------|
 | Phase 1 | 核心基础设施（CLI、Web、Relay、Token 系统） | ✅ 已完成 |
-| Phase 2 | 社区与生态（ClawHub 整合、安全扫描、install.sh） | 🔲 计划中 |
-| Phase 3 | 商业化与规模化（Token Plan、多 Provider 故障转移） | 🔲 计划中 |
-| Phase 4 | 社交与用户体验（分享、评分、通知中心） | 🔲 计划中 |
-| Phase 5 | 高级 AI 能力（Skill 中断恢复、IP 记忆注入） | 🔲 计划中 |
-| Phase 6 | 国际化版本（GitHub OAuth、Stripe、多区域部署） | 🔲 计划中 |
+| Phase 2 | Web 正式上线 + Skill 生态（M0：正式部署 → M6：出海准备） | 🔲 进行中 |
+| Phase 3 | 社交与用户体验（分享、评分、Featured 轮播、通知中心） | 🔲 计划中 |
+| Phase 4 | 商业化与规模化（Token Plan、多 Provider 故障转移） | 🔲 计划中 |
+| Phase 5 | 高级 AI 能力 — 双线深化：Skill 中断恢复 + IP 记忆知识库 | 🔲 计划中 |
 
 完整路线图见 [ROADMAP.md](./ROADMAP.md)。
 

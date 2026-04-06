@@ -1,16 +1,22 @@
+import createMiddleware from "next-intl/middleware";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-// Locale detection — read from cookie, fallback to env default
-// Note: we don't use next-intl's createMiddleware here because it interferes
-// with routing when localePrefix is "never". Instead, locale is determined at
-// build/runtime via NEXT_LOCALE env var and read in app/layout.tsx.
+const intlMiddleware = createMiddleware({
+  locales: ["zh", "en"],
+  defaultLocale: (process.env.NEXT_LOCALE as "zh" | "en") || "zh",
+  localePrefix: "never",
+});
+
 const PROTECTED_PATHS = ["/dashboard", "/submit"];
 
 export function middleware(request: NextRequest): Response {
   const { pathname } = request.nextUrl;
 
-  // Auth protection
+  // locale detection + cookie set
+  const response = intlMiddleware(request) as NextResponse;
+
+  // auth protection
   const isProtected = PROTECTED_PATHS.some((p) => pathname.startsWith(p));
   if (isProtected) {
     const token = request.cookies.get("clawplay_token")?.value;
@@ -22,7 +28,7 @@ export function middleware(request: NextRequest): Response {
     }
   }
 
-  return NextResponse.next();
+  return response;
 }
 
 export const config = {

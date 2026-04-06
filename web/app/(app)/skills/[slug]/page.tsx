@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { skills, skillVersions } from "@/lib/db/schema";
 import { eq, and, isNull, desc } from "drizzle-orm";
 import { getAuthFromCookies } from "@/lib/auth";
+import { getTranslations } from "next-intl/server";
 import { QuickInstallCard } from "@/components/QuickInstallCard";
 
 export async function generateMetadata({ params }: { params: { slug: string } }) {
@@ -22,6 +23,8 @@ export default async function SkillDetailPage({
   params: { slug: string };
 }) {
   const auth = await getAuthFromCookies();
+  const t = await getTranslations("skill_detail");
+  const tCommon = await getTranslations("common");
 
   const skill = await db.query.skills.findFirst({
     where: and(eq(skills.slug, params.slug), isNull(skills.deletedAt)),
@@ -53,7 +56,7 @@ export default async function SkillDetailPage({
       <div className="max-w-5xl mx-auto px-6 py-10">
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-sm text-[#7a6a5a] mb-8 font-body">
-          <Link href="/skills" className="hover:text-[#a23f00]">Skills</Link>
+          <Link href="/skills" className="hover:text-[#a23f00]">{t("breadcrumb_skills")}</Link>
           <span>/</span>
           <span className="font-semibold text-[#564337] truncate">{skill.name}</span>
         </div>
@@ -68,12 +71,12 @@ export default async function SkillDetailPage({
                 <div>
                   <h1 className="text-2xl font-bold font-heading text-[#564337]">{skill.name}</h1>
                   <p className="text-[#7a6a5a] mt-1 font-body">
-                    by <span className="font-semibold">{skill.authorName || "anonymous"}</span>
+                    {tCommon("by")} <span className="font-semibold">{skill.authorName || tCommon("anonymous")}</span>
                     {" · "}
                     <span className="text-[#fa7025]">v{latestVersion?.version ?? "?"}</span>
                   </p>
                   <p className="text-[#7a6a5a] text-sm mt-2 font-body">
-                    {skill.summary || "No description."}
+                    {skill.summary || tCommon("no_description")}
                   </p>
                 </div>
               </div>
@@ -81,7 +84,7 @@ export default async function SkillDetailPage({
               {/* Status badge */}
               <div className="flex items-center gap-2">
                 <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#586330]/10 text-[#586330] text-xs font-semibold rounded-full font-body">
-                  ✅ Approved
+                  ✅ {tCommon("approved")}
                 </span>
                 {skill.statsStars > 0 && (
                   <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#faf3d0] text-[#7a6a5a] text-xs font-medium rounded-full font-body">
@@ -96,7 +99,7 @@ export default async function SkillDetailPage({
               parsedMetadata?.requires) && (
               <div className="bg-[#fffdf7] card-radius p-6 border border-[#e8dfc8] card-shadow">
                 <h2 className="font-semibold font-heading text-[#564337] mb-4">
-                  Environment Dependencies
+                  {t("env_dependencies")}
                 </h2>
                 <div className="space-y-3">
                   {(() => {
@@ -122,7 +125,7 @@ export default async function SkillDetailPage({
                         <div>
                           <p className="text-sm font-semibold text-[#564337] font-heading">{dep.label}</p>
                           <p className="text-xs text-[#a89888] font-body">
-                            {dep.type === "env" ? "Environment variable" : "CLI tool"}
+                            {dep.type === "env" ? t("env_var") : t("cli_tool")}
                           </p>
                         </div>
                       </div>
@@ -134,7 +137,7 @@ export default async function SkillDetailPage({
 
             {/* Version history */}
             <div className="bg-[#fffdf7] card-radius p-6 border border-[#e8dfc8] card-shadow">
-              <h2 className="font-semibold font-heading text-[#564337] mb-4">Version History</h2>
+              <h2 className="font-semibold font-heading text-[#564337] mb-4">{t("version_history")}</h2>
               <div className="space-y-3">
                 {versions.map((v) => (
                   <div
@@ -148,7 +151,7 @@ export default async function SkillDetailPage({
                       <p className="font-semibold text-[#564337] font-heading">
                         v{v.version}
                         {v.id === latestVersion?.id && (
-                          <span className="ml-2 text-xs text-[#7a6a5a] font-body">latest</span>
+                          <span className="ml-2 text-xs text-[#7a6a5a] font-body">{tCommon("latest")}</span>
                         )}
                       </p>
                       <p className="text-[#7a6a5a] font-body">{v.changelog}</p>

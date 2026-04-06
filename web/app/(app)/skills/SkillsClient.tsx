@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import Link from "next/link";
+import { useTranslations } from "next-intl";
 
 interface Skill {
   slug: string;
@@ -15,15 +15,6 @@ interface Skill {
 interface SkillsClientProps {
   initialSkills: Skill[];
 }
-
-const CATEGORIES = [
-  { label: "全部", emoji: "✨", filter: "" },
-  { label: "艺术", emoji: "🎨", filter: "🎨" },
-  { label: "写作", emoji: "📝", filter: "✍️" },
-  { label: "游戏", emoji: "🎮", filter: "🎮" },
-  { label: "工具", emoji: "🛠️", filter: "🛠️" },
-  { label: "健康", emoji: "🌿", filter: "🌿" },
-];
 
 function CopyIcon() {
   return (
@@ -44,9 +35,19 @@ function SearchIcon() {
 }
 
 export function SkillsClient({ initialSkills }: SkillsClientProps) {
+  const t = useTranslations("skills");
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState("");
   const [copiedSlug, setCopiedSlug] = useState<string | null>(null);
+
+  const categories = [
+    { label: t("category_all"), emoji: "✨", filter: "" },
+    { label: t("category_art"), emoji: "🎨", filter: "🎨" },
+    { label: t("category_write"), emoji: "📝", filter: "✍️" },
+    { label: t("category_game"), emoji: "🎮", filter: "🎮" },
+    { label: t("category_tool"), emoji: "🛠️", filter: "🛠️" },
+    { label: t("category_health"), emoji: "🌿", filter: "🌿" },
+  ];
 
   const filtered = initialSkills
     .filter((s) => {
@@ -76,10 +77,10 @@ export function SkillsClient({ initialSkills }: SkillsClientProps) {
         {/* Hero Header */}
         <div className="text-center pt-16 pb-8">
           <h1 className="text-6xl md:text-7xl font-extrabold font-heading text-[#1d1c0d] tracking-tight leading-[1.05] mb-4">
-            技能库
+            {t("title")}
           </h1>
           <p className="text-lg text-[#564337] font-body max-w-2xl mx-auto leading-relaxed">
-            发现精选 AI 行为、创作工具和社区制作的 Skills，为你的 ClawPlay 智能体赋能。
+            {t("subtitle")}
           </p>
         </div>
 
@@ -90,7 +91,7 @@ export function SkillsClient({ initialSkills }: SkillsClientProps) {
           </div>
           <input
             type="text"
-            placeholder="搜索行为、工具或创作者..."
+            placeholder={t("search_placeholder")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full h-14 pl-16 pr-6 rounded-2xl bg-[#ede9cf] border-2 border-transparent text-[#564337] placeholder-[rgba(86,67,55,0.6)] text-base font-body focus:outline-none focus:border-[#a23f00] transition-all shadow-[0_1px_2px_rgba(0,0,0,0.05)]"
@@ -99,7 +100,7 @@ export function SkillsClient({ initialSkills }: SkillsClientProps) {
 
         {/* Category Filters — centered row */}
         <div className="flex flex-wrap gap-3 justify-center mb-10">
-          {CATEGORIES.map(({ label, emoji, filter }) => (
+          {categories.map(({ label, emoji, filter }) => (
             <button
               key={filter}
               onClick={() => setActiveCategory(filter)}
@@ -120,17 +121,17 @@ export function SkillsClient({ initialSkills }: SkillsClientProps) {
           <div className="text-center py-24 space-y-4">
             <div className="text-6xl">{activeCategory || "🦐"}</div>
             <h2 className="text-2xl font-bold text-[#564337] font-heading">
-              {search ? `未找到「${search}」相关结果` : "暂无该分类技能"}
+              {search ? t("no_results", { query: search }) : t("no_category")}
             </h2>
             <p className="text-[#7a6a5a] font-body">
-              {search ? "换个关键词试试吧。" : "成为第一个提交者！"}
+              {search ? t("try_different") : t("be_first")}
             </p>
             {search && (
               <button
                 onClick={() => setSearch("")}
                 className="mt-2 px-6 py-2 rounded-full bg-[#ede9cf] text-[#5c6834] text-sm font-semibold font-body hover:bg-[#ddd8b8] transition-all"
               >
-                清除搜索
+                {t("clear_search")}
               </button>
             )}
           </div>
@@ -147,23 +148,6 @@ export function SkillsClient({ initialSkills }: SkillsClientProps) {
           </div>
         )}
       </div>
-
-      {/* Footer */}
-      <footer className="bg-[#ede9cf] rounded-tl-[48px] rounded-tr-[48px]">
-        <div className="max-w-[1280px] mx-auto px-8 py-12 flex flex-col md:flex-row items-center justify-between gap-6">
-          <div>
-            <p className="text-xl font-bold font-heading text-[#a23f00]">ClawPlay</p>
-          </div>
-          <div className="flex items-center gap-8">
-            <Link href="/" className="text-sm text-[#586330] font-body hover:text-[#a23f00] transition-colors">首页</Link>
-            <Link href="/skills" className="text-sm text-[#586330] font-body hover:text-[#a23f00] transition-colors">技能库</Link>
-            <Link href="/submit" className="text-sm text-[#586330] font-body hover:text-[#a23f00] transition-colors">提交 Skill</Link>
-          </div>
-          <p className="text-sm text-[#586330] font-body">
-            © 2024 ClawPlay AI Community
-          </p>
-        </div>
-      </footer>
     </div>
   );
 }
@@ -177,6 +161,8 @@ function SkillCard({
   copied: boolean;
   onCopy: () => void;
 }) {
+  const t = useTranslations("skills");
+  const tCommon = useTranslations("common");
   const installCmd = `claw install ${skill.slug}`;
   const stars = (skill.statsStars ?? 0) / 100;
 
@@ -196,7 +182,7 @@ function SkillCard({
 
         {/* Description */}
         <p className="text-sm text-[#564337] font-body leading-relaxed line-clamp-3 flex-1">
-          {skill.summary || "暂无描述。"}
+          {skill.summary || tCommon("no_description")}
         </p>
 
         {/* Author + stats */}
@@ -206,7 +192,7 @@ function SkillCard({
               {skill.authorName ? skill.authorName[0].toUpperCase() : "?"}
             </div>
             <span className="text-xs text-[#564337] font-body truncate max-w-[100px]">
-              {skill.authorName || "匿名创作者"}
+              {skill.authorName || tCommon("anonymous")}
             </span>
           </div>
           <div className="flex items-center gap-3">
@@ -226,10 +212,10 @@ function SkillCard({
           <button
             onClick={onCopy}
             className="flex-shrink-0 text-[#fefae0] hover:text-white transition-colors"
-            title="复制命令"
+            title={t("copy_command")}
           >
             {copied ? (
-              <span className="text-xs font-bold">✓</span>
+              <span className="text-xs font-bold">{t("skill_copied")}</span>
             ) : (
               <CopyIcon />
             )}
