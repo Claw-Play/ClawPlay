@@ -1,0 +1,86 @@
+name: Bug Report
+description: Report something that is broken or not working as expected
+title: "[Bug] "
+labels: ["bug"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Bug Report
+
+        Thanks for taking the time to fill out this bug report!
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Bug Severity
+      description: How severe is this bug?
+      options:
+        - Critical (crashes, data loss, security vulnerability)
+        - High (major feature broken, workarounds difficult)
+        - Medium (feature partially broken, workaround exists)
+        - Low (minor issue, cosmetic)
+      default: 0
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: A clear description of the bug. What happened vs what you expected?
+      placeholder: |
+        **What happened:**
+        ...
+
+        **What I expected:**
+        ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: Exact steps to reproduce the bug
+      placeholder: |
+        1. Go to '...'
+        2. Click on '...'
+        3. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, Node.js version, CLI version, etc.
+      placeholder: |
+        - OS: macOS 14.4
+        - Node.js: v20.10.0
+        - pnpm: 9.15.9
+        - CLI version: (run `clawplay --version`)
+        - Web URL: https://...
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant Logs
+      description: Terminal output, browser console errors, server logs, etc.
+      placeholder: |
+        ```
+        [clawplay image] Error: ...
+        ```
+    validations:
+      required: false
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional Context
+      description: Anything else that might be relevant
+    validations:
+      required: false
