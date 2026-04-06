@@ -1,0 +1,52 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build outputs
+.next/
+out/
+dist/
+
+# Data
+data/
+*.db
+*.db-wal
+*.db-shm
+
+# Environment
+.env
+.env.local
+.env.production
+
+# Claude Code (memory, plans, session context)
+.claude/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Test
+coverage/
+playwright-report/
+test-results/
+.gstack/
+
+# Docs
+docs/providers/
+TODOS.md
+
+# Example Skills
+example-skills/

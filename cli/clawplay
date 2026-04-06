@@ -1,0 +1,159 @@
+#!/usr/bin/env bash
+# clawplay — Unified multimodal CLI for ClawPlay
+# Usage: clawplay <command> [options]
+
+set -euo pipefail
+
+CLAWPLAY_VERSION="0.1.0"
+CLAWPLAY_API_URL="${CLAWPLAY_API_URL:-https://api.clawplay.example.com}"
+CLAWPLAY_TOKEN="${CLAWPLAY_TOKEN:-}"
+CLI_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+info() { echo -e "${GREEN}[clawplay]${NC} $*"; }
+warn() { echo -e "${YELLOW}[clawplay]${NC} $*" >&2; }
+error() { echo -e "${RED}[clawplay]${NC} $*" >&2; exit 1; }
+
+# Check dependencies
+check_deps() {
+  for cmd in curl jq; do
+    command -v "$cmd" >/dev/null 2>&1 || error "Missing dependency: $cmd. Install it first."
+  done
+}
+
+# Show help
+show_help() {
+  cat << EOF
+clawplay v${CLAWPLAY_VERSION} — ClawPlay Unified Multimodal CLI
+
+USAGE:
+  clawplay <command> [options]
+
+COMMANDS:
+  setup             - Interactive setup: paste your token, configure API URL
+  image generate   - Generate an image via ClawPlay relay
+  vision analyze   - Analyze an image (describe / detect / segment)
+  whoami           - Show current user info from CLAWPLAY_TOKEN
+  help             - Show this help message
+
+EXAMPLES:
+  clawplay setup
+  clawplay whoami
+  clawplay image generate --prompt "a cyberpunk shrimp"
+  clawplay image generate --prompt "change style" --ref ./photo.png --size 9:16
+  clawplay vision analyze --image ./photo.jpg --prompt "描述这张图片"
+  clawplay vision analyze --image ./photo.jpg --prompt "find objects" --mode detect --json
+
+ENVIRONMENT:
+  CLAWPLAY_TOKEN   - Encrypted token (export CLAWPLAY_TOKEN=... from dashboard)
+  CLAWPLAY_API_URL - ClawPlay API URL (default: https://api.clawplay.example.com)
+
+For full docs: https://clawplay.example.com/docs
+EOF
+}
+
+# Interactive setup wizard
+cmd_setup() {
+  echo ""
+  info "🦐 ClawPlay CLI Setup"
+  echo ""
+  echo "Paste your CLAWPLAY_TOKEN from the dashboard and press Enter."
+  echo "(It looks like: export CLAWPLAY_TOKEN=eyJh...)"
+  echo ""
+  printf "Token: "
+  read -r token
+
+  if [[ -z "$token" ]]; then
+    error "Token cannot be empty."
+  fi
+
+  # Extract the token value (handle "export VAR=..." format)
+  if [[ "$token" =~ CLAWPLAY_TOKEN= ]]; then
+    token="${token#*CLAWPLAY_TOKEN=}"
+    token="${token#\"}"; token="${token%\"}"
+    token="${token#\'}"; token="${token%\'}"
+  fi
+
+  # Detect shell profile
+  local shell_profile=""
+  if [[ -n "${HOME:-}" ]]; then
+    for f in "$HOME/.zshrc" "$HOME/.bashrc" "$HOME/.bash_profile"; do
+      if [[ -f "$f" ]]; then
+        shell_profile="$f"
+        break
+      fi
+    done
+  fi
+
+  local export_line="export CLAWPLAY_TOKEN='${token}'"
+
+  if [[ -n "$shell_profile" ]]; then
+    if grep -q "CLAWPLAY_TOKEN" "$shell_profile" 2>/dev/null; then
+      warn "CLAWPLAY_TOKEN already found in $shell_profile — skipping."
+    else
+      echo "$export_line" >> "$shell_profile"
+      info "Added to $shell_profile"
+    fi
+  else
+    echo ""
+    warn "Could not detect shell profile. Add this line manually:"
+    echo "  $export_line"
+  fi
+
+  export CLAWPLAY_TOKEN="$token"
+
+  echo ""
+  info "✅ Setup complete! Verifying token..."
+  echo ""
+  source "${CLI_DIR}/lib/token.sh"
+  cmd_whoami
+}
+
+# Route subcommands
+case "${1:-help}" in
+  setup)
+    check_deps
+    cmd_setup
+    ;;
+  image)
+    check_deps
+    shift
+    source "${CLI_DIR}/lib/image.sh"
+    cmd_image "$@"
+    ;;
+  vision)
+    check_deps
+    shift
+    source "${CLI_DIR}/lib/vision.sh"
+    cmd_vision "$@"
+    ;;
+  whoami)
+    check_deps
+    source "${CLI_DIR}/lib/token.sh"
+    cmd_whoami
+    ;;
+  llm)
+    check_deps
+    source "${CLI_DIR}/lib/llm.sh"
+    shift
+    cmd_llm "$@"
+    ;;
+  skill)
+    shift
+    node "${CLI_DIR}/skill/index.mjs" "$@"
+    ;;
+  --version|-v)
+    echo "clawplay v${CLAWPLAY_VERSION}"
+    ;;
+  help|--help|-h)
+    show_help
+    ;;
+  *)
+    error "Unknown command: $1. Run 'clawplay help' for usage."
+    ;;
+esac

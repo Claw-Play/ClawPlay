@@ -1,0 +1,116 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Be+Vietnam+Pro:wght@400;500;600&family=Liberation+Serif&family=Liberation+Mono&display=swap');
+
+:root {
+  /* Warm Light Design System — Terracotta/Olive palette */
+  --background: #fefae0;
+  --background-2: #faf3d0;
+  --foreground: #564337;
+  --card: #fffdf7;
+  --card-foreground: #564337;
+  --primary: #a23f00;
+  --primary-light: #c45000;
+  --primary-foreground: #FFFFFF;
+  --secondary: #f0e8d0;
+  --secondary-foreground: #7a4a20;
+  --muted: #faf3d0;
+  --muted-foreground: #7a6a5a;
+  --accent: #fa7025;
+  --accent-light: #ff8f4a;
+  --accent-foreground: #FFFFFF;
+  --border: #e8dfc8;
+  --input-border: #e0d4bc;
+  --ring: #a23f00;
+  --radius-card: 48px;
+  --radius-btn: 9999px;
+  --radius-input: 40px;
+  --radius-chip: 9999px;
+  --error: #DC2626;
+  --success: #16A34A;
+  --shadow-card: 0 8px 40px rgba(162, 63, 0, 0.08);
+  --shadow-btn: 0 6px 24px rgba(162, 63, 0, 0.2);
+  --font-heading: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-body: 'Be Vietnam Pro', system-ui, sans-serif;
+  --font-serif: 'Liberation Serif', Georgia, serif;
+  --font-mono: 'Liberation Mono', 'Courier New', monospace;
+}
+
+* {
+  border-color: var(--border);
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: var(--font-body), system-ui, sans-serif;
+  min-height: 100vh;
+}
+
+/* Warm card shadows */
+.card-shadow {
+  box-shadow: var(--shadow-card);
+}
+
+.card-shadow-hover:hover {
+  box-shadow: 0 12px 48px rgba(162, 63, 0, 0.12), 0 4px 12px rgba(0,0,0,0.06);
+  transform: translateY(-2px);
+  transition: all 0.2s ease;
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* Warm gradient backgrounds */
+  .bg-warm-gradient {
+    background: linear-gradient(135deg, #fefae0 0%, #faf3d0 50%, #f5ecb8 100%);
+  }
+
+  .bg-warm-surface {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(12px);
+  }
+
+  /* Typography */
+  .font-heading {
+    font-family: var(--font-heading);
+  }
+
+  .font-body {
+    font-family: var(--font-body);
+  }
+
+  .font-serif {
+    font-family: var(--font-serif);
+  }
+
+  .font-mono-custom {
+    font-family: var(--font-mono);
+  }
+
+  /* Pill buttons */
+  .btn-pill {
+    border-radius: var(--radius-btn);
+  }
+
+  /* Card radius */
+  .card-radius {
+    border-radius: var(--radius-card);
+  }
+
+  /* Input radius */
+  .input-radius {
+    border-radius: var(--radius-input);
+  }
+
+  /* Gradient primary button */
+  .btn-gradient {
+    background: linear-gradient(135deg, #a23f00 0%, #fa7025 100%);
+    box-shadow: var(--shadow-btn);
+  }
+}

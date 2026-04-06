@@ -1,0 +1,30 @@
+{
+  "name": "clawplay",
+  "version": "0.1.0",
+  "description": "ClawPlay Unified Multimodal CLI — image generation, TTS, voice synthesis",
+  "keywords": ["clawplay", "multimodal", "ai", "cli"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/clawplay"
+  },
+  "bin": {
+    "clawplay": "./clawplay"
+  },
+  "scripts": {
+    "postinstall": "chmod +x clawplay"
+  },
+  "os": ["darwin", "linux"],
+  "engines": {
+    "node": ">=18"
+  },
+  "peerDependencies": {
+    "curl": "*",
+    "jq": "*",
+    "bash": ">=4.0"
+  },
+  "peerDependenciesMeta": {
+    "curl": { "optional": true },
+    "jq": { "optional": true }
+  }
+}

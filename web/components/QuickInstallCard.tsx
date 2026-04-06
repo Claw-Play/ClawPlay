@@ -1,0 +1,71 @@
+"use client";
+import Link from "next/link";
+
+interface QuickInstallCardProps {
+  slug: string;
+  repoUrl: string | null;
+  auth: boolean;
+}
+
+export function QuickInstallCard({ slug, repoUrl, auth }: QuickInstallCardProps) {
+  return (
+    <div className="space-y-5">
+      {/* Quick Install — dark card */}
+      <div
+        className="rounded-[24px] p-5 border border-[#464330]"
+        style={{ background: "#323120" }}
+      >
+        <h3 className="font-semibold font-heading mb-1" style={{ color: "#fefae0" }}>
+          Quick Install
+        </h3>
+        <p className="text-xs mb-4 font-body" style={{ color: "#a89888" }}>
+          Run in your X Claw terminal:
+        </p>
+        <div
+          className="rounded-[16px] p-4 text-sm font-mono-custom leading-relaxed"
+          style={{ background: "#1d1c0d", color: "#fa7025" }}
+        >
+          claw install {slug}
+        </div>
+        <button
+          onClick={() => navigator.clipboard.writeText(`claw install ${slug}`)}
+          className="mt-3 w-full py-2.5 rounded-[16px] text-sm font-semibold font-heading transition-all hover:opacity-90"
+          style={{ background: "linear-gradient(135deg, #a23f00 0%, #fa7025 100%)", color: "#fff" }}
+        >
+          Copy install command
+        </button>
+        {repoUrl && (
+          <a
+            href={repoUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-3 block text-center text-sm font-body hover:underline transition-all"
+            style={{ color: "#fa7025" }}
+          >
+            View source on GitHub →
+          </a>
+        )}
+      </div>
+
+      {/* Quick setup */}
+      <div className="bg-[#fffdf7] card-radius p-5 border border-[#e8dfc8] card-shadow">
+        <h3 className="font-semibold font-heading text-[#564337] mb-3">Quick Setup</h3>
+        <p className="text-sm text-[#7a6a5a] mb-3 font-body">
+          Use ClawPlay CLI to power this Skill:
+        </p>
+        <div className="bg-[#faf3d0] rounded-[16px] p-3 text-xs font-mono-custom text-[#564337] space-y-1">
+          <div>export CLAWPLAY_TOKEN=...</div>
+          <div>clawplay image generate ...</div>
+        </div>
+        {!auth && (
+          <Link
+            href="/register"
+            className="mt-3 block w-full text-center px-4 py-3 bg-gradient-to-r from-[#a23f00] to-[#fa7025] hover:opacity-90 text-white text-sm font-semibold rounded-[40px] shadow-[0_6px_24px_rgba(162,63,0,0.2)] transition-all font-heading"
+          >
+            Get your free token
+          </Link>
+        )}
+      </div>
+    </div>
+  );
+}
