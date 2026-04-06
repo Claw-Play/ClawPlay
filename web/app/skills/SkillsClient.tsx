@@ -1,0 +1,241 @@
+"use client";
+import { useState } from "react";
+import Link from "next/link";
+
+interface Skill {
+  slug: string;
+  name: string;
+  summary: string | null;
+  authorName: string | null;
+  iconEmoji: string | null;
+  statsStars: number | null;
+  createdAt: Date | null;
+}
+
+interface SkillsClientProps {
+  initialSkills: Skill[];
+}
+
+const CATEGORIES = [
+  { label: "全部", emoji: "✨", filter: "" },
+  { label: "艺术", emoji: "🎨", filter: "🎨" },
+  { label: "写作", emoji: "📝", filter: "✍️" },
+  { label: "游戏", emoji: "🎮", filter: "🎮" },
+  { label: "工具", emoji: "🛠️", filter: "🛠️" },
+  { label: "健康", emoji: "🌿", filter: "🌿" },
+];
+
+function CopyIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
+      <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+    </svg>
+  );
+}
+
+function SearchIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="11" cy="11" r="8"/>
+      <path d="m21 21-4.35-4.35"/>
+    </svg>
+  );
+}
+
+export function SkillsClient({ initialSkills }: SkillsClientProps) {
+  const [search, setSearch] = useState("");
+  const [activeCategory, setActiveCategory] = useState("");
+  const [copiedSlug, setCopiedSlug] = useState<string | null>(null);
+
+  const filtered = initialSkills
+    .filter((s) => {
+      const q = search.toLowerCase();
+      const matchesSearch =
+        !q ||
+        s.name.toLowerCase().includes(q) ||
+        (s.summary ?? "").toLowerCase().includes(q) ||
+        (s.authorName ?? "").toLowerCase().includes(q);
+      const matchesCategory =
+        !activeCategory || s.iconEmoji === activeCategory;
+      return matchesSearch && matchesCategory;
+    });
+
+  function copyInstall(slug: string) {
+    const cmd = `claw install ${slug}`;
+    navigator.clipboard.writeText(cmd).then(() => {
+      setCopiedSlug(slug);
+      setTimeout(() => setCopiedSlug(null), 2000);
+    });
+  }
+
+  return (
+    <div className="min-h-screen bg-[#fefae0] flex flex-col">
+      {/* Main content — centered, max-w-[1280px] */}
+      <div className="flex-1 w-full max-w-[1280px] mx-auto px-6 pb-20">
+        {/* Hero Header */}
+        <div className="text-center pt-16 pb-8">
+          <h1 className="text-6xl md:text-7xl font-extrabold font-heading text-[#1d1c0d] tracking-tight leading-[1.05] mb-4">
+            技能库
+          </h1>
+          <p className="text-lg text-[#564337] font-body max-w-2xl mx-auto leading-relaxed">
+            发现精选 AI 行为、创作工具和社区制作的 Skills，为你的 ClawPlay 智能体赋能。
+          </p>
+        </div>
+
+        {/* Search Bar — centered, max-w-[672px] */}
+        <div className="relative max-w-[672px] mx-auto mb-6">
+          <div className="absolute left-6 top-1/2 -translate-y-1/2 text-[rgba(86,67,55,0.6)] pointer-events-none">
+            <SearchIcon />
+          </div>
+          <input
+            type="text"
+            placeholder="搜索行为、工具或创作者..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full h-14 pl-16 pr-6 rounded-2xl bg-[#ede9cf] border-2 border-transparent text-[#564337] placeholder-[rgba(86,67,55,0.6)] text-base font-body focus:outline-none focus:border-[#a23f00] transition-all shadow-[0_1px_2px_rgba(0,0,0,0.05)]"
+          />
+        </div>
+
+        {/* Category Filters — centered row */}
+        <div className="flex flex-wrap gap-3 justify-center mb-10">
+          {CATEGORIES.map(({ label, emoji, filter }) => (
+            <button
+              key={filter}
+              onClick={() => setActiveCategory(filter)}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-base font-semibold font-body transition-all ${
+                activeCategory === filter
+                  ? "bg-gradient-to-r from-[#a23f00] to-[#fa7025] text-white shadow-[0_6px_20px_rgba(162,63,0,0.25)]"
+                  : "bg-[#ede9cf] text-[#586330] hover:bg-[#ddd8b8]"
+              }`}
+            >
+              <span>{emoji}</span>
+              <span>{label}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Skills Grid — 4 columns */}
+        {filtered.length === 0 ? (
+          <div className="text-center py-24 space-y-4">
+            <div className="text-6xl">{activeCategory || "🦐"}</div>
+            <h2 className="text-2xl font-bold text-[#564337] font-heading">
+              {search ? `未找到「${search}」相关结果` : "暂无该分类技能"}
+            </h2>
+            <p className="text-[#7a6a5a] font-body">
+              {search ? "换个关键词试试吧。" : "成为第一个提交者！"}
+            </p>
+            {search && (
+              <button
+                onClick={() => setSearch("")}
+                className="mt-2 px-6 py-2 rounded-full bg-[#ede9cf] text-[#5c6834] text-sm font-semibold font-body hover:bg-[#ddd8b8] transition-all"
+              >
+                清除搜索
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {filtered.map((s) => (
+              <SkillCard
+                key={s.slug}
+                skill={s}
+                copied={copiedSlug === s.slug}
+                onCopy={() => copyInstall(s.slug)}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Footer */}
+      <footer className="bg-[#ede9cf] rounded-tl-[48px] rounded-tr-[48px]">
+        <div className="max-w-[1280px] mx-auto px-8 py-12 flex flex-col md:flex-row items-center justify-between gap-6">
+          <div>
+            <p className="text-xl font-bold font-heading text-[#a23f00]">ClawPlay</p>
+          </div>
+          <div className="flex items-center gap-8">
+            <Link href="/" className="text-sm text-[#586330] font-body hover:text-[#a23f00] transition-colors">首页</Link>
+            <Link href="/skills" className="text-sm text-[#586330] font-body hover:text-[#a23f00] transition-colors">技能库</Link>
+            <Link href="/submit" className="text-sm text-[#586330] font-body hover:text-[#a23f00] transition-colors">提交 Skill</Link>
+          </div>
+          <p className="text-sm text-[#586330] font-body">
+            © 2024 ClawPlay AI Community
+          </p>
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+function SkillCard({
+  skill,
+  copied,
+  onCopy,
+}: {
+  skill: Skill;
+  copied: boolean;
+  onCopy: () => void;
+}) {
+  const installCmd = `claw install ${skill.slug}`;
+  const stars = (skill.statsStars ?? 0) / 100;
+
+  return (
+    <div className="bg-white rounded-[48px] shadow-[0_8px_24px_rgba(86,67,55,0.06)] overflow-hidden flex flex-col">
+      {/* Card body */}
+      <div className="p-8 flex flex-col flex-1 gap-3">
+        {/* Emoji icon */}
+        <div className="w-12 h-12 rounded-full bg-[rgba(250,112,37,0.1)] flex items-center justify-center text-2xl mb-1">
+          {skill.iconEmoji ?? "🦐"}
+        </div>
+
+        {/* Skill name */}
+        <h3 className="text-xl font-bold font-heading text-[#1d1c0d] leading-snug">
+          {skill.name}
+        </h3>
+
+        {/* Description */}
+        <p className="text-sm text-[#564337] font-body leading-relaxed line-clamp-3 flex-1">
+          {skill.summary || "暂无描述。"}
+        </p>
+
+        {/* Author + stats */}
+        <div className="flex items-center justify-between pt-3 border-t border-[rgba(220,193,177,0.2)]">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-[#ede9cf] flex items-center justify-center text-xs font-bold font-heading text-[#586330] overflow-hidden">
+              {skill.authorName ? skill.authorName[0].toUpperCase() : "?"}
+            </div>
+            <span className="text-xs text-[#564337] font-body truncate max-w-[100px]">
+              {skill.authorName || "匿名创作者"}
+            </span>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-[rgba(86,67,55,0.8)] font-body">
+              ⭐ {stars.toFixed(1)}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Install command bar */}
+      <div className="mx-6 mb-6">
+        <div className="bg-[#586330] rounded-[32px] px-4 py-2.5 flex items-center justify-between gap-2">
+          <code className="text-xs font-mono-custom text-[#fefae0] truncate flex-1">
+            {installCmd}
+          </code>
+          <button
+            onClick={onCopy}
+            className="flex-shrink-0 text-[#fefae0] hover:text-white transition-colors"
+            title="复制命令"
+          >
+            {copied ? (
+              <span className="text-xs font-bold">✓</span>
+            ) : (
+              <CopyIcon />
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
