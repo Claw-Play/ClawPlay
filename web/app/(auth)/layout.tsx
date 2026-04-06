@@ -27,7 +27,7 @@ export default function AuthLayout({
       <main className="flex-1 flex items-center justify-center px-4 py-8">
         <div className="w-full max-w-md">
           {/* Warm card */}
-          <div className="bg-[#fffdf7] card-radius card-shadow p-8 md:p-10 space-y-6 border border-[#e8dfc8]">
+          <div className="bg-[#fffdf7] card-radius card-shadow p-8 md:p-10 space-y-6 border border-[#e8dfc8]" style={{ writingMode: "horizontal-tb", textOrientation: "mixed" }}>
             {children}
           </div>
 

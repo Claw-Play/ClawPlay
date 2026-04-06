@@ -106,7 +106,7 @@ export default function LoginPage() {
   ];
 
   return (
-    <div className="min-h-screen grid md:grid-cols-2">
+    <div className="min-h-screen grid md:grid-cols-2" style={{ writingMode: "horizontal-tb", textOrientation: "mixed" }}>
       {/* Left branding panel */}
       <div className="hidden md:flex flex-col justify-center items-center bg-gradient-to-br from-[#fefae0] via-[#faf3d0] to-[#f5ecb8] p-12">
         <div className="max-w-md text-center space-y-6">
