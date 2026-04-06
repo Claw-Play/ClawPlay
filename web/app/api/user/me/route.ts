@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { users, userIdentities } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { getQuota } from "@/lib/redis";
-import { decryptToken } from "@/lib/token";
+import { decryptToken, type TokenPayload } from "@/lib/token";
 
 export async function GET(request: NextRequest) {
   // Accept either JWT cookie or Bearer CLAWPLAY_TOKEN
@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
     const bearer = request.headers.get("Authorization")?.replace("Bearer ", "");
     if (bearer) {
       try {
-        const payload = decryptToken(bearer);
+        const payload = decryptToken<TokenPayload>(bearer);
         auth = { userId: payload.userId, role: "user" };
       } catch {
         // Token invalid — fall through to unauthorized

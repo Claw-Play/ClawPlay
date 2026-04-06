@@ -25,7 +25,13 @@ test.describe("Auth flow", () => {
     await expect(page.getByText(/USR-/i)).toBeVisible({ timeout: 15_000 });
     await expect(page.getByRole("button", { name: /generate token/i })).toBeVisible();
 
-    // Logout — dashboard shows "Revoke Access & Sign out"
+    // Generate token first (sign-out button lives inside the token card)
+    await page.getByRole("button", { name: /generate token/i }).click();
+    await expect(
+      page.getByText(/export CLAWPLAY_TOKEN=/i, { timeout: 10_000 })
+    ).toBeVisible();
+
+    // Logout — sign out button inside the token card
     await page.getByText("Revoke Access & Sign out").click();
     await expect(page).toHaveURL("/", { timeout: 5_000 });
   });
@@ -40,6 +46,13 @@ test.describe("Auth flow", () => {
     await page.getByLabel("确认密码").fill(TEST_PASSWORD);
     await page.getByRole("button", { name: "创建账号" }).click();
     await expect(page).toHaveURL("/dashboard", { timeout: 30_000 });
+    await expect(page.getByText(/USR-/i)).toBeVisible({ timeout: 15_000 });
+
+    // Generate token first (sign-out button lives inside the token card)
+    await page.getByRole("button", { name: /generate token/i }).click();
+    await expect(
+      page.getByText(/export CLAWPLAY_TOKEN=/i, { timeout: 10_000 })
+    ).toBeVisible();
 
     await page.getByText("Revoke Access & Sign out").click();
     await expect(page).toHaveURL("/", { timeout: 5_000 });

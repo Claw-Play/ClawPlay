@@ -1,3 +1,4 @@
+/// <reference types="vitest/globals" />
 // Vitest setup — runs before each test file
 import { vi } from "vitest";
 
