@@ -6,9 +6,6 @@ on:
   pull_request:
     branches: [main]
 
-permissions:
-  contents: write
-
 jobs:
   lint-and-typecheck:
     name: Lint & Type Check
@@ -45,18 +42,6 @@ jobs:
       - run: pnpm lint
 
       - run: pnpm tsc --noEmit
-
-      # Commit generated lockfile if it didn't exist before
-      # Use $GITHUB_HEAD_REF for PRs, or $GITHUB_REF for direct pushes
-      - name: Commit lockfile
-        run: |
-          TARGET_BRANCH="${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}"
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git checkout "$TARGET_BRANCH"
-          git add pnpm-lock.yaml
-          git diff --staged --quiet || git commit -m "chore: generate pnpm-lock.yaml"
-          git push
 
   test:
     name: Unit Tests
