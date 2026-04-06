@@ -13,6 +13,13 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Redirect if already logged in
+  useEffect(() => {
+    fetch("/api/user/me")
+      .then((r) => { if (r.ok) router.push("/dashboard"); })
+      .catch(() => {/* not logged in, stay */});
+  }, [router]);
+
   // Email tab
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

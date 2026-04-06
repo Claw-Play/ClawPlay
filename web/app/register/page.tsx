@@ -13,6 +13,13 @@ export default function RegisterPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Redirect if already logged in
+  useEffect(() => {
+    fetch("/api/user/me")
+      .then((r) => { if (r.ok) router.push("/dashboard"); })
+      .catch(() => {/* not logged in, stay */});
+  }, [router]);
+
   // Phone tab
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
