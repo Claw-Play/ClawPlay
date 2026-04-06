@@ -77,6 +77,21 @@ jobs:
 
       - run: pnpm test
 
+  CI:
+    name: CI
+    runs-on: ubuntu-latest
+    needs: [lint-and-typecheck, test, build]
+    if: always()
+    steps:
+      - name: Check all jobs passed
+        run: |
+          if [[ "${{ needs.lint-and-typecheck.result }}" != "success" || \
+                "${{ needs.test.result }}" != "success" || \
+                "${{ needs.build.result }}" != "success" ]]; then
+            echo "One or more jobs failed"
+            exit 1
+          fi
+
   build:
     name: Build
     runs-on: ubuntu-latest
