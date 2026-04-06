@@ -67,7 +67,7 @@ jobs:
       CLAWPLAY_SECRET_KEY: ci-dummy-32-byte-secret-key-for-build-only
       UPSTASH_REDIS_REST_URL: https://fake-redis.upstash.io
       UPSTASH_REDIS_REST_TOKEN: ci-dummy-token
-      DATABASE_URL: :memory:
+      DATABASE_URL: ":memory:"
     steps:
       - uses: actions/checkout@v4
 
