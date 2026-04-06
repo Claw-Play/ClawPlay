@@ -31,7 +31,7 @@ ClawPlay/
 ├── web/                          # Next.js 14 app
 │   ├── app/
 │   │   ├── (auth)/               # Login/register pages
-│   │   ├── (app)/                # Authenticated pages (dashboard, skills, submit)
+│   │   ├── (app)/                # Authenticated pages (dashboard, skills, submit); layout provides nav shell on Skills routes
 │   │   ├── (admin)/              # Admin review panel
 │   │   ├── api/                  # 22 API routes
 │   │   ├── page.tsx              # Homepage (one-click token copy)
@@ -290,7 +290,7 @@ All abilities route through a provider abstraction layer in `web/lib/providers/`
 - **stdout = file path only**: Never output base64, binary, or JSON to stdout; errors go to stderr with `[clawplay <subcommand>]` prefix
 - **CLI does Base64 encoding**: For vision analysis, CLI Base64-encodes images before POST to reduce relay bandwidth; server receives base64, not raw files
 - **MIME type detection**: For unknown file extensions, use `file -b --mime-type`; fallback to `image/png`
-- **Figma designs > current code**: Many pages in Figma (left sidebar, Reviews section, horizontal Skills carousel) are aspirational and NOT in Phase 1 code; do not implement Figma-only features in Phase 1
+- **Figma designs > current code**: Some pages in Figma (Reviews section) are aspirational and NOT in Phase 1; do not implement Figma-only features without confirmation. Implemented so far: Dashboard full-width layout with sidebar, Skills horizontal card list with hero + filters.
 
 ### Testing
 - **No real network calls in unit tests**: Mock Upstash Redis, mock Volcengine/Gemini API responses
@@ -325,4 +325,6 @@ When adding features, update both README files and keep them in sync.
 | 2026-04-05 | Multi-provider abstraction | Ark + Gemini routed server-side; CLI sends generic params only |
 | 2026-04-05 | JSONL audit (not DB table) | Append-only immutability; avoids DB write bottleneck under load |
 | 2026-04-06 | 分语言 README | GitHub 默认展示英文；中文用户通过 README.zh.md 访问 |
+| 2026-04-06 | Dashboard 页面改版 | 全宽布局 + 左侧边栏，与 Figma 设计对齐；去掉占位符卡片（Community Status / Auto-Refill / 2FA / Cloud Sync）；Token 生成时间改为从 DB 读取 |
+| 2026-04-06 | Skills 技能库页面改版 | Hero 标题 + 搜索栏 + 分类筛选 + 横向卡片布局，与 Figma 设计对齐；(app)/layout.tsx 提供 Skills 路由专用导航壳（顶部导航 + 左侧边栏） |
 | 2026-04-06 | Phase 6 国际化版本 | GitHub OAuth、Stripe、多区域部署、海外独立 Skill 社区 |
