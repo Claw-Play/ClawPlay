@@ -63,7 +63,7 @@ export function SkillsClient({ initialSkills }: SkillsClientProps) {
     });
 
   function copyInstall(slug: string) {
-    const cmd = `claw install ${slug}`;
+    const cmd = `clawplay install ${slug}`;
     navigator.clipboard.writeText(cmd).then(() => {
       setCopiedSlug(slug);
       setTimeout(() => setCopiedSlug(null), 2000);
@@ -163,7 +163,7 @@ function SkillCard({
 }) {
   const t = useT("skills");
   const tCommon = useT("common");
-  const installCmd = `claw install ${skill.slug}`;
+  const installCmd = `clawplay install ${skill.slug}`;
   const stars = (skill.statsStars ?? 0) / 100;
 
   return (

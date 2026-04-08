@@ -5,9 +5,9 @@
 set -euo pipefail
 
 CLAWPLAY_VERSION="0.1.0"
-CLAWPLAY_API_URL="${CLAWPLAY_API_URL:-https://api.clawplay.example.com}"
-CLAWPLAY_TOKEN="${CLAWPLAY_TOKEN:-}"
 CLI_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${CLI_DIR}/lib/api-env.sh"
+CLAWPLAY_TOKEN="${CLAWPLAY_TOKEN:-}"
 
 # Colors
 RED='\033[0;31m'
@@ -54,74 +54,359 @@ EXAMPLES:
 
 ENVIRONMENT:
   CLAWPLAY_TOKEN   - Encrypted token (export CLAWPLAY_TOKEN=... from dashboard)
-  CLAWPLAY_API_URL - ClawPlay API URL (default: https://api.clawplay.example.com)
+  CLAWPLAY_API_URL - ClawPlay API URL (default: http://localhost:3000)
 
 For full docs: https://clawplay.example.com/docs
 EOF
 }
 
+# Detect language
+_setup_lang() {
+  if [[ "${LANG:-}${LC_ALL:-}" =~ zh ]]; then
+    echo "zh"
+  else
+    echo "en"
+  fi
+}
+
 # Interactive setup wizard
 cmd_setup() {
-  echo ""
-  info "🦐 ClawPlay CLI Setup"
-  echo ""
-  echo "Paste your CLAWPLAY_TOKEN from the dashboard and press Enter."
-  echo "(It looks like: export CLAWPLAY_TOKEN=eyJh...)"
-  echo ""
-  printf "Token: "
-  read -r token
+  local lang=$(_setup_lang)
+  local token=""
+  local open_browser=false
 
-  if [[ -z "$token" ]]; then
-    error "Token cannot be empty."
+  # Parse flags
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --open-browser)
+        open_browser=true
+        shift
+        ;;
+      --token)
+        token="$2"
+        shift 2
+        ;;
+      --lang)
+        lang="$2"
+        shift 2
+        ;;
+      -h|--help)
+        if [[ "$lang" == "zh" ]]; then
+          echo "用法: clawplay setup [选项]"
+          echo "  --token VALUE      直接指定 token，无需交互"
+          echo "  --open-browser     自动打开浏览器（注册/控制台）"
+          echo "  --lang zh|en       强制语言"
+        else
+          echo "Usage: clawplay setup [options]"
+          echo "  --token VALUE      Pass token directly, non-interactive"
+          echo "  --open-browser     Auto-open browser (register/dashboard)"
+          echo "  --lang zh|en       Force language"
+        fi
+        return 0
+        ;;
+      *)
+        shift
+        ;;
+    esac
+  done
+
+  # i18n: _msg key  →  echo value
+  _msg() {
+    case "$lang" in
+      zh)
+        case "$1" in
+          title)        echo "🦐 ClawPlay CLI 配置向导" ;;
+          step1)        echo "第一步：准备账号" ;;
+          step2)        echo "第二步：获取 Token" ;;
+          step3)        echo "第三步：验证并保存" ;;
+          no_account)   echo "还没有账号？" ;;
+          register_btn) echo "注册账号 →" ;;
+          no_token)     echo "还没有 Token？" ;;
+          generate_btn) echo "打开控制台 →" ;;
+          skip_hint)    echo "（已有账号，跳过）" ;;
+          token_hint)   echo "复制以下内容，粘贴到终端：" ;;
+          account_q)    echo "你已经注册过 ClawPlay 了吗？" ;;
+          opt1_label)   echo "已注册，直接去控制台生成 Token" ;;
+          opt2_label)   echo "还没注册，先去注册" ;;
+          opt1_btn)     echo "打开控制台 →" ;;
+          opt2_btn)     echo "打开注册页 →" ;;
+          opt_prompt)   echo "↑↓ 选择，Enter 确认" ;;
+          press_done)   echo "注册/登录完成后，按 Enter 继续" ;;
+          arrow_hint)   echo "↑↓ 选择，Enter 确认" ;;
+          parsing)      echo "正在解析 Token..." ;;
+          saving)       echo "正在保存到 shell 配置..." ;;
+          saved)        echo "✅ 已保存到" ;;
+          already)      echo "Token 已存在于" ;;
+          skip_save)    echo "跳过保存（Token 已存在）" ;;
+          success)      echo "✅ 配置完成！" ;;
+          failed)       echo "❌ 配置失败" ;;
+          wrong_fmt)    echo "Token 格式错误，请重新运行" ;;
+          open_reg)     echo "正在打开注册页面..." ;;
+          open_dash)    echo "正在打开控制台..." ;;
+          manual_hint)  echo "请手动添加到 shell 配置：" ;;
+          quota_info)   echo "配额信息" ;;
+          remaining)    echo "剩余" ;;
+        esac
+        ;;
+      *)
+        case "$1" in
+          title)        echo "🦐 ClawPlay CLI Setup Wizard" ;;
+          step1)        echo "Step 1: Prepare Account" ;;
+          step2)        echo "Step 2: Get Token" ;;
+          step3)        echo "Step 3: Verify & Save" ;;
+          no_account)   echo "Don't have an account?" ;;
+          register_btn) echo "Register →" ;;
+          no_token)     echo "Don't have a token?" ;;
+          generate_btn) echo "Open Dashboard →" ;;
+          skip_hint)    echo "（already have an account, skip）" ;;
+          token_hint)   echo "Copy the following and paste into terminal:" ;;
+          account_q)    echo "Have you registered a ClawPlay account?" ;;
+          opt1_label)   echo "Yes — go to Dashboard to generate Token" ;;
+          opt2_label)   echo "No — register first" ;;
+          opt1_btn)     echo "Open Dashboard →" ;;
+          opt2_btn)     echo "Open Register →" ;;
+          opt_prompt)   echo "↑↓ select, Enter to confirm" ;;
+          press_done)   echo "After register/login, press Enter to continue" ;;
+          arrow_hint)   echo "↑↓ select, Enter to confirm" ;;
+          parsing)      echo "Parsing token..." ;;
+          saving)       echo "Saving to shell config..." ;;
+          saved)        echo "✅ Saved to" ;;
+          already)      echo "Token already exists in" ;;
+          skip_save)    echo "Skipped（token already exists）" ;;
+          success)      echo "✅ Setup complete!" ;;
+          failed)       echo "❌ Setup failed" ;;
+          wrong_fmt)    echo "Invalid token format, please run again" ;;
+          open_reg)     echo "Opening registration page..." ;;
+          open_dash)    echo "Opening dashboard..." ;;
+          manual_hint)  echo "Please add manually to shell config:" ;;
+          quota_info)   echo "Quota info" ;;
+          remaining)    echo "Remaining" ;;
+        esac
+        ;;
+    esac
+  }
+
+  # Derive web URL from API_URL (strip /api suffix if present)
+  local web_url="${CLAWPLAY_API_URL%/api}"
+  local register_url="${web_url}/register"
+  local dashboard_url="${web_url}/dashboard"
+
+  echo ""
+  echo "  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo "   $(_msg title)"
+  echo "  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo ""
+
+  # --open-browser: auto-open and exit
+  if [[ "$open_browser" == "true" ]]; then
+    echo " $(_msg open_reg)"
+    echo ""
+    open "$register_url" 2>/dev/null || true
+    echo " $(_msg no_account) ${register_url}"
+    echo ""
+    echo " $(_msg open_dash)"
+    echo ""
+    open "$dashboard_url" 2>/dev/null || true
+    echo " $(_msg no_token) ${dashboard_url}"
+    echo ""
+    return 0
   fi
 
-  # Extract the token value (handle "export VAR=..." format)
+  # Step 1: account check with arrow-key selection
+  local selected=1
+
+  echo ""
+  if [[ "$lang" == "zh" ]]; then
+    echo " ┌─────────────────────────────────────────┐"
+    echo " │ $(_msg step1)                        │"
+    echo " └─────────────────────────────────────────┘"
+  else
+    echo " ┌──────────────────────────────────────────┐"
+    echo " │ $(_msg step1)                  │"
+    echo " └──────────────────────────────────────────┘"
+  fi
+  echo ""
+  echo "  $(_msg account_q)"
+  echo ""
+
+  while true; do
+    if [[ "$selected" == "1" ]]; then
+      echo "  ▸ $(_msg opt1_label)"
+      echo "    $(_msg opt2_label)"
+    else
+      echo "    $(_msg opt1_label)"
+      echo "  ▸ $(_msg opt2_label)"
+    fi
+    echo ""
+    printf "  %s " "$( _msg arrow_hint)"
+    IFS= read -rsn1 key
+    # Move cursor up 5 lines (past the 2 option lines, blank, arrow-hint line, and extra blank above)
+    # then clear from that position to end of screen — overwrites old menu cleanly
+    printf '\033[3A\r\033[K\033[0J'
+    case "$key" in
+      $'\033')
+        read -rsn1 next
+        if [[ "$next" == "[" ]]; then
+          read -rsn1 arrow
+          case "$arrow" in
+            A) (( selected = selected > 1 ? selected - 1 : selected )) ;;
+            B) (( selected = selected < 2 ? selected + 1 : selected )) ;;
+          esac
+        fi
+        ;;
+      '')
+        # Clear menu lines (cursor is at arrow-hint line)
+        printf '\033[1A\r\033[K\033[0J'
+        echo ""
+        if [[ "$selected" == "1" ]]; then
+          echo "  $(_msg open_dash)"
+          open "$dashboard_url" 2>/dev/null || true
+        else
+          echo "  $(_msg open_reg)"
+          open "$register_url" 2>/dev/null || true
+        fi
+        break
+        ;;
+    esac
+  done
+
+  echo ""
+  echo "  $(_msg press_done)"
+  read -r _
+  echo ""
+
+  # Step 2: get token
+  if [[ "$lang" == "zh" ]]; then
+    echo " ┌─────────────────────────────────────────┐"
+    echo " │ $(_msg step2)                      │"
+    echo " └─────────────────────────────────────────┘"
+  else
+    echo " ┌──────────────────────────────────────────┐"
+    echo " │ $(_msg step2)                        │"
+    echo " └──────────────────────────────────────────┘"
+  fi
+  echo ""
+  echo "  $(_msg no_token)  $(_msg generate_btn)"
+  echo "  ${dashboard_url}"
+  echo ""
+  echo "  $(_msg token_hint)"
+  echo ""
+  if [[ "$lang" == "zh" ]]; then
+    echo " ┌─────────────────────────────────────────┐"
+    echo " │  1. 打开控制台，点击「生成 Token」      │"
+    echo " │  2. 点击复制按钮（会复制 export 命令）  │"
+    echo " │  3. 粘贴到这里，回车                    │"
+    echo " └─────────────────────────────────────────┘"
+  else
+    echo " ┌──────────────────────────────────────────┐"
+    echo " │  1. Open Dashboard, click Generate Token │"
+    echo " │  2. Click Copy (copies export command)   │"
+    echo " │  3. Paste here and press Enter           │"
+    echo " └──────────────────────────────────────────┘"
+  fi
+  echo ""
+  printf " Token :"
+  read -r input_token
+
+  # Use --token flag value if provided, otherwise use input
+  token="${token:-$input_token}"
+
+  if [[ -z "$token" ]]; then
+    echo ""
+    echo "[clawplay] $( _msg wrong_fmt)"
+    return 1
+  fi
+
+  # Parse token (handle "export CLAWPLAY_TOKEN=xxx" or bare "xxx")
+  echo ""
+  echo " $(_msg parsing)"
   if [[ "$token" =~ CLAWPLAY_TOKEN= ]]; then
     token="${token#*CLAWPLAY_TOKEN=}"
     token="${token#\"}"; token="${token%\"}"
     token="${token#\'}"; token="${token%\'}"
   fi
 
-  # Detect shell profile
-  local shell_profile=""
-  if [[ -n "${HOME:-}" ]]; then
-    for f in "$HOME/.zshrc" "$HOME/.bashrc" "$HOME/.bash_profile"; do
-      if [[ -f "$f" ]]; then
-        shell_profile="$f"
-        break
-      fi
-    done
+  # Step 3: verify token
+  echo ""
+  if [[ "$lang" == "zh" ]]; then
+    echo " ┌─────────────────────────────────────────┐"
+    echo " │ $(_msg step3)                      │"
+    echo " └─────────────────────────────────────────┘"
+  else
+    echo " ┌──────────────────────────────────────────┐"
+    echo " │ $(_msg step3)                    │"
+    echo " └──────────────────────────────────────────┘"
   fi
+  echo ""
+
+  local response
+  response=$(curl -s \
+    -H "Authorization: Bearer ${token}" \
+    "${web_url}/api/user/me" 2>/dev/null) || {
+    echo "[clawplay] $( _msg failed): cannot reach server"
+    return 1
+  }
+
+  local err
+  err=$(echo "$response" | jq -r '.error // empty' 2>/dev/null)
+  if [[ -n "$err" ]]; then
+    echo "[clawplay] $( _msg failed): ${err}"
+    return 1
+  fi
+
+  # Extract user info
+  local user_name user_role used limit remaining
+  user_name=$(echo "$response" | jq -r '.user.name // empty')
+  user_role=$(echo "$response" | jq -r '.user.role // empty')
+  used=$(echo "$response" | jq -r '.quota.used // 0')
+  limit=$(echo "$response" | jq -r '.quota.limit // 0')
+  remaining=$(echo "$response" | jq -r '.quota.remaining // 0')
+
+  # Save to shell profile
+  echo " $(_msg saving)"
+  local shell_profile=""
+  for f in "$HOME/.zshrc" "$HOME/.bashrc" "$HOME/.bash_profile"; do
+    if [[ -f "$f" ]]; then
+      shell_profile="$f"
+      break
+    fi
+  done
 
   local export_line="export CLAWPLAY_TOKEN='${token}'"
 
   if [[ -n "$shell_profile" ]]; then
     if grep -q "CLAWPLAY_TOKEN" "$shell_profile" 2>/dev/null; then
-      warn "CLAWPLAY_TOKEN already found in $shell_profile — skipping."
+      echo " $(_msg already) ${shell_profile}"
+      echo " $(_msg skip_save)"
     else
       echo "$export_line" >> "$shell_profile"
-      info "Added to $shell_profile"
+      echo " $(_msg saved) ${shell_profile}"
     fi
   else
     echo ""
-    warn "Could not detect shell profile. Add this line manually:"
+    echo "[clawplay] Cannot detect shell profile."
+    echo " $(_msg manual_hint)"
     echo "  $export_line"
   fi
 
-  export CLAWPLAY_TOKEN="$token"
-
+  # Show success + quota
   echo ""
-  info "✅ Setup complete! Verifying token..."
+  echo "  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo "   $(_msg success)"
+  echo "  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   echo ""
-  source "${CLI_DIR}/lib/token.sh"
-  cmd_whoami
+  echo "  User:  ${user_name}  (${user_role})"
+  echo "  Quota: ${used}/${limit}  |  $( _msg remaining): ${remaining}"
+  echo ""
+  echo "  Run 'clawplay whoami' to verify"
+  echo ""
 }
 
 # Route subcommands
 case "${1:-help}" in
   setup)
     check_deps
-    cmd_setup
+    cmd_setup "$@"
     ;;
   image)
     check_deps

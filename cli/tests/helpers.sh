@@ -108,6 +108,8 @@ set -uo pipefail
 
 CLI_DIR="${CLI_DIR}"
 ${env_lines}
+  # Source api.sh for CLAWPLAY_API_URL and shared helpers
+  source "\${CLI_DIR}/lib/api.sh"
 
 info()  { echo "[info] \$*" >&2; }
 warn()  { echo "[warn] \$*" >&2; }

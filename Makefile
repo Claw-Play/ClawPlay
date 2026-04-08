@@ -7,25 +7,25 @@ dev:
 	@echo "→ Clearing Next.js build cache..."
 	@rm -rf web/.next
 	@echo "→ Starting dev server..."
-	@cd web && npm run dev
+	@cd web && pnpm run dev
 
 # Restart dev server without clearing cache (faster, for normal restarts)
 restart:
 	@lsof -ti :3000 | xargs kill -9 2>/dev/null || true
-	@cd web && npm run dev
+	@cd web && pnpm run dev
 
 # Full clean: cache + node_modules reinstall
 clean:
 	@rm -rf web/.next web/node_modules
-	@cd web && npm install
+	@cd web && pnpm install
 
 # Production build
 build:
-	@cd web && npm run build
+	@cd web && pnpm run build
 
 # Unit tests (web + CLI)
 test:
-	@cd web && npm test
+	@cd web && pnpm test
 	@bash cli/tests/run-all.sh
 
 # E2E tests (requires dev server running)
@@ -34,4 +34,4 @@ e2e:
 
 # Install dependencies
 install:
-	@cd web && npm install
+	@cd web && pnpm install

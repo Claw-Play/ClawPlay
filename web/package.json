@@ -2,6 +2,9 @@
   "name": "web",
   "version": "0.1.0",
   "private": true,
+  "pnpm": {
+    "onlyBuiltDependencies": ["better-sqlite3"]
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -25,7 +28,6 @@
     "jose": "^6.2.2",
     "jszip": "^3.10.1",
     "next": "14.2.35",
-    "next-intl": "^4.9.0",
     "react": "^18",
     "react-dom": "^18"
   },

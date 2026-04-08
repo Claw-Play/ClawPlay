@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # lib/install.sh — clawplay install <slug> [--version x.y.z] [--dir <path>]
-
-CLAWPLAY_API_URL="${CLAWPLAY_API_URL:-https://api.clawplay.example.com}"
+INSTALL_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${INSTALL_LIB_DIR}/api-env.sh"
 CLAWPLAY_SKILLS_DIR="${CLAWPLAY_SKILLS_DIR:-${HOME}/.clawplay/skills}"
 
 cmd_install() {
@@ -53,7 +53,18 @@ cmd_install() {
 
   # Download zip
   local http_code
-  http_code=$(curl -sL -w "%{http_code}" -o "$tmp_zip" "$url")
+  http_code=$(curl -sL -w "%{http_code}" -o "$tmp_zip" "$url" 2>&1)
+  local curl_err=$?
+
+  if [[ $curl_err -ne 0 ]]; then
+    rm -f "$tmp_zip"
+    error "Connection failed: curl exited with code ${curl_err}. Check network or CLAWPLAY_API_URL."
+  fi
+
+  if [[ -z "$http_code" ]]; then
+    rm -f "$tmp_zip"
+    error "Server did not respond (empty HTTP status)."
+  fi
 
   if [[ "$http_code" == "404" ]]; then
     rm -f "$tmp_zip"

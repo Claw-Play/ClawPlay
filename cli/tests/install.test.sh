@@ -189,6 +189,7 @@ curl() {
   done
   echo "404"
 }
+source "${CLI_DIR}/lib/api.sh"
 source "${CLI_DIR}/lib/install.sh"
 cmd_install "my-skill" --version "1.2.3" 2>/dev/null || true
 SCRIPT

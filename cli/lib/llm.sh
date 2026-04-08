@@ -54,7 +54,7 @@ _llm_generate() {
     exit 1
   fi
 
-  local api_url="${CLAWPLAY_API_URL:-https://api.clawplay.example.com}"
+  source "${CLI_DIR}/lib/api.sh"
 
   # Build JSON body
   local json
@@ -73,7 +73,7 @@ _llm_generate() {
   # Call relay
   local response
   response=$(curl -s --fail-with-body \
-    -X POST "${api_url}/api/ability/llm/generate" \
+    -X POST "${CLAWPLAY_API_URL}/api/ability/llm/generate" \
     -H "Authorization: Bearer ${CLAWPLAY_TOKEN}" \
     -H "Content-Type: application/json" \
     -d "$json") || {

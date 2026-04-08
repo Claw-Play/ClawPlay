@@ -153,8 +153,8 @@ describe("SkillsClient — empty state", () => {
 describe("SkillsClient — card rendering", () => {
   it("shows correct install command per skill", () => {
     render(<SkillsClient initialSkills={FAKE_SKILLS} />, { wrapper: TestWrapper });
-    expect(screen.getByText("claw install avatar-creator")).toBeInTheDocument();
-    expect(screen.getByText("claw install music-mixer")).toBeInTheDocument();
+    expect(screen.getByText("clawplay install avatar-creator")).toBeInTheDocument();
+    expect(screen.getByText("clawplay install music-mixer")).toBeInTheDocument();
   });
 
   it("skill card shows '🦐' emoji fallback when iconEmoji is null", () => {
