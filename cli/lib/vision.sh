@@ -3,6 +3,8 @@
 # Sends normalized request to ClawPlay relay; relay handles provider routing.
 # stdout: analysis text (describe) or file path (detect/segment with --output)
 
+source "${CLI_DIR}/lib/api.sh"
+
 cmd_vision() {
   local subcmd="${1:-}"
   shift || true
@@ -76,8 +78,6 @@ _vision_analyze() {
     as_json=true
   fi
 
-  local api_url="${CLAWPLAY_API_URL:-https://api.clawplay.example.com}"
-
   # Build images JSON array
   local images_json="[]"
   for img in "${images[@]}"; do
@@ -117,7 +117,7 @@ _vision_analyze() {
   # Call relay
   local response
   response=$(curl -s --fail-with-body \
-    -X POST "${api_url}/api/ability/vision/analyze" \
+    -X POST "${CLAWPLAY_API_URL}/api/ability/vision/analyze" \
     -H "Authorization: Bearer ${CLAWPLAY_TOKEN}" \
     -H "Content-Type: application/json" \
     -d "$json") || {

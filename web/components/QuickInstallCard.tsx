@@ -27,10 +27,10 @@ export function QuickInstallCard({ slug, repoUrl, auth }: QuickInstallCardProps)
           className="rounded-[16px] p-4 text-sm font-mono-custom leading-relaxed"
           style={{ background: "#1d1c0d", color: "#fa7025" }}
         >
-          claw install {slug}
+          clawplay install {slug}
         </div>
         <button
-          onClick={() => navigator.clipboard.writeText(`claw install ${slug}`)}
+          onClick={() => navigator.clipboard.writeText(`clawplay install ${slug}`)}
           className="mt-3 w-full py-2.5 rounded-[16px] text-sm font-semibold font-heading transition-all hover:opacity-90"
           style={{ background: "linear-gradient(135deg, #a23f00 0%, #fa7025 100%)", color: "#fff" }}
         >

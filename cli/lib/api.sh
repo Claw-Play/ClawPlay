@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # lib/api.sh — HTTP calls to ClawPlay server
+# Exports CLAWPLAY_API_URL and provides api_call with 401 auto-refresh.
 
-CLAWPLAY_API_URL="${CLAWPLAY_API_URL:-https://api.clawplay.example.com}"
+export CLAWPLAY_API_URL="${CLAWPLAY_API_URL:-http://localhost:3000}"
 
 # Refresh CLAWPLAY_TOKEN using the refresh endpoint.
 # Returns 0 on success and prints the new token to stdout.
@@ -85,17 +86,4 @@ api_call() {
   fi
 
   echo "$response"
-}
-
-# Check quota by calling whoami on the server (server-side validation)
-api_check_quota() {
-  local response
-  response=$(api_call GET "/api/ability/check" 2>/dev/null) || {
-    echo "[clawplay] WARNING: Could not reach ClawPlay server — skipping quota pre-check" >&2
-    return 0  # Fail open: let the relay enforce quota server-side
-  }
-
-  local remaining
-  remaining=$(echo "$response" | jq -r '.remaining // 0' 2>/dev/null)
-  echo "$remaining"
 }

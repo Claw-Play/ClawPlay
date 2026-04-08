@@ -16,6 +16,7 @@
 import { execSync } from 'node:child_process';
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { resolve, dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 // ---------------------------------------------------------------------------
 // CLI entry point
@@ -106,6 +107,64 @@ function extractPhaseSections(content) {
   return sections;
 }
 
+/**
+ * @param {string} content - Full SKILL.md content
+ * @returns {Map<string, string>} - phase name → description
+ */
+export function extractPhaseDescriptions(content) {
+  const descriptions = new Map();
+
+  // Primary: parse ## 阶段说明 table (| phase | meaning |)
+  const tableRe = /^##\s+阶段说明\s*$/m;
+  const tableMatch = content.match(tableRe);
+  if (tableMatch) {
+    const afterTable = content.slice(tableMatch.index);
+    // Match table rows: | `phase` | description |
+    const rowRe = /^\|\s*`?([a-zA-Z_][a-zA-Z0-9_]*)`?\s*\|\s*(.+?)\s*\|/gm;
+    let row;
+    while ((row = rowRe.exec(afterTable)) !== null) {
+      const name = row[1].trim();
+      const desc = row[2].replace(/[`*_]/g, '').trim();
+      // Skip header row and separator row
+      if (!name || name === 'Phase' || name === '状态' || name.startsWith('-')) continue;
+      if (desc) descriptions.set(name, desc);
+    }
+  }
+
+  // Fallback: first meaningful line of each phase section
+  const sections = extractPhaseSections(content);
+  for (const section of sections) {
+    if (!descriptions.has(section.name)) {
+      const lines = section.content.split('\n');
+      for (const line of lines) {
+        const trimmed = line.trim();
+        // Skip empty, code fences, bullets, blockquotes
+        if (
+          !trimmed ||
+          trimmed.startsWith('```') ||
+          trimmed.startsWith('- ') ||
+          trimmed.startsWith('* ') ||
+          trimmed.startsWith('> ') ||
+          trimmed.startsWith('执行') ||
+          trimmed.startsWith('**') ||
+          /^\d+\.\s/.test(trimmed)
+        )
+          continue;
+        // Stop at first heading or horizontal rule
+        if (/^#{1,3}\s/.test(trimmed) || /^---/.test(trimmed)) break;
+        // Use this line as description (truncated to 60 chars)
+        const desc = trimmed.slice(0, 60).replace(/\s*→.*$/, '').trim();
+        if (desc) {
+          descriptions.set(section.name, desc);
+          break;
+        }
+      }
+    }
+  }
+
+  return descriptions;
+}
+
 // ---------------------------------------------------------------------------
 // Call clawplay llm generate
 // ---------------------------------------------------------------------------
@@ -115,13 +174,32 @@ function extractPhaseSections(content) {
  * @returns {string} - Raw LLM text output
  */
 function callLLMGenerate(prompt) {
-  // Escape double quotes for shell
-  const escapedPrompt = prompt.replace(/"/g, '\\"');
+  // Escape for shell: double quotes, backslashes, backticks, and $
+  const escapedPrompt = prompt
+    .replace(/\\/g, '\\\\')
+    .replace(/"/g, '\\"')
+    .replace(/`/g, '\\`')
+    .replace(/\$/g, '\\$');
+
+  const __dirname = dirname(fileURLToPath(import.meta.url));
+  // Use local CLI to avoid global version mismatches
+  const localCli = resolve(__dirname, '../clawplay');
+
   try {
-    const result = execSync(`clawplay llm generate --prompt "${escapedPrompt}"`, {
-      encoding: 'utf-8',
-      stdio: ['pipe', 'pipe', 'pipe'],
-    });
+    const apiUrl =
+      process.env.CLAWPLAY_API_URL || 'http://localhost:3000';
+    const result = execSync(
+      `bash "${localCli}" llm generate --prompt "${escapedPrompt}"`,
+      {
+        encoding: 'utf-8',
+        stdio: ['pipe', 'pipe', 'pipe'],
+        env: {
+          ...process.env,
+          CLAWPLAY_TOKEN: process.env.CLAWPLAY_TOKEN || '',
+          CLAWPLAY_API_URL: apiUrl,
+        },
+      }
+    );
     return result.trim();
   } catch (err) {
     const stderr = err.stderr ?? '';
@@ -154,25 +232,29 @@ function extractMermaidBlock(raw) {
   }
 
   // Ensure entry node exists
-  if (!/\[\\*]\s*-->/.test(diagram)) {
+  if (!/\[*]\s*-->/.test(diagram)) {
     throw new Error('LLM 输出缺少入口节点 [*] -->，请重试');
   }
 
-  // Clean: strip text descriptions from state node definitions
+  // Clean: remove standalone state description lines (state_name : description)
+  // but keep transition lines with condition labels (phase_a --> phase_b : condition)
   const lines = diagram.split('\n');
   const cleaned = lines.map((line) => {
     const t = line.trim();
     if (
       t === '' ||
       t.startsWith('stateDiagram-v2') ||
-      t.startsWith('--') ||
       t.startsWith('note for')
     ) {
       return line;
     }
-    // state_node: description → strip description
-    return line.replace(/\s*:\s*[^\n-]+(\s*-->.*)?$/, '$1');
-  });
+    // Drop lines that are ONLY a state description (no arrow in the line)
+    // Keep lines that have an arrow (these are transitions, possibly with condition labels)
+    if (!t.includes('-->') && !t.includes('-->' ) && t.includes(':')) {
+      return '    '; // replace with blank (will collapse via filter)
+    }
+    return line.trimEnd();
+  }).filter((line) => line.trim() !== '');
 
   return '```mermaid\n' + cleaned.join('\n') + '\n```';
 }
@@ -194,6 +276,14 @@ export async function generateDiagram(content, skillFilePath) {
     throw new Error('未检测到任何 phase（## Phase {name} / ## 状态 {name}），无法生成流程图');
   }
 
+  const phaseDescriptions = extractPhaseDescriptions(content);
+
+  // Build phase description table for LLM context
+  const descTable =
+    [...phaseDescriptions.entries()]
+      .map(([name, desc]) => `  - ${name}: ${desc}`)
+      .join('\n') || '  (无描述，请从 phase 内容中推断)';
+
   // Build LLM prompt
   const phaseBlocks = sections
     .map((s) => `## Phase ${s.name} (line ${s.startLine})\n${s.content}`)
@@ -202,12 +292,16 @@ export async function generateDiagram(content, skillFilePath) {
   const prompt = [
     '你是一个 Skill 流程图生成专家。请根据以下 SKILL.md 文档中的 phase 定义，生成 Mermaid stateDiagram-v2 格式的状态机流程图。',
     '',
+    '## Phase 状态含义参考（用于生成边的条件说明）',
+    '',
+    descTable,
+    '',
     '## 规则（必须严格遵守）',
     '',
     '1. 入口节点: [*] --> {第一个 phase 名称}',
     '2. 终态节点: {phase_name} --> [*]',
-    '3. 状态节点: 只写 phase ID（slug 格式，如 init，awaiting_desc），不要在节点内写文字描述',
-    '4. 边（Transition）: 所有边都加条件标签，格式为 phase_a --> phase_b: 条件说明',
+    '3. 状态节点: 只写 phase ID（slug 格式，如 init，awaiting_desc），不写任何描述文字',
+    '4. 边（Transition）: 所有边都加条件标签，格式为 `phase_a --> phase_b : 条件说明`；条件说明参考上面的 Phase 状态含义',
     '5. 唯一入口: 确保图有且只有一个入口 [*] -->',
     '6. 连通性: 每个节点（除终态外）至少有一条出边',
     '7. 不要重复边: 相同起点和终点的边不要出现多次',

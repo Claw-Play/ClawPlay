@@ -67,7 +67,6 @@ _image_generate() {
   fi
 
   local out_file="${output:-$(mktemp)}"
-  local api_url="${CLAWPLAY_API_URL:-https://api.clawplay.example.com}"
 
   # Build JSON body
   local json
@@ -100,7 +99,6 @@ _image_generate() {
 
   # Call relay (api_call handles 401 auto-refresh)
   source "${CLI_DIR}/lib/api.sh"
-
   local response
   response=$(api_call POST "/api/ability/image/generate" "$json") || {
     echo "[clawplay image] ERROR: Request to ClawPlay relay failed." >&2

@@ -13,14 +13,12 @@ cmd_whoami() {
     exit 1
   fi
 
-  local api_url="${CLAWPLAY_API_URL:-https://api.clawplay.example.com}"
-
-  # Call /api/user/me with the encrypted token
+  # Call /api/user/me with the encrypted token (uses global CLAWPLAY_API_URL)
   local response
   response=$(curl -s \
     -H "Authorization: Bearer ${CLAWPLAY_TOKEN}" \
-    "${api_url}/api/user/me") || {
-    echo "[clawplay] ERROR: Failed to reach ClawPlay server at ${api_url}" >&2
+    "${CLAWPLAY_API_URL}/api/user/me") || {
+    echo "[clawplay] ERROR: Failed to reach ClawPlay server at ${CLAWPLAY_API_URL}" >&2
     exit 1
   }
 
