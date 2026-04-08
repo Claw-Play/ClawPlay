@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
-import { NextIntlClientProvider } from "next-intl";
-import { getMessages } from "next-intl/server";
+import { I18nProvider } from "@/lib/i18n/context";
+import { getMessages } from "@/lib/i18n";
 import "./globals.css";
 
 const geistSans = localFont({
@@ -21,22 +21,22 @@ export const metadata: Metadata = {
     "Build, share, and discover social entertainment Skills for X Claw. Unified multimodal CLI, free tier, one-click setup.",
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const messages = await getMessages();
   const locale = process.env.NEXT_LOCALE || "zh";
+  const messages = getMessages(locale);
 
   return (
     <html lang={locale}>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <NextIntlClientProvider messages={messages}>
+        <I18nProvider messages={messages}>
           {children}
-        </NextIntlClientProvider>
+        </I18nProvider>
       </body>
     </html>
   );

@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useT } from "@/lib/i18n/context";
 
 interface AuditEntry {
   event_id?: string;
@@ -18,16 +19,19 @@ type FilterTab = "all" | "skills" | "tokens" | "users";
 
 const PAGE_SIZE = 20;
 
-const ACTION_STYLES: Record<string, { bg: string; text: string; label: string }> = {
-  approve_skill: { bg: "#dcfce7", text: "#166534", label: "Approve Skill" },
-  reject_skill: { bg: "#fee2e2", text: "#991b1b", label: "Reject Skill" },
-  generate_token: { bg: "#ffedd5", text: "#9a3412", label: "Generate Token" },
-  revoke_token: { bg: "#f0e8d0", text: "#7a6a5a", label: "Revoke Token" },
-  submit_skill: { bg: "#dbeafe", text: "#1e40af", label: "Submit Skill" },
-  login: { bg: "#ede9cf", text: "#586330", label: "User Login" },
-};
-
 export default function AdminAuditPage() {
+  const t = useT("admin_audit");
+  const tCommon = useT("common");
+
+  const ACTION_STYLES: Record<string, { bg: string; text: string; label: string }> = {
+    approve_skill: { bg: "#dcfce7", text: "#166534", label: t("approve_skill") },
+    reject_skill: { bg: "#fee2e2", text: "#991b1b", label: t("reject_skill") },
+    generate_token: { bg: "#ffedd5", text: "#9a3412", label: t("generate_token") },
+    revoke_token: { bg: "#f0e8d0", text: "#7a6a5a", label: t("revoke_token") },
+    submit_skill: { bg: "#dbeafe", text: "#1e40af", label: t("submit_skill") },
+    login: { bg: "#ede9cf", text: "#586330", label: t("login") },
+  };
+
   const [entries, setEntries] = useState<AuditEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
@@ -74,15 +78,15 @@ export default function AdminAuditPage() {
       <div className="flex items-end justify-between">
         <div>
           <h2 className="text-3xl font-extrabold font-heading text-[#1d1c0d] tracking-tight">
-            Audit Logs
+            {t('title')}
           </h2>
           <p className="text-[#564337] text-sm mt-2 font-body">
-            Monitor system-wide activity, track asset modifications, and ensure regulatory compliance.
+            {t('subtitle')}
           </p>
         </div>
         <button className="flex items-center gap-2 px-5 py-2.5 bg-[#d8e6a6] text-[#5c6834] text-sm font-semibold rounded-full hover:bg-[#c8d696] transition-colors font-heading shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)]">
           <span>↓</span>
-          Export JSONL
+          {t("export_jsonl")}
         </button>
       </div>
 
@@ -91,17 +95,17 @@ export default function AdminAuditPage() {
         {/* Tabs */}
         <div className="flex items-center gap-1 px-2">
           <div className="bg-[#ede9cf] rounded-full p-1 flex gap-1">
-            {(["all", "skills", "tokens", "users"] as FilterTab[]).map((t) => (
+            {(["all", "skills", "tokens", "users"] as FilterTab[]).map((tabItem) => (
               <button
-                key={t}
-                onClick={() => { setTab(t); setPage(1); }}
+                key={tabItem}
+                onClick={() => { setTab(tabItem); setPage(1); }}
                 className={`px-5 py-2 rounded-full text-sm font-medium transition-all font-body ${
-                  tab === t
+                  tab === tabItem
                     ? "bg-white text-[#a23f00] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)]"
                     : "text-[#5c6834] hover:text-[#1d1c0d]"
                 }`}
               >
-                {t === "all" ? "All Logs" : t.charAt(0).toUpperCase() + t.slice(1)}
+                {tabItem === "all" ? t("all_logs") : t(`tab_${tabItem}`)}
               </button>
             ))}
           </div>
@@ -113,17 +117,17 @@ export default function AdminAuditPage() {
             onClick={() => { setTab("all"); setPage(1); }}
             className="px-4 py-2 bg-[#e7e3ca] text-[#1d1c0d] text-sm font-semibold rounded-[32px] hover:bg-[#d8d3ba] transition-colors font-body"
           >
-            Clear Filters
+                        {t("clear_filters")}
           </button>
           <button className="h-[40px] px-4 bg-white rounded-[32px] text-sm font-medium text-[#1d1c0d] hover:bg-[#faf3d0] transition-colors font-body shadow-sm">
-            Last 24 Hours ▼
+            {t("last_24_hours")} ▼
           </button>
           <button className="h-[40px] px-4 bg-white rounded-[32px] text-sm font-medium text-[#1d1c0d] hover:bg-[#faf3d0] transition-colors font-body shadow-sm">
-            All Action Types ▼
+            {t("all_action_types")} ▼
           </button>
           <div className="h-[40px] px-4 bg-white rounded-[32px] flex items-center gap-2 text-sm text-[#6b7280] font-body">
             <span>🔍</span>
-            <span>Actor User ID</span>
+            <span>{t("actor_user_id")}</span>
           </div>
         </div>
       </div>
@@ -133,19 +137,19 @@ export default function AdminAuditPage() {
         {/* Table header */}
         <div className="bg-[rgba(237,233,207,0.5)] border-b border-[rgba(220,193,177,0.1)]">
           <div className="grid grid-cols-[170px_200px_1fr_180px_120px] gap-0">
-            <div className="px-6 py-4 text-[12px] font-semibold text-[#897365] uppercase tracking-widest font-body">Timestamp</div>
-            <div className="px-6 py-4 text-[12px] font-semibold text-[#897365] uppercase tracking-widest font-body">Action Type</div>
-            <div className="px-6 py-4 text-[12px] font-semibold text-[#897365] uppercase tracking-widest font-body">Actor</div>
-            <div className="px-6 py-4 text-[12px] font-semibold text-[#897365] uppercase tracking-widest font-body">Target ID</div>
-            <div className="px-6 py-4 text-[12px] font-semibold text-[#897365] uppercase tracking-widest font-body text-right">Activity</div>
+            <div className="px-6 py-4 text-[12px] font-semibold text-[#897365] uppercase tracking-widest font-body">{t("time")}</div>
+            <div className="px-6 py-4 text-[12px] font-semibold text-[#897365] uppercase tracking-widest font-body">{t("action")}</div>
+            <div className="px-6 py-4 text-[12px] font-semibold text-[#897365] uppercase tracking-widest font-body">{t("actor")}</div>
+            <div className="px-6 py-4 text-[12px] font-semibold text-[#897365] uppercase tracking-widest font-body">{t("target")}</div>
+            <div className="px-6 py-4 text-[12px] font-semibold text-[#897365] uppercase tracking-widest font-body text-right">{t("activity")}</div>
           </div>
         </div>
 
         {/* Loading */}
         {loading ? (
-          <div className="py-12 text-center text-[#7a6a5a] animate-pulse font-body">Loading...</div>
+          <div className="py-12 text-center text-[#7a6a5a] animate-pulse font-body">{tCommon("loading")}</div>
         ) : entries.length === 0 ? (
-          <div className="py-12 text-center text-[#7a6a5a] font-body">No entries found.</div>
+          <div className="py-12 text-center text-[#7a6a5a] font-body">{t("no_entries")}</div>
         ) : (
           <>
             {entries.map((entry, i) => {
@@ -193,7 +197,7 @@ export default function AdminAuditPage() {
                         {initials}
                       </div>
                       <span className="text-sm font-medium text-[#1d1c0d] font-body truncate">
-                        {actorId || "SYSTEM"}
+                        {actorId || t("system")}
                       </span>
                     </div>
 
@@ -207,7 +211,7 @@ export default function AdminAuditPage() {
                     {/* Details */}
                     <div className="px-6 py-5 text-right">
                       <span className="text-sm font-semibold text-[#a23f00] hover:text-[#c45000] transition-colors font-body">
-                        Details →
+                        {t("details")}
                       </span>
                     </div>
                   </div>
@@ -227,7 +231,7 @@ export default function AdminAuditPage() {
             {/* Pagination */}
             <div className="bg-[rgba(237,233,207,0.3)] border-t border-[rgba(220,193,177,0.1)] px-6 py-4 flex items-center justify-between">
               <p className="text-xs text-[#564337] font-body">
-                Showing {startItem} to {endItem} of {total.toLocaleString()} logs
+                {t("showing_range", {startItem: String(startItem), endItem: String(endItem), total: String(total.toLocaleString())})}
               </p>
               <div className="flex items-center gap-2">
                 <PageBtn onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1}>
@@ -263,8 +267,8 @@ export default function AdminAuditPage() {
               <span className="text-white text-lg">📄</span>
             </div>
             <div>
-              <h3 className="font-bold font-heading text-[#1d1c0d] text-lg">Metadata Insight</h3>
-              <p className="text-sm text-[#564337] font-body">Click any row above to view detailed JSON payload</p>
+              <h3 className="font-bold font-heading text-[#1d1c0d] text-lg">{t("metadata_insight")}</h3>
+              <p className="text-sm text-[#564337] font-body">{t("click_row_hint")}</p>
             </div>
           </div>
         </div>

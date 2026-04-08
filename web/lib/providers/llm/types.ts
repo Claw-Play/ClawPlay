@@ -2,6 +2,7 @@
 
 export interface LLMGenerateRequest {
   prompt: string;
+  system?: string;
   /** Override default model (provider-specific) */
   model?: string;
   maxTokens?: number;

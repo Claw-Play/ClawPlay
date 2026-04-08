@@ -2,7 +2,6 @@ import { db } from "@/lib/db";
 import { userIdentities, users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { getAuthFromCookies } from "@/lib/auth";
-import { getQuota } from "@/lib/redis";
 import { redirect } from "next/navigation";
 import { DashboardClient } from "./DashboardClient";
 
@@ -22,17 +21,15 @@ async function getDashboardData(userId: number) {
   const phone = identities.find((i) => i.provider === "phone")?.providerAccountId ?? null;
   const wechat = identities.find((i) => i.provider === "wechat")?.providerAccountId ?? null;
 
-  let quota = await getQuota(userId);
-  if (!quota) {
-    quota = {
-      used: user.quotaUsed,
-      limit: user.quotaFree,
-      remaining: user.quotaFree - user.quotaUsed,
-    };
-  }
+  // Get quota from DB immediately — Redis quota is fire-and-forget, non-blocking
+  const quota = {
+    used: user.quotaUsed,
+    limit: user.quotaFree,
+    remaining: user.quotaFree - user.quotaUsed,
+  };
 
   const activeToken = await db.query.userTokens.findFirst({
-    columns: { id: true, createdAt: true },
+    columns: { id: true, createdAt: true, encryptedPayload: true },
     where: (t, { and, eq, isNull }) =>
       and(eq(t.userId, userId), isNull(t.revokedAt)),
   });
@@ -49,7 +46,7 @@ async function getDashboardData(userId: number) {
     },
     quota,
     token: activeToken
-      ? { id: activeToken.id, createdAt: activeToken.createdAt instanceof Date ? activeToken.createdAt.toISOString() : activeToken.createdAt }
+      ? { id: activeToken.id, createdAt: activeToken.createdAt instanceof Date ? activeToken.createdAt.toISOString() : activeToken.createdAt, value: activeToken.encryptedPayload }
       : null,
   };
 }

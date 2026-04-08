@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { useT } from "@/lib/i18n/context";
 
 interface SkillDetail {
   id: string;
@@ -50,6 +51,8 @@ export default function AdminReviewDetailPage() {
   const params = useParams();
   const router = useRouter();
   const skillId = params.id as string;
+  const t = useT("admin_review_detail");
+  const tCommon = useT("common");
 
   const [skill, setSkill] = useState<SkillDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -61,6 +64,7 @@ export default function AdminReviewDetailPage() {
     manualLinkCheck: false,
   });
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!skillId) {
       router.push("/admin/review");
@@ -120,7 +124,7 @@ export default function AdminReviewDetailPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24">
-        <div className="text-[#7a6a5a] animate-pulse font-body">Loading...</div>
+        <div className="text-[#7a6a5a] animate-pulse font-body">{tCommon("loading")}</div>
       </div>
     );
   }
@@ -135,7 +139,7 @@ export default function AdminReviewDetailPage() {
     <div className="max-w-6xl space-y-6">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm text-[#7a6a5a] font-body">
-        <Link href="/admin/review" className="hover:text-[#a23f00]">Pending Reviews</Link>
+        <Link href="/admin/review" className="hover:text-[#a23f00]">{t("breadcrumb")}</Link>
         <span>/</span>
         <span className="font-semibold text-[#564337]">{skill.name}</span>
       </div>
@@ -154,13 +158,13 @@ export default function AdminReviewDetailPage() {
                   {skill.name}
                 </h1>
                 <span className="px-3 py-1 bg-[rgba(162,63,0,0.1)] border border-[rgba(162,63,0,0.2)] text-[#a23f00] text-[10px] font-semibold uppercase tracking-wider rounded-full font-body">
-                  Pending Review
+                  {t("pending_review")}
                 </span>
               </div>
               <div className="flex items-center gap-4 mt-2 text-sm text-[#586330] font-body flex-wrap">
                 <span className="flex items-center gap-1">
                   <span>📅</span>
-                  <span>Submitted {new Date(skill.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
+                  <span>{t("submitted")} {new Date(skill.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
                 </span>
                 {skill.authorEmail && (
                   <span className="flex items-center gap-1">
@@ -177,29 +181,29 @@ export default function AdminReviewDetailPage() {
             {/* Bio & Description */}
             <div className="bg-white rounded-[48px] p-6 border border-[rgba(220,193,177,0.1)] card-shadow space-y-3">
               <p className="text-[10px] font-bold text-[#a23f00] uppercase tracking-widest font-body">
-                Bio & Description
+                {t("bio_description")}
               </p>
               <p className="text-base italic text-[rgba(29,28,13,0.8)] leading-relaxed font-body">
                 {skill.summary
                   ? `"${skill.summary}"`
-                  : "No description provided. The author has not included a summary for this skill."}
+                  : t("no_description")}
               </p>
             </div>
 
             {/* Author Details */}
             <div className="bg-white rounded-[48px] p-6 border border-[rgba(220,193,177,0.1)] card-shadow space-y-4">
               <p className="text-[10px] font-bold text-[#a23f00] uppercase tracking-widest font-body">
-                Author Details
+                {t('author_details')}
               </p>
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-[#586330] font-body">Author ID</span>
+                  <span className="text-sm text-[#586330] font-body">{t("author_id")}</span>
                   <span className="text-sm font-bold font-mono-custom text-[#1d1c0d]">
                     USR-{String(skill.id).padStart(4, "0")}-X
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-[#586330] font-body">Email</span>
+                  <span className="text-sm text-[#586330] font-body">{t("email_label")}</span>
                   <span className="text-sm font-medium text-[#1d1c0d] font-body">
                     {skill.authorEmail || "—"}
                   </span>
@@ -224,7 +228,7 @@ export default function AdminReviewDetailPage() {
             <div className="bg-white rounded-[48px] border border-[rgba(220,193,177,0.1)] card-shadow overflow-hidden">
               <div className="bg-[#ede9cf] px-6 py-3 flex items-center justify-between">
                 <span className="flex items-center gap-2 text-sm font-bold text-[#586330] uppercase tracking-widest font-body">
-                  <span>📄</span> SKILL.MD PREVIEW
+                  <span>📄</span> {t("skill_md_preview")}
                 </span>
                 <span className="text-[10px] text-[rgba(88,99,48,0.6)] font-mono-custom">
                   UTF-8 • {(skill.skillMdContent?.length ?? 0)} chars
@@ -241,12 +245,12 @@ export default function AdminReviewDetailPage() {
           {/* Submission Timeline */}
           <div className="bg-[#f8f4db] rounded-[48px] p-6 space-y-4">
             <p className="text-[10px] font-bold text-[#a23f00] uppercase tracking-widest font-body">
-              Submission Timeline
+              {t("submission_timeline")}
             </p>
             <div className="space-y-4">
               <TimelineItem
                 dot="#586330"
-                title="Automatic Security Scan Passed"
+                title={t("security_scan_passed")}
                 time={new Date(skill.createdAt).toLocaleString("en-US", {
                   month: "short",
                   day: "numeric",
@@ -257,8 +261,8 @@ export default function AdminReviewDetailPage() {
               />
               <TimelineItem
                 dot="#a23f00"
-                title="Assigned to Content Moderator"
-                time="Today"
+                title={t("assigned_moderator")}
+                time={t("today")}
               />
             </div>
           </div>
@@ -271,37 +275,37 @@ export default function AdminReviewDetailPage() {
             <div className="flex items-center gap-2">
               <span>✅</span>
               <p className="text-xs font-bold text-[#1d1c0d] uppercase tracking-widest font-body">
-                Moderator Checklist
+                {t("moderator_checklist")}
               </p>
             </div>
             <div className="space-y-2">
               <ChecklistItem
-                label="Icon matches bio"
+                label={t("icon_matches_bio")}
                 checked={checklist.iconMatches}
                 onChange={(v) => setChecklist((c) => ({ ...c, iconMatches: v }))}
               />
               <ChecklistItem
-                label="License is CC0 or MIT"
+                label={t("license_cc0_mit")}
                 checked={checklist.licenseOk}
                 onChange={(v) => setChecklist((c) => ({ ...c, licenseOk: v }))}
               />
               <ChecklistItem
-                label="Manual link check"
+                label={t("manual_link_check")}
                 checked={checklist.manualLinkCheck}
                 onChange={(v) => setChecklist((c) => ({ ...c, manualLinkCheck: v }))}
               />
             </div>
             <p className="text-[10px] italic text-[rgba(88,99,48,0.7)] font-body">
-              Complete all steps before finalizing decision.
+              {t("complete_checklist")}
             </p>
           </div>
 
           {/* Review Decision Card */}
           <div className="bg-white rounded-[24px] p-8 border border-[rgba(162,63,0,0.05)] card-shadow shadow-[0px_20px_50px_0px_rgba(86,67,55,0.12)] space-y-5">
             <div>
-              <h3 className="text-xl font-extrabold font-heading text-[#a23f00]">Final Decision</h3>
+              <h3 className="text-xl font-extrabold font-heading text-[#a23f00]">{t("final_decision")}</h3>
               <p className="text-[10px] text-[#586330]/60 uppercase tracking-widest font-body mt-0.5">
-                Admin Verification
+                {t("admin_verification")}
               </p>
             </div>
 
@@ -309,14 +313,14 @@ export default function AdminReviewDetailPage() {
             <div>
               <div className="flex items-center justify-between mb-1">
                 <p className="text-[11px] font-bold uppercase tracking-wider text-[#1d1c0d] font-body">
-                  Rejection Feedback
+                  {t("rejection_feedback")}
                 </p>
                 <p className="text-[10px] italic text-[#ba1a1a] font-body lowercase">
-                  *Required for rejection only
+                  {t("rejection_required")}
                 </p>
               </div>
               <textarea
-                placeholder="Please provide specific feedback for the developer... (e.g., improve icon resolution, fix broken documentation links)"
+                placeholder={t("feedback_placeholder")}
                 value={feedback}
                 onChange={(e) => setFeedback(e.target.value)}
                 rows={5}
@@ -331,21 +335,21 @@ export default function AdminReviewDetailPage() {
                 disabled={actioning}
                 className="w-full flex items-center justify-center gap-3 h-[56px] bg-gradient-to-r from-[#a23f00] to-[#fa7025] text-white font-semibold rounded-full shadow-[0px_10px_15px_-3px_rgba(162,63,0,0.2),0px_4px_6px_-4px_rgba(162,63,0,0.2)] hover:opacity-90 transition-all font-heading disabled:opacity-50"
               >
-                {actioning ? "Processing..." : <>✓ Approve & Publish</>}
+                {actioning ? t("processing") : t("approve_publish")}
               </button>
               <button
                 onClick={reject}
                 disabled={actioning}
                 className="w-full flex items-center justify-center gap-3 h-[56px] border-2 border-[rgba(186,26,26,0.2)] text-[#ba1a1a] font-semibold rounded-full hover:bg-red-50 transition-colors font-heading disabled:opacity-50"
               >
-                ✕ Reject Submission
+                ✕ {t("reject_submission")}
               </button>
             </div>
 
             {/* Disclaimer */}
             <div className="border-t border-[#ede9cf] pt-6">
               <p className="text-[11px] text-[#586330] leading-relaxed font-body">
-                By approving, this skill will be immediately deployed to the public registry. All edits are logged for compliance.
+                &ldquo;{t("approve_disclaimer")}&rdquo;
               </p>
             </div>
           </div>

@@ -1,11 +1,11 @@
 import { ReactNode } from "react";
-import { NextIntlClientProvider } from "next-intl";
+import { I18nProvider } from "@/lib/i18n/context";
 import zhMessages from "./messages/zh.json";
 
 export function TestWrapper({ children }: { children: ReactNode }) {
   return (
-    <NextIntlClientProvider locale="zh" messages={zhMessages}>
+    <I18nProvider messages={zhMessages}>
       {children}
-    </NextIntlClientProvider>
+    </I18nProvider>
   );
 }

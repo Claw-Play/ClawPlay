@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { useTranslations } from "next-intl";
+import { useT } from "@/lib/i18n/context";
 
 interface QuotaInfo {
   used: number;
@@ -33,15 +33,18 @@ function formatRelativeTime(date: Date): string {
 interface DashboardClientProps {
   user: UserInfo;
   quota: QuotaInfo;
-  token: { id: string; createdAt: string } | null;
+  token: { id: string; createdAt: string; value: string } | null;
 }
 
 export function DashboardClient({ user, quota, token }: DashboardClientProps) {
-  const t = useTranslations("dashboard");
-  const tCommon = useTranslations("common");
+  const t = useT("dashboard");
+  const tCommon = useT("common");
   const [generating, setGenerating] = useState(false);
-  const [activeToken, setActiveToken] = useState<{ id: string; createdAt: string } | null>(token);
-  const [tokenValue, setTokenValue] = useState<string | null>(null);
+  const [activeToken, setActiveToken] = useState<{ id: string; createdAt: string; value: string } | null>(token);
+  // Token 值持久化在 localStorage（key = token id），用于路由跳转后恢复
+  const [tokenValue, setTokenValue] = useState<string | null>(() =>
+    token ? token.value : null
+  );
   const [copied, setCopied] = useState(false);
   const [revoking, setRevoking] = useState(false);
 
@@ -51,8 +54,10 @@ export function DashboardClient({ user, quota, token }: DashboardClientProps) {
       const res = await fetch("/api/user/token/generate", { method: "POST" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
+      const newToken = { id: data.tokenId, createdAt: data.createdAt, value: data.token };
+      setActiveToken(newToken);
       setTokenValue(data.token);
-      setActiveToken({ id: data.tokenId, createdAt: data.createdAt });
+      localStorage.setItem(`clawplay_token_${data.tokenId}`, data.token);
     } catch (err) {
       alert(err instanceof Error ? err.message : t("generate_failed"));
     } finally {
@@ -76,6 +81,7 @@ export function DashboardClient({ user, quota, token }: DashboardClientProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ tokenId: activeToken.id }),
       });
+      localStorage.removeItem(`clawplay_token_${activeToken.id}`);
       setActiveToken(null);
       setTokenValue(null);
     } catch {

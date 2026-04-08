@@ -4,6 +4,8 @@ import { db } from "@/lib/db";
 import { skills, skillVersions, userIdentities, users } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import matter from "gray-matter";
+import { scanSkillContent } from "@/lib/skill-security-scan";
+import { llmSafetyReview } from "@/lib/skill-llm-safety";
 
 // Generate a slug from name
 function slugify(name: string): string {
@@ -46,15 +48,76 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Resolve author info from user record + email identity (if any)
-    const user = await db.query.users.findFirst({ where: eq(users.id, auth.userId) });
+    // ── 1. 静态安全扫描 ─────────────────────────────────────────────────────
+    const scan = scanSkillContent(skillMdContent);
+    if (!scan.safe) {
+      const errorFlags = scan.flags
+        .filter((f) => f.severity === "error")
+        .map((f) => `[${f.code}] ${f.description}`);
+      return NextResponse.json(
+        {
+          error: "Security scan failed.",
+          details: errorFlags,
+        },
+        { status: 400 }
+      );
+    }
+
+    // ── 2. LLM 安全预审（可选，优雅降级）───────────────────────────────────
+    let llmFlags: Array<{ code: string; description: string }> = [];
+
+    try {
+      const { getLLMProvider } = await import("@/lib/providers/llm");
+      const provider = getLLMProvider();
+      const review = await llmSafetyReview(skillMdContent, async (req) => {
+        const result = await provider.generate({
+          prompt: req.prompt,
+          system: req.system,
+          maxTokens: req.maxTokens,
+          temperature: req.temperature,
+        });
+        return { text: result.text };
+      });
+
+      if (review) {
+        llmFlags = review.flags;
+
+        if (review.verdict === "UNSAFE") {
+          return NextResponse.json(
+            {
+              error: "LLM safety review flagged this content.",
+              reason: review.reason,
+            },
+            { status: 400 }
+          );
+        }
+      }
+    } catch {
+      // LLM 未配置或调用失败 — 跳过，不阻断提交
+    }
+
+    // ── 3. 合并 moderationFlags ─────────────────────────────────────────────
+    const allFlags = [
+      ...scan.flags
+        .filter((f) => f.severity === "warning")
+        .map((f) => ({ code: f.code, description: f.description })),
+      ...llmFlags.map((f) => ({ code: `LLM_${f.code}`, description: f.description })),
+    ];
+
+    // ── 4. 解析 author info ─────────────────────────────────────────────────
+    const user = await db.query.users.findFirst({
+      where: eq(users.id, auth.userId),
+    });
     const emailIdentity = await db.query.userIdentities.findFirst({
-      where: and(eq(userIdentities.userId, auth.userId), eq(userIdentities.provider, "email")),
+      where: and(
+        eq(userIdentities.userId, auth.userId),
+        eq(userIdentities.provider, "email")
+      ),
     });
     const authorName = user?.name || "";
     const authorEmail = emailIdentity?.providerAccountId ?? "";
 
-    // Generate unique slug
+    // ── 5. 生成 slug ────────────────────────────────────────────────────────
     let slug = slugify(name);
     const existing = await db.query.skills.findFirst({
       where: eq(skills.slug, slug),
@@ -63,7 +126,7 @@ export async function POST(request: NextRequest) {
       slug = `${slug}-${genId().slice(0, 6)}`;
     }
 
-    // Parse SKILL.md frontmatter
+    // ── 6. 解析 SKILL.md frontmatter ────────────────────────────────────────
     let parsedMetadata: Record<string, unknown> = {};
     try {
       const { data } = matter(skillMdContent);
@@ -76,7 +139,7 @@ export async function POST(request: NextRequest) {
     const versionId = genId();
     const version = "1.0.0";
 
-    // Create skill
+    // ── 7. 写 DB ────────────────────────────────────────────────────────────
     await db.insert(skills).values({
       id: skillId,
       slug,
@@ -88,12 +151,13 @@ export async function POST(request: NextRequest) {
       iconEmoji: iconEmoji ?? "🦐",
       moderationStatus: "pending",
       moderationReason: "",
-      moderationFlags: "[]",
+      moderationFlags: JSON.stringify(allFlags),
       latestVersionId: versionId,
       statsStars: 0,
+      statsRatingsCount: 0,
+      isFeatured: 0,
     });
 
-    // Create first version
     await db.insert(skillVersions).values({
       id: versionId,
       skillId,
@@ -106,7 +170,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         skill: { id: skillId, slug, name, version },
-        message: "Skill submitted. Pending review.",
+        message:
+          allFlags.length > 0
+            ? "Skill submitted. Pending review."
+            : "Skill submitted. Pending review.",
+        reviewFlags: allFlags.length > 0 ? allFlags : undefined,
       },
       { status: 201 }
     );

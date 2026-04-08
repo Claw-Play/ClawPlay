@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
+import { useT } from "@/lib/i18n/context";
 
 interface Skill {
   slug: string;
@@ -18,6 +19,7 @@ interface SkillsGridProps {
 }
 
 export function SkillsGrid({ initialSkills, allEmojis }: SkillsGridProps) {
+  const t = useT("skills_grid");
   const [activeEmoji, setActiveEmoji] = useState<string | null>(null);
   const [search, setSearch] = useState("");
 
@@ -44,7 +46,7 @@ export function SkillsGrid({ initialSkills, allEmojis }: SkillsGridProps) {
         </div>
         <input
           type="text"
-          placeholder="Search skills, categories, or authors..."
+          placeholder={t("search_placeholder")}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="w-full h-16 pl-14 pr-5 rounded-[24px] bg-[#fffdf7]/80 backdrop-blur-md border border-[#e8dfc8] text-[#564337] placeholder-[#a89888] text-sm focus:outline-none focus:ring-2 focus:ring-[#a23f00]/30 focus:border-[#a23f00] transition-all shadow-sm"
@@ -61,7 +63,7 @@ export function SkillsGrid({ initialSkills, allEmojis }: SkillsGridProps) {
               : "bg-[#fffdf7] border border-[#e8dfc8] text-[#7a6a5a] hover:border-[#a23f00] hover:text-[#a23f00]"
           }`}
         >
-          All
+          {t("all")}
         </button>
         {allEmojis.map((e) => (
           <button
@@ -85,7 +87,7 @@ export function SkillsGrid({ initialSkills, allEmojis }: SkillsGridProps) {
             onClick={() => { setActiveEmoji(null); setSearch(""); }}
             className="text-sm text-[#a23f00] hover:underline font-body"
           >
-            Show all skills
+            {t("show_all")}
           </button>
         </div>
       )}
@@ -97,10 +99,10 @@ export function SkillsGrid({ initialSkills, allEmojis }: SkillsGridProps) {
             {activeEmoji ?? "🦐"}
           </div>
           <h2 className="text-xl font-semibold text-[#564337]">
-            {search ? `No results for "${search}"` : `No skills with ${activeEmoji ?? "this filter"}`}
+            {search ? t("no_results", {search}) : t("no_emoji_filter")}
           </h2>
           <p className="text-[#7a6a5a]">
-            {search ? "Try a different search term." : "Try a different filter or submit the first one!"}
+            {search ? t("try_different") : t("try_first")}
           </p>
         </div>
       ) : (
@@ -120,12 +122,12 @@ export function SkillsGrid({ initialSkills, allEmojis }: SkillsGridProps) {
                     {s.name}
                   </h3>
                   <p className="text-xs text-[#a89888] font-body">
-                    by {s.authorName || "anonymous"}
+                    {t("by")} {s.authorName || t("anonymous")}
                   </p>
                 </div>
               </div>
               <p className="text-sm text-[#7a6a5a] line-clamp-2 leading-relaxed font-body">
-                {s.summary || "No description provided."}
+                {s.summary || t("no_description")}
               </p>
               <div className="flex items-center gap-3 mt-3 pt-3 border-t border-[#e8dfc8]">
                 <span className="text-xs text-[#a89888] font-body">

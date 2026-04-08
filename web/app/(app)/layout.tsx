@@ -2,7 +2,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useT } from "@/lib/i18n/context";
 
 function NavIcon({ name }: { name: string }) {
   if (name === "grid") return <span className="inline-block w-4 text-center text-base">⊞</span>;
@@ -16,10 +16,10 @@ function NavIcon({ name }: { name: string }) {
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() ?? "";
   const router = useRouter();
-  const t = useTranslations("nav");
-  const tCommon = useTranslations("common");
+  const t = useT("nav");
+  const tCommon = useT("common");
   const isSkillsRoute = pathname.startsWith("/skills");
-  const [user, setUser] = useState<{ name?: string } | null>(null);
+  const [user, setUser] = useState<{ name?: string; role?: string } | null>(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -128,6 +128,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     >
                       <span className="text-base">✦</span> {tCommon("submit")}
                     </Link>
+                    {user?.role === "admin" && (
+                      <Link
+                        href="/admin"
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-[#a23f00] hover:bg-[#faf3d0] font-body transition-colors font-semibold"
+                        onClick={() => setDropdownOpen(false)}
+                      >
+                        <span className="text-base">🛡</span> {tCommon("admin_panel")}
+                      </Link>
+                    )}
                   </div>
                   <div className="border-t border-[#ede9cf] py-2">
                     <button

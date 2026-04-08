@@ -5,8 +5,12 @@ const IV_LENGTH = 12;
 const AUTH_TAG_LENGTH = 16;
 const SALT = "clawplay-salt-v1"; // Static salt for PBKDF2 — not user-specific in Phase 1
 
+// Cached derived key — scrypt is CPU-intensive; derive once per process lifetime
+let _cachedKey: Buffer | null = null;
+let _cachedSecret: string | null = null;
+
 /**
- * Get the encryption key. Throws in production if not configured.
+ * Get the encryption key (cached per secret). Throws in production if not configured.
  */
 function getKey(): Buffer {
   const secret = process.env.CLAWPLAY_SECRET_KEY;
@@ -17,7 +21,10 @@ function getKey(): Buffer {
     // Dev fallback — never used in production
     return scryptSync("clawplay-dev-secret-do-not-use-in-prod", SALT, 32);
   }
-  return scryptSync(secret, SALT, 32);
+  if (_cachedKey && _cachedSecret === secret) return _cachedKey;
+  _cachedSecret = secret;
+  _cachedKey = scryptSync(secret, SALT, 32);
+  return _cachedKey;
 }
 
 /**

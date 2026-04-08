@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useT } from "@/lib/i18n/context";
 
 interface UserInfo {
   id: number;
@@ -16,6 +17,7 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const t = useT("admin");
   const [user, setUser] = useState<UserInfo | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -41,7 +43,7 @@ export default function AdminLayout({
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#fefae0]">
-        <div className="text-[#7a6a5a] animate-pulse font-body">Loading...</div>
+        <div className="text-[#7a6a5a] animate-pulse font-body">{t("loading")}</div>
       </div>
     );
   }
@@ -56,17 +58,17 @@ export default function AdminLayout({
             <span className="text-lg">🦐</span>
           </div>
           <div>
-            <p className="text-[#a23f00] font-bold font-heading text-lg leading-tight">Admin</p>
-            <p className="text-[#586330] text-[10px] uppercase tracking-widest font-body leading-tight">Managing the Garden</p>
+            <p className="text-[#a23f00] font-bold font-heading text-lg leading-tight">{t("admin_panel")}</p>
+            <p className="text-[#586330] text-[10px] uppercase tracking-widest font-body leading-tight">{t("managing")}</p>
           </div>
         </div>
 
         {/* Nav */}
         <nav className="flex-1 space-y-1">
-          <NavLink href="/admin" icon="📊" label="Dashboard" active={pathname === "/admin"} />
-          <NavLink href="/admin/review" icon="📝" label="Pending Reviews" active={isReview} />
-          <NavLink href="/admin/audit" icon="📋" label="Audit Logs" active={isAudit} />
-          <NavLink href="/admin/settings" icon="⚙️" label="Settings" active={pathname === "/admin/settings"} />
+          <NavLink href="/admin" icon="📊" label={t("dashboard")} active={pathname === "/admin"} />
+          <NavLink href="/admin/review" icon="📝" label={t("pending_reviews")} active={isReview} />
+          <NavLink href="/admin/audit" icon="📋" label={t("audit_logs")} active={isAudit} />
+          <NavLink href="/admin/settings" icon="⚙️" label={t("settings")} active={pathname === "/admin/settings"} />
         </nav>
 
         {/* Bottom */}
@@ -76,7 +78,7 @@ export default function AdminLayout({
             className="flex items-center gap-3 px-4 py-3 rounded-full text-[#586330] hover:bg-[#ede9cf] transition-colors font-body"
           >
             <span className="text-base">↩</span>
-            <span className="text-sm">Back to App</span>
+            <span className="text-sm">{t("back_to_app")}</span>
           </Link>
           <form action="/api/auth/logout" method="POST">
             <button
@@ -84,7 +86,7 @@ export default function AdminLayout({
               className="w-full flex items-center gap-3 px-4 py-3 rounded-full text-[#586330] hover:bg-[#ede9cf] transition-colors font-body"
             >
               <span className="text-base">🚪</span>
-              <span className="text-sm">Logout</span>
+              <span className="text-sm">{t("logout")}</span>
             </button>
           </form>
         </div>
@@ -96,7 +98,13 @@ export default function AdminLayout({
         <header className="h-[80px] bg-[#fefae0] border-b border-[rgba(220,193,177,0.1)] flex items-center px-8 shadow-[0px_8px_24px_0px_rgba(86,67,55,0.06)]">
           <div className="flex-1">
             <h1 className="text-2xl font-bold font-heading text-[#a23f00] tracking-tight">
-              {getPageTitle(pathname ?? "")}
+              {getPageTitle(pathname ?? "", {
+                dashboard: t("dashboard"),
+                pending_reviews: t("pending_reviews"),
+                audit_logs: t("audit_logs"),
+                settings: t("settings"),
+                admin_panel: t("admin_panel"),
+              })}
             </h1>
           </div>
           {user && (
@@ -145,10 +153,10 @@ function NavLink({
   );
 }
 
-function getPageTitle(pathname: string): string {
-  if (pathname === "/admin") return "Dashboard";
-  if (pathname.startsWith("/admin/review")) return "Skill Review";
-  if (pathname.startsWith("/admin/audit")) return "Audit Logs";
-  if (pathname.startsWith("/admin/settings")) return "Settings";
-  return "Admin";
+function getPageTitle(pathname: string, labels: {dashboard: string; pending_reviews: string; audit_logs: string; settings: string; admin_panel: string}): string {
+  if (pathname === "/admin") return labels.dashboard;
+  if (pathname.startsWith("/admin/review")) return labels.pending_reviews;
+  if (pathname.startsWith("/admin/audit")) return labels.audit_logs;
+  if (pathname.startsWith("/admin/settings")) return labels.settings;
+  return labels.admin_panel;
 }
