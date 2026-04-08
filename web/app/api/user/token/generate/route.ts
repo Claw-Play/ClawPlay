@@ -43,8 +43,8 @@ export async function POST() {
     encryptedPayload: encrypted,
   });
 
-  // Initialize Redis quota
-  await initQuota(user.id, user.quotaFree);
+  // Initialize Redis quota — fire-and-forget, never blocks token generation
+  initQuota(user.id, user.quotaFree).catch(() => {});
 
   return NextResponse.json({
     token: encrypted,

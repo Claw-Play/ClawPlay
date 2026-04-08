@@ -76,6 +76,8 @@ export const skills = sqliteTable(
     moderationFlags: text("moderation_flags").notNull().default("[]"), // JSON array
     latestVersionId: text("latest_version_id"), // FK → skill_versions.id
     statsStars: integer("stats_stars").notNull().default(0),
+    statsRatingsCount: integer("stats_ratings_count").notNull().default(0),
+    isFeatured: integer("is_featured").notNull().default(0),
     deletedAt: integer("deleted_at", { mode: "timestamp" }),
     createdAt: integer("created_at", { mode: "timestamp" })
       .notNull()
@@ -138,6 +140,29 @@ export const userTokens = sqliteTable(
   ]
 );
 
+// SkillRatings table — one rating + optional comment per user per skill
+export const skillRatings = sqliteTable(
+  "skill_ratings",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    skillId: text("skill_id")
+      .notNull()
+      .references(() => skills.id),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id),
+    rating: integer("rating").notNull(), // 1–5
+    comment: text("comment").notNull().default(""),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => [
+    uniqueIndex("skill_ratings_user_skill").on(table.userId, table.skillId),
+    index("skill_ratings_by_skill").on(table.skillId),
+  ]
+);
+
 // Type exports for use in API routes
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
@@ -151,3 +176,5 @@ export type SkillVersion = typeof skillVersions.$inferSelect;
 export type NewSkillVersion = typeof skillVersions.$inferInsert;
 export type UserToken = typeof userTokens.$inferSelect;
 export type NewUserToken = typeof userTokens.$inferInsert;
+export type SkillRating = typeof skillRatings.$inferSelect;
+export type NewSkillRating = typeof skillRatings.$inferInsert;

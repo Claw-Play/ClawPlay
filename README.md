@@ -222,8 +222,8 @@ pnpm test:all
 |-------|------|--------|
 | Phase 1 | Core infrastructure (CLI, Web, Relay, Token system) | ✅ Done |
 | Phase 2 | Web launch + Skill ecosystem (M0: production deploy → M6: international expansion) | 🔲 In Progress |
-| Phase 3 | Social & UX (sharing, reviews, Featured carousel, notification center) | 🔲 Planned |
-| Phase 4 | Monetization & scale (Token Plans, multi-provider failover) | 🔲 Planned |
+| Phase 3 | Social & UX (reviews ✅, Featured carousel ✅, sharing, notification center) | 🔲 In Progress |
+| Phase 4 | Monetization & scale (Token Plans, multi-provider failover; LLM safety pre-scan ✅) | 🔲 Planned |
 | Phase 5 | Advanced AI — dual-track: Skill recovery + IP memory knowledge base | 🔲 Planned |
 
 See [ROADMAP.md](./ROADMAP.md) for full details.

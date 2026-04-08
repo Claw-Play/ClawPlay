@@ -39,18 +39,15 @@ export interface QuotaInfo {
 
 /**
  * Get current quota for a user.
- * Returns { used, limit, remaining } or null if no quota set.
+ * Non-blocking — Redis timeout returns null immediately without waiting.
  */
 export async function getQuota(userId: number): Promise<QuotaInfo | null> {
   try {
     const r = getRedis();
     if (!r) return null;
-    const timeout = new Promise<null>((resolve) =>
-      setTimeout(() => resolve(null), 2000)
-    );
     const data = await Promise.race([
       r.get<{ used: number; limit: number }>(`clawplay:quota:${userId}`),
-      timeout,
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), 2000)),
     ]);
     if (!data) return null;
     const remaining = Math.max(0, data.limit - data.used);
@@ -141,9 +138,8 @@ export async function incrementQuota(
     if (remaining < 0) return { ok: false };
     return { ok: true, remaining };
   } catch {
-    console.warn("[redis/incrementQuota] Redis unavailable — skipping quota deduction", { userId, ability });
-    // Redis unavailable — proceed optimistically (quota may be deducted on next request)
-    return { ok: true, remaining: 999 };
+    console.warn("[redis/incrementQuota] Redis unavailable — rejecting request", { userId, ability });
+    return { ok: false };
   }
 }
 
@@ -166,6 +162,7 @@ export async function checkAndIncrementQuota(
 
 /**
  * Initialize quota for a new user (called on token generation).
+ * Fire-and-forget — errors are silently ignored; quota can be set on first use.
  */
 export async function initQuota(
   userId: number,
@@ -176,6 +173,6 @@ export async function initQuota(
     if (!r) return;
     await r.set(`clawplay:quota:${userId}`, { used: 0, limit }, { ex: 86400 });
   } catch {
-    // Redis not configured — skip silently in dev
+    // Redis not configured or unreachable — skip silently
   }
 }

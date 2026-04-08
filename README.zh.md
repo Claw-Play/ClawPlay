@@ -223,8 +223,8 @@ pnpm test:all
 |------|------|------|
 | Phase 1 | 核心基础设施（CLI、Web、Relay、Token 系统） | ✅ 已完成 |
 | Phase 2 | Web 正式上线 + Skill 生态（M0：正式部署 → M6：出海准备） | 🔲 进行中 |
-| Phase 3 | 社交与用户体验（分享、评分、Featured 轮播、通知中心） | 🔲 计划中 |
-| Phase 4 | 商业化与规模化（Token Plan、多 Provider 故障转移） | 🔲 计划中 |
+| Phase 3 | 社交与用户体验（评论 ✅、Featured 轮播 ✅、分享、通知中心） | 🔲 进行中 |
+| Phase 4 | 商业化与规模化（Token Plan、多 Provider 故障转移；LLM 安全预审 ✅） | 🔲 计划中 |
 | Phase 5 | 高级 AI 能力 — 双线深化：Skill 中断恢复 + IP 记忆知识库 | 🔲 计划中 |
 
 完整路线图见 [ROADMAP.md](./ROADMAP.md)。

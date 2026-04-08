@@ -1,7 +1,7 @@
 "use client";
 import { useEffect } from "react";
 import Link from "next/link";
-import { useTranslations } from "next-intl";
+import { useT } from "@/lib/i18n/context";
 
 export default function ErrorPage({
   error,
@@ -10,7 +10,7 @@ export default function ErrorPage({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  const t = useTranslations("error");
+  const t = useT("error");
 
   useEffect(() => {
     console.error("[ClawPlay] Unhandled error:", error);

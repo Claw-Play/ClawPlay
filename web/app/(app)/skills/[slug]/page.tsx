@@ -4,8 +4,9 @@ import { db } from "@/lib/db";
 import { skills, skillVersions } from "@/lib/db/schema";
 import { eq, and, isNull, desc } from "drizzle-orm";
 import { getAuthFromCookies } from "@/lib/auth";
-import { getTranslations } from "next-intl/server";
+import { getT } from "@/lib/i18n";
 import { QuickInstallCard } from "@/components/QuickInstallCard";
+import { ReviewsSection } from "@/components/ReviewsSection";
 
 export async function generateMetadata({ params }: { params: { slug: string } }) {
   const skill = await db.query.skills.findFirst({
@@ -23,8 +24,8 @@ export default async function SkillDetailPage({
   params: { slug: string };
 }) {
   const auth = await getAuthFromCookies();
-  const t = await getTranslations("skill_detail");
-  const tCommon = await getTranslations("common");
+  const t = getT("skill_detail");
+  const tCommon = getT("common");
 
   const skill = await db.query.skills.findFirst({
     where: and(eq(skills.slug, params.slug), isNull(skills.deletedAt)),
@@ -86,9 +87,9 @@ export default async function SkillDetailPage({
                 <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#586330]/10 text-[#586330] text-xs font-semibold rounded-full font-body">
                   ✅ {tCommon("approved")}
                 </span>
-                {skill.statsStars > 0 && (
+                {skill.statsRatingsCount > 0 && (
                   <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#faf3d0] text-[#7a6a5a] text-xs font-medium rounded-full font-body">
-                    ⭐ {skill.statsStars}
+                    ⭐ {(skill.statsStars / skill.statsRatingsCount).toFixed(1)} ({skill.statsRatingsCount})
                   </span>
                 )}
               </div>
@@ -162,7 +163,18 @@ export default async function SkillDetailPage({
                   </div>
                 ))}
               </div>
+              <div className="mt-4 pt-4 border-t border-[#e8dfc8]">
+                <Link
+                  href={`/skills/${skill.slug}/versions`}
+                  className="text-sm text-[#a23f00] hover:text-[#c45000] font-body font-medium transition-colors"
+                >
+                  {t("view_all_versions")}
+                </Link>
+              </div>
             </div>
+
+            {/* Reviews */}
+            <ReviewsSection skillSlug={skill.slug} authUserId={auth?.userId ?? null} />
           </div>
 
           <QuickInstallCard slug={skill.slug} repoUrl={skill.repoUrl} auth={!!auth} />

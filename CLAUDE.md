@@ -2,7 +2,7 @@
 
 ## What is this project?
 
-ClawPlay is an open-source community hub for X Claw social/entertainment Skills. Phase 1 goals:
+ClawPlay is an open-source community hub for X Claw social/entertainment Skills. Phase 1 (✅ done as of 2026-04-06):
 
 1. **Unified Multimodal CLI** (`clawplay`) — one CLI for image, vision, LLM, TTS; replaces raw API keys
 2. **Web App** (Next.js 14) — Skill registry with human review, user registration, free tier quotas
@@ -32,7 +32,7 @@ ClawPlay/
 │   ├── app/
 │   │   ├── (auth)/               # Login/register pages
 │   │   ├── (app)/                # Authenticated pages (dashboard, skills, submit); layout provides nav shell on Skills routes
-│   │   ├── (admin)/              # Admin review panel
+│   │   ├── (admin)/              # Admin review panel (admin/audit, admin/review, admin/settings)
 │   │   ├── api/                  # 22 API routes
 │   │   ├── page.tsx              # Homepage (one-click token copy)
 │   │   └── layout.tsx
@@ -214,12 +214,14 @@ POST /api/user/token/generate      — 生成加密 CLAWPLAY_TOKEN
 POST /api/user/token/revoke        — 撤销 Token
 ```
 
-**Skills Routes（4个）**
+**Skills Routes（4个 + reviews）**
 ```
 GET  /api/skills                   — Skill 列表（SSR，筛选已审核）
 GET  /api/skills/[slug]            — Skill 详情
 GET  /api/skills/[slug]/versions   — 版本历史
 POST /api/skills/submit            — 提交 Skill（pending 状态）
+GET  /api/skills/[slug]/reviews    — 获取评论列表
+POST /api/skills/[slug]/reviews    — 提交评分/评论
 ```
 
 **Admin Routes（3个）**
@@ -261,8 +263,11 @@ Run from the project root:
 
 ## Key Files to Read First
 
-- `web/lib/db/schema.ts` — All table definitions
+- `web/lib/db/schema.ts` — All table definitions (incl. `skillRatings`, `isFeatured`, `statsRatingsCount`)
 - `web/lib/db/index.ts` — DB connection + auto-migration
+- `web/lib/i18n/` — Custom i18n: `getT` for server components, `I18nProvider` + `useT` for client components
+- `web/lib/skill-llm-safety.ts` — LLM pre-screening on Skill submit (UNSAFE/REVIEW/SAFE)
+- `web/lib/skill-security-scan.ts` — Bash injection detection on Skill submit
 - `web/lib/auth.ts` — JWT signing/verification helpers
 - `web/lib/token.ts` — AES-256-GCM encryption
 - `web/lib/redis.ts` — Quota management (atomic WATCH+MULTI+EXEC)
@@ -306,6 +311,7 @@ Run from the project root:
 - **CLI does Base64 encoding**: For vision analysis, CLI Base64-encodes images before POST to reduce relay bandwidth; server receives base64, not raw files
 - **MIME type detection**: For unknown file extensions, use `file -b --mime-type`; fallback to `image/png`
 - **Figma designs > current code**: Some pages in Figma (Reviews section) are aspirational and NOT in Phase 1; do not implement Figma-only features without confirmation. Implemented so far: Dashboard full-width layout with sidebar, Skills horizontal card list with hero + filters.
+- **i18n is custom (not next-intl)**: `web/lib/i18n/index.ts` provides `getT<K>(ns)` for server components (no await needed); `web/lib/i18n/context.tsx` provides `useT<K>(ns)` for client components via `I18nProvider` in `(app)/layout.tsx`. `web/i18n/request.ts` was deleted (incompatible with App Router cache); `next-intl/plugin` removed from `next.config.mjs`
 
 ### Testing
 - **No real network calls in unit tests**: Mock Upstash Redis, mock Volcengine/Gemini API responses
@@ -313,6 +319,7 @@ Run from the project root:
 - **SMS/WeChat can be mocked**: These routes exist but UI wiring and full OAuth flow may not be complete; test with mock responses
 - **CLI unit tests**: Pure bash, zero external dependencies; `curl` is mocked via function override in isolated subprocesses. Run with `bash cli/tests/run-all.sh` or via `make test`. Test files live in `cli/tests/` — one file per lib (`token`, `api`, `image`, `llm`, `vision`, `install`); shared harness in `cli/tests/helpers.sh`
 - **`make test`** runs both web unit tests (`cd web && npm test`) and CLI bash tests in sequence
+- **New web test files**: `skill-llm-safety.test.ts`, `skill-security-scan.test.ts`, `reviews.test.ts`, `skill-download.test.ts`, `i18n-context.test.tsx` — all in `web/lib/__tests__/`
 
 ## Bilingual Documentation Convention
 
@@ -348,3 +355,10 @@ When adding features, update both README files and keep them in sync.
 | 2026-04-06 | CLI bash 单元测试 | 纯 bash + curl mock（函数覆盖），零外部依赖；84 个用例覆盖全部 lib（token/api/image/llm/vision/install）；`make test` 同时跑 web + CLI |
 | 2026-04-06 | mktemp 不带扩展名 | macOS BSD mktemp 要求 X 在末尾，带 .png/.zip 后缀时返回字面量路径；image.sh / install.sh 统一改用 `mktemp` |
 | 2026-04-06 | Phase 6 并入 Phase 2 | 原 Phase 6（GitHub OAuth / Stripe / 多区域部署 / 英文社区）并入 Phase 2；Phase 2 现为"社区与生态 + 国际化"；原 Phase 3/4/5 序号前移 |
+| 2026-04-08 | 自定义 i18n（替换 next-intl） | next-intl 插件与 App Router cache 不兼容；改用自定义 `getT`（服务端，直接读 JSON）+ `I18nProvider` + `useT`（客户端）；删除 `next-intl/plugin`；`web/i18n/request.ts` 已删除 |
+| 2026-04-08 | Admin 面板路由重构 | Admin 路由从 `(admin)/audit/` + `(admin)/review/` 改为 `(admin)/admin/audit/` + `(admin)/admin/review/` + `(admin)/admin/settings/`；layout 使用 `useT` 翻译所有 nav label |
+| 2026-04-08 | Featured Skill 路由 | 首页按 `isFeatured` DESC → `createdAt` DESC 排序；`FeaturedCarousel` 组件；admin 可 feature/unfeature；Schema 新增 `isFeatured`、`statsRatingsCount` 字段 |
+| 2026-04-08 | Skill 评分与评论系统 | `skillRatings` 表（userId + skillId 唯一约束）；`/api/skills/[slug]/reviews/` GET/POST；`ReviewsSection` + `ReviewForm` 组件；详情页展示平均分和评论列表 |
+| 2026-04-08 | Phase 3 全部完成 | Skill 评分与评论、Featured Skill 轮播均已 ✅；Phase 3 其他项（分享卡片、通知中心等）待实现 |
+| 2026-04-08 | LLM 安全预审层 | `web/lib/skill-llm-safety.ts` — 提交时调用 LLM 对 SKILL.md 做安全评估；UNSAFE 直接拒绝，REVIEW 存入 `moderationFlags`，安全 Skill 继续人工审核 |
+| 2026-04-08 | Skill 安全扫描 | `web/lib/skill-security-scan.ts` — bash 注入检测（`rm -rf /`、`eval $VAR`、`curl \| sh` 等）；与 `skill-llm-safety.ts` 共同构成双重防护 |

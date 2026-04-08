@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useT } from "@/lib/i18n/context";
 
 interface Skill {
   id: string;
@@ -15,6 +16,8 @@ interface Skill {
 }
 
 export default function AdminReviewPage() {
+  const t = useT("admin_review");
+  const tCommon = useT("common");
   const [skills, setSkills] = useState<Skill[]>([]);
   const [loading, setLoading] = useState(true);
   const [actioning, setActioning] = useState<string | null>(null);
@@ -75,7 +78,7 @@ export default function AdminReviewPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24">
-        <div className="text-[#7a6a5a] animate-pulse font-body">Loading...</div>
+        <div className="text-[#7a6a5a] animate-pulse font-body">{tCommon("loading")}</div>
       </div>
     );
   }
@@ -86,14 +89,14 @@ export default function AdminReviewPage() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold font-heading text-[#564337]">
-            Pending Reviews
+            {t("pending_reviews")}
           </h2>
           <p className="text-[#7a6a5a] text-sm mt-1 font-body">
-            {skills.length} submission{skills.length !== 1 ? "s" : ""} awaiting review
+            {t("submissions_count", { count: String(skills.length) })}
           </p>
         </div>
         <span className="px-3 py-1 bg-[#fa7025]/10 text-[#fa7025] text-xs font-semibold rounded-full font-body">
-          {skills.length} pending
+          {skills.length} {t("pending")}
         </span>
       </div>
 
@@ -102,14 +105,14 @@ export default function AdminReviewPage() {
         <div className="bg-[#fffdf7] rounded-[48px] p-12 text-center card-shadow space-y-4">
           <div className="text-5xl">🌿</div>
           <div>
-            <h3 className="text-xl font-bold font-heading text-[#564337]">All clear!</h3>
-            <p className="text-[#7a6a5a] mt-1 font-body">No pending submissions right now. The garden is thriving.</p>
+            <h3 className="text-xl font-bold font-heading text-[#564337]">{t("all_clear")}</h3>
+            <p className="text-[#7a6a5a] mt-1 font-body">{t("no_pending")}</p>
           </div>
           <Link
             href="/admin/audit"
             className="inline-block px-5 py-2.5 bg-[#f8f4db] text-[#a23f00] text-sm font-semibold rounded-full hover:bg-[#ede9cf] transition-colors font-heading"
           >
-            View audit log →
+            {t("view_audit")}
           </Link>
         </div>
       ) : (
@@ -134,11 +137,11 @@ export default function AdminReviewPage() {
                       {skill.name}
                     </h3>
                     <span className="px-2 py-0.5 bg-[rgba(162,63,0,0.1)] text-[#a23f00] text-[10px] font-semibold rounded-full font-body flex-shrink-0">
-                      ⏳ Pending
+                      ⏳ {t("pending_label").replace("⏳ ", "")}
                     </span>
                   </div>
                   <p className="text-xs text-[#586330] mt-1 font-body">
-                    by {skill.authorName || skill.authorEmail}
+                    {t("by")} {skill.authorName || skill.authorEmail}
                   </p>
                   <p className="text-xs text-[#7a6a5a] mt-1 font-body">
                     {new Date(skill.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
@@ -148,7 +151,7 @@ export default function AdminReviewPage() {
 
               {/* Summary */}
               <p className="text-sm text-[#7a6a5a] line-clamp-2 font-body pl-2">
-                {skill.summary || "No summary provided."}
+                {skill.summary || t("no_summary")}
               </p>
 
               {/* Install command */}
@@ -162,7 +165,7 @@ export default function AdminReviewPage() {
               {showReject === skill.id && (
                 <div className="space-y-2 pl-2">
                   <textarea
-                    placeholder="Reason for rejection (visible to user)..."
+                    placeholder={t("reject_reason_placeholder")}
                     value={reason}
                     onChange={(e) => setReason(e.target.value)}
                     rows={2}
@@ -174,13 +177,13 @@ export default function AdminReviewPage() {
                       disabled={actioning !== null}
                       className="px-4 py-2 bg-[#DC2626] hover:bg-[#b91c1c] text-white text-xs font-semibold rounded-full transition-colors font-body disabled:opacity-50"
                     >
-                      {actioning === skill.id ? "Rejecting..." : "Confirm reject"}
+                      {actioning === skill.id ? t("rejecting") : t("confirm_reject")}
                     </button>
                     <button
                       onClick={() => { setShowReject(null); setReason(""); }}
                       className="px-4 py-2 bg-[#f8f4db] text-[#7a6a5a] text-xs font-semibold rounded-full hover:bg-[#ede9cf] transition-colors font-body"
                     >
-                      Cancel
+                      {t("cancel")}
                     </button>
                   </div>
                 </div>
@@ -192,7 +195,7 @@ export default function AdminReviewPage() {
                   href={`/admin/review/${skill.id}`}
                   className="flex-1 text-center px-4 py-2.5 bg-gradient-to-r from-[#a23f00] to-[#fa7025] hover:opacity-90 text-white text-xs font-semibold rounded-full shadow-[0_6px_24px_rgba(162,63,0,0.2)] transition-all font-heading"
                 >
-                  Review Details
+                  {t("review_details")}
                 </Link>
                 <button
                   onClick={() => approve(skill.id)}
@@ -221,6 +224,7 @@ export default function AdminReviewPage() {
 }
 
 function AuditLogSection() {
+  const t = useT("admin_review");
   const [entries, setEntries] = useState<Record<string, unknown>[]>([]);
   const [loading, setLoading] = useState(false);
   const [visible, setVisible] = useState(false);
@@ -235,6 +239,7 @@ function AuditLogSection() {
       .finally(() => setLoading(false));
   }
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (visible) load();
   }, [visible]);
@@ -250,7 +255,7 @@ function AuditLogSection() {
     <div className="bg-[#1d1c0d] rounded-[48px] p-8 card-shadow space-y-4">
       <div className="flex items-center gap-2">
         <span className="text-lg">📋</span>
-        <h3 className="font-bold font-heading text-[#586330] text-base">Recent Audit Log</h3>
+        <h3 className="font-bold font-heading text-[#586330] text-base">{t("recent_audit")}</h3>
       </div>
 
       {!visible ? (
@@ -258,12 +263,12 @@ function AuditLogSection() {
           onClick={() => setVisible(true)}
           className="text-sm text-[#fa7025] hover:text-[#ff8f4a] transition-colors font-body"
         >
-          Show recent activity →
+          {t("show_activity")}
         </button>
       ) : loading ? (
-        <p className="text-[#fefae0]/50 text-sm animate-pulse font-body">Loading...</p>
+        <p className="text-[#fefae0]/50 text-sm animate-pulse font-body">{t("loading")}</p>
       ) : entries.length === 0 ? (
-        <p className="text-[#fefae0]/50 text-sm font-body">No entries yet.</p>
+        <p className="text-[#fefae0]/50 text-sm font-body">{t("no_entries")}</p>
       ) : (
         <div className="space-y-3">
           {entries.slice(0, 5).map((entry: Record<string, unknown>, i: number) => {
@@ -302,7 +307,7 @@ function AuditLogSection() {
             href="/admin/audit"
             className="inline-block text-sm text-[#fa7025] hover:text-[#ff8f4a] transition-colors font-body pt-2"
           >
-            View full audit log →
+            {t("full_audit")}
           </Link>
         </div>
       )}

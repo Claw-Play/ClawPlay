@@ -1,33 +1,46 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { skills } from "@/lib/db/schema";
-import { eq, and, isNull } from "drizzle-orm";
+import { eq, and, isNull, desc } from "drizzle-orm";
 import { getAuthFromCookies } from "@/lib/auth";
-import { getTranslations } from "next-intl/server";
+import { getT } from "@/lib/i18n";
 import { HomeClient } from "./HomeClient";
+import { FeaturedCarousel } from "@/components/FeaturedCarousel";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const t = await getTranslations("home");
-  const tCommon = await getTranslations("common");
+  const t = getT("home");
+  const tCommon = getT("common");
 
-  // Fetch featured skills (latest 4 approved)
-  let featuredSkills: { slug: string; name: string; iconEmoji: string; summary: string }[] = [];
+  // Fetch featured skills: isFeatured first, then latest approved to fill up to 4
+  let featuredSkills: {
+    slug: string;
+    name: string;
+    iconEmoji: string;
+    summary: string;
+    authorName: string;
+    statsStars: number;
+    statsRatingsCount: number;
+  }[] = [];
   try {
-    const rows = await db
+    const base = await db
       .select({
         slug: skills.slug,
         name: skills.name,
         iconEmoji: skills.iconEmoji,
         summary: skills.summary,
+        authorName: skills.authorName,
+        statsStars: skills.statsStars,
+        statsRatingsCount: skills.statsRatingsCount,
       })
       .from(skills)
       .where(and(eq(skills.moderationStatus, "approved"), isNull(skills.deletedAt)))
+      .orderBy(desc(skills.isFeatured), desc(skills.createdAt))
       .limit(4);
-    featuredSkills = rows;
+    featuredSkills = base;
   } catch {
-    // DB not ready yet — show placeholder
+    // DB not ready yet
   }
 
   const auth = await getAuthFromCookies();
@@ -164,28 +177,27 @@ export default async function HomePage() {
                 {t("see_all")}
               </Link>
             </div>
-            <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-5">
-              {featuredSkills.map((s) => (
-                <Link
-                  key={s.slug}
-                  href={`/skills/${s.slug}`}
-                  className="bg-[#fffdf7] card-radius p-5 border border-[#e8dfc8] card-shadow card-shadow-hover transition-all duration-200 flex flex-col gap-3"
-                >
-                  <div className="flex items-start justify-between">
-                    <span className="text-3xl">{s.iconEmoji}</span>
-                    <span className="inline-block px-2 py-0.5 bg-[#d8e6a6]/60 text-[#586330] text-xs font-semibold rounded-full font-body">
-                      {tCommon("free")}
-                    </span>
-                  </div>
+            {featuredSkills.length === 1 ? (
+              /* Single skill — no carousel needed */
+              <Link
+                href={`/skills/${featuredSkills[0].slug}`}
+                className="block bg-[#fffdf7] card-radius p-6 border border-[#e8dfc8] card-shadow"
+              >
+                <div className="flex items-start gap-4">
+                  <span className="text-5xl">{featuredSkills[0].iconEmoji}</span>
                   <div>
-                    <h3 className="font-semibold font-heading text-[#564337] text-base">{s.name}</h3>
-                    <p className="text-xs text-[#7a6a5a] line-clamp-2 mt-1 font-body">
-                      {s.summary || tCommon("no_description")}
+                    <h3 className="text-xl font-bold font-heading text-[#564337]">
+                      {featuredSkills[0].name}
+                    </h3>
+                    <p className="text-sm text-[#7a6a5a] font-body mt-1">
+                      {featuredSkills[0].summary || tCommon("no_description")}
                     </p>
                   </div>
-                </Link>
-              ))}
-            </div>
+                </div>
+              </Link>
+            ) : (
+              <FeaturedCarousel skills={featuredSkills} />
+            )}
           </div>
         </section>
       )}

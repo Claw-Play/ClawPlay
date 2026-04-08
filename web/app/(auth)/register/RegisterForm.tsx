@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useTranslations } from "next-intl";
+import { useT } from "@/lib/i18n/context";
 import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
 
@@ -10,7 +10,7 @@ type Tab = "phone" | "wechat";
 
 export function RegisterForm() {
   const router = useRouter();
-  const t = useTranslations("auth");
+  const t = useT("auth");
   const [tab, setTab] = useState<Tab>("phone");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);

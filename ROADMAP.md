@@ -37,8 +37,8 @@
 - **Skill 下载 API**：`/api/skills/[slug]/download`（zip 打包 + 版本支持 + E2E 测试）
 - **开发者入门文档**：CLI 导入、SKILL.md 编写规范、本地调试方法，发布到 `docs/`
 - **非 Relay 模式兼容**：Skill 可分发到 ClawHub，优先使用 X Claw 内置多模态工具
-- **自动安全扫描**：提交时跑 bash 注入检测（`rm -rf /`、`eval $VAR`、`curl | sh` 等），拦截恶意 Skill
-- **Skill 版本历史**：`/skills/[slug]/versions` 支持查看所有版本 diff
+- **自动安全扫描**：✅ 完成 — 提交时跑 bash 注入检测（`rm -rf /`、`eval $VAR`、`curl | sh` 等），拦截恶意 Skill；LLM 预审兜底
+- **Skill 版本历史**：✅ 完成 — `/skills/[slug]/versions` 独立页面，LCS diff 对比相邻版本
 
 ### 里程碑 3：第一个用户体验
 
@@ -66,14 +66,14 @@
 
 ---
 
-## Phase 3 — 社交与用户体验
+## Phase 3 — 社交与用户体验 ✅ 部分完成（2026-04-08）
 
 **目标：让用户分享玩耍心得，形成社区氛围，繁荣 Skill 生态**
 
 - **社媒分享功能**：用户分享玩耍心得、与其他用户交流，支持评论互动
 - **分享卡片**：参考 ChatGPT share link，Agent 执行完 Skill 后可自动生成分享卡片（含截图/命令/Skill 名）
-- **Skill 评分与评论**：用户对 Skill 评分、留言，帮助其他用户筛选优质内容
-- **Featured Skill 轮播**：首页自动播放的 Skill 展示
+- **Skill 评分与评论**：✅ 完成 — 1-5星评分 + 文字评论，`skillRatings` 表，`/api/skills/[slug]/reviews` API，详情页 UI
+- **Featured Skill 轮播**：✅ 完成 — `isFeatured` 字段，`FeaturedCarousel` 组件，首页自动切换，admin feature/unfeature 开关
 - **数字统计动画**：滚动触发的数字增长动画
 - **使用量趋势图**：配额使用历史图表
 - **通知中心**：审核状态变更、评论回复等消息推送
@@ -87,7 +87,7 @@
 
 - **多模态 Token Plan（free / pro / max）**：free 额度相对宽松用于引流，pro/max 档覆盖运营成本，探索赞助模式为 free tier 提供资金
 - **多 Provider 故障转移**：Ark + Gemini 负载均衡，Provider 故障时自动切换
-- **LLM 安全审查层**：人工审核前增加 LLM 自动预筛选，过滤明显恶意/违规内容
+- **LLM 安全审查层**：✅ 完成 — 提交时调用 LLM 对 SKILL.md 内容做安全评估（`/lib/skill-llm-safety.ts`），UNSAFE 直接拒绝，REVIEW 存入 moderationFlags，优雅降级
 
 ---
 

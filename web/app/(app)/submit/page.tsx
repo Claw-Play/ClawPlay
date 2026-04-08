@@ -2,13 +2,13 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useTranslations } from "next-intl";
+import { useT } from "@/lib/i18n/context";
 import { Button } from "@/components/Button";
 import { Input, Textarea } from "@/components/Input";
 
 export default function SubmitPage() {
   const router = useRouter();
-  const t = useTranslations("submit");
+  const t = useT("submit");
   const [form, setForm] = useState({
     name: "",
     summary: "",

@@ -100,4 +100,28 @@ CREATE INDEX IF NOT EXISTS user_tokens_by_user ON user_tokens(user_id);
 // Run migrations on import
 sqlite.exec(migrationSQL);
 
+// Add columns/tables if not exist (safe to re-run)
+const safeMigrations = `
+-- skills table: add new columns (no-op if already exist)
+ALTER TABLE skills ADD COLUMN stats_ratings_count INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE skills ADD COLUMN is_featured INTEGER NOT NULL DEFAULT 0;
+
+-- skill_ratings table
+CREATE TABLE IF NOT EXISTS skill_ratings (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  skill_id TEXT NOT NULL REFERENCES skills(id),
+  user_id INTEGER NOT NULL REFERENCES users(id),
+  rating INTEGER NOT NULL CHECK(rating BETWEEN 1 AND 5),
+  comment TEXT NOT NULL DEFAULT '',
+  created_at INTEGER NOT NULL DEFAULT (unixepoch())
+);
+CREATE UNIQUE INDEX IF NOT EXISTS skill_ratings_user_skill ON skill_ratings(user_id, skill_id);
+CREATE INDEX IF NOT EXISTS skill_ratings_by_skill ON skill_ratings(skill_id);
+`;
+try {
+  sqlite.exec(safeMigrations);
+} catch {
+  // Columns may already exist — ignore
+}
+
 export { DB_PATH };

@@ -21,15 +21,25 @@ export async function PATCH(
   const { id } = params;
   const body = await request.json();
   const { action, reason } = body as {
-    action?: "approve" | "reject";
+    action?: "approve" | "reject" | "feature" | "unfeature";
     reason?: string;
   };
 
-  if (!action || !["approve", "reject"].includes(action)) {
+  if (!action || !["approve", "reject", "feature", "unfeature"].includes(action)) {
     return NextResponse.json(
-      { error: "action must be 'approve' or 'reject'." },
+      { error: "action must be 'approve', 'reject', 'feature', or 'unfeature'." },
       { status: 400 }
     );
+  }
+
+  if (action === "feature" || action === "unfeature") {
+    await db
+      .update(skills)
+      .set({ isFeatured: action === "feature" ? 1 : 0, updatedAt: new Date() })
+      .where(and(eq(skills.id, id), isNull(skills.deletedAt)));
+    return NextResponse.json({
+      message: action === "feature" ? "Skill featured." : "Skill unfeatured.",
+    });
   }
 
   const skill = await db.query.skills.findFirst({

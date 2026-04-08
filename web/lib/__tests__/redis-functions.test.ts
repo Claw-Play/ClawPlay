@@ -107,11 +107,10 @@ describe("Redis quota functions", () => {
       expect(result.ok).toBe(false);
     });
 
-    it("returns ok=true optimistically on Redis error", async () => {
+    it("returns ok=false on Redis error (fail-safe)", async () => {
       mockFns.eval.mockRejectedValueOnce(new Error("Redis down"));
       const result = await incrementQuota(1, "image.generate");
-      expect(result.ok).toBe(true);
-      expect(result.remaining).toBe(999);
+      expect(result.ok).toBe(false);
     });
   });
 

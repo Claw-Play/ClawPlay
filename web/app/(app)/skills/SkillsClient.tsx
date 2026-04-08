@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { useTranslations } from "next-intl";
+import { useT } from "@/lib/i18n/context";
 
 interface Skill {
   slug: string;
@@ -35,7 +35,7 @@ function SearchIcon() {
 }
 
 export function SkillsClient({ initialSkills }: SkillsClientProps) {
-  const t = useTranslations("skills");
+  const t = useT("skills");
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState("");
   const [copiedSlug, setCopiedSlug] = useState<string | null>(null);
@@ -161,8 +161,8 @@ function SkillCard({
   copied: boolean;
   onCopy: () => void;
 }) {
-  const t = useTranslations("skills");
-  const tCommon = useTranslations("common");
+  const t = useT("skills");
+  const tCommon = useT("common");
   const installCmd = `claw install ${skill.slug}`;
   const stars = (skill.statsStars ?? 0) / 100;
 

@@ -1,9 +1,9 @@
 "use client";
 import { useState, useRef } from "react";
-import { useTranslations } from "next-intl";
+import { useT } from "@/lib/i18n/context";
 
 export function HomeClient() {
-  const t = useTranslations("home_cli");
+  const t = useT("home_cli");
   const [copied, setCopied] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
