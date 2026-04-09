@@ -63,7 +63,9 @@ export async function POST(request: NextRequest) {
 
     // 5. Deduct quota after successful generation
     await incrementQuota(payload.userId, ABILITY);
-    analytics.quota.use(payload.userId, ABILITY, COST);
+    analytics.quota.use(payload.userId, ABILITY, COST, {
+      outputTokens: result.usage?.totalTokens ?? 0,
+    });
 
     return NextResponse.json({ ...result, _quota: { used: COST, remaining: quotaCheck.remaining! - COST } });
   } catch (err) {

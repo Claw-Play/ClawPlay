@@ -15,8 +15,8 @@ export interface ImageGenerateRequest {
 }
 
 export type ImageGenerateResponse =
-  | { type: "url"; url: string }
-  | { type: "b64"; b64: string; mimeType: string };
+  | { type: "url"; url: string; usage?: { generatedImages: number; outputTokens: number; totalTokens: number } }
+  | { type: "b64"; b64: string; mimeType: string; usage?: { generatedImages: number; outputTokens: number; totalTokens: number } };
 
 export interface ImageProvider {
   generate(req: ImageGenerateRequest): Promise<ImageGenerateResponse>;

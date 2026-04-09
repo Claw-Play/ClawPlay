@@ -1,7 +1,10 @@
 import type { ImageProvider, ImageGenerateRequest, ImageGenerateResponse } from "./types";
+import { pickKeyWithRetry, recordKeyUsage } from "../key-pool";
 
 const ARK_ENDPOINT = "https://ark.cn-beijing.volces.com/api/v3/images/generations";
 const DEFAULT_MODEL = process.env.IMAGE_MODEL_ARK ?? "ep-20260307174559-w6lfl";
+const PROVIDER = "ark_image";
+const MAX_RETRIES = 3;
 
 /**
  * Map aspect ratio + quality tier to Ark `size` pixel string.
@@ -38,13 +41,35 @@ function toArkSize(ratio: string, quality: string): string {
 }
 
 export class ArkProvider implements ImageProvider {
-  private apiKey: string;
+  async generate(req: ImageGenerateRequest): Promise<ImageGenerateResponse> {
+    let lastError: Error | null = null;
 
-  constructor(apiKey: string) {
-    this.apiKey = apiKey;
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      const { id: keyId, key: apiKey } = await pickKeyWithRetry(PROVIDER);
+
+      try {
+        const result = await this.callArk(apiKey, req);
+        await recordKeyUsage(PROVIDER, keyId);
+        return result;
+      } catch (err: unknown) {
+        const code = (err as NodeJS.ErrnoException)?.code;
+        if (code === "PROVIDER_RATE_LIMITED") {
+          lastError = err as Error;
+          console.warn(`[ark/image] 429 on key ${keyId}, retrying with next key...`);
+          continue;
+        }
+        throw err;
+      }
+    }
+
+    // All keys exhausted
+    const msg = lastError?.message ?? "All Ark image keys are rate-limited.";
+    const err = new Error(msg);
+    (err as NodeJS.ErrnoException).code = "PROVIDER_RATE_LIMITED";
+    throw err;
   }
 
-  async generate(req: ImageGenerateRequest): Promise<ImageGenerateResponse> {
+  private async callArk(apiKey: string, req: ImageGenerateRequest): Promise<ImageGenerateResponse> {
     const size = toArkSize(req.size ?? "1:1", req.quality ?? "2K");
 
     const body: Record<string, unknown> = {
@@ -53,7 +78,7 @@ export class ArkProvider implements ImageProvider {
       size,
       output_format: "png",
       watermark: false,
-      response_format: "url", // CLI downloads from CDN; avoids large base64 in relay
+      response_format: "url",
     };
 
     if (req.refImages && req.refImages.length > 0) {
@@ -68,7 +93,7 @@ export class ArkProvider implements ImageProvider {
     const res = await fetch(ARK_ENDPOINT, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${this.apiKey}`,
+        Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify(body),
@@ -84,14 +109,25 @@ export class ArkProvider implements ImageProvider {
       throw new Error(`Ark API error ${res.status}: ${text}`);
     }
 
-    const data = await res.json() as { data: Array<{ url?: string; b64_json?: string }> };
+    const data = await res.json() as {
+      data: Array<{ url?: string; b64_json?: string }>;
+      usage?: { generated_images?: number; output_tokens?: number; total_tokens?: number };
+    };
     const item = data.data?.[0];
 
+    const usage = data.usage
+      ? {
+          generatedImages: data.usage.generated_images ?? 1,
+          outputTokens: data.usage.output_tokens ?? 0,
+          totalTokens: data.usage.total_tokens ?? 0,
+        }
+      : undefined;
+
     if (item?.url) {
-      return { type: "url", url: item.url };
+      return { type: "url", url: item.url, usage };
     }
     if (item?.b64_json) {
-      return { type: "b64", b64: item.b64_json, mimeType: "image/png" };
+      return { type: "b64", b64: item.b64_json, mimeType: "image/png", usage };
     }
 
     throw new Error("Ark API returned no image data.");
