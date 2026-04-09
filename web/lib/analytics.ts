@@ -236,8 +236,23 @@ export const analytics = {
   quota: {
     check: (userId: number, current: number, limit: number) =>
       logEvent({ event: "quota.check", userId, targetType: "quota", targetId: String(userId), metadata: { current, limit } }),
-    use: (userId: number, ability: string, cost: number) =>
-      logEvent({ event: "quota.use", userId, targetType: "ability", targetId: ability, metadata: { ability, cost } }),
+    use: (
+      userId: number,
+      ability: string,
+      cost: number,
+      usage?: { inputTokens?: number; outputTokens?: number }
+    ) => {
+      const inputTokens = usage?.inputTokens ?? 0;
+      const outputTokens = usage?.outputTokens ?? 0;
+      const totalTokens = inputTokens + outputTokens;
+      logEvent({
+        event: "quota.use",
+        userId,
+        targetType: "ability",
+        targetId: ability,
+        metadata: { ability, cost, inputTokens, outputTokens, totalTokens },
+      });
+    },
     exceeded: (userId: number, ability: string, current: number, limit: number) =>
       logEvent({ event: "quota.exceeded", userId, targetType: "ability", targetId: ability, metadata: { ability, current, limit } }),
     error: (userId: number, ability: string, provider: string, code: string) =>

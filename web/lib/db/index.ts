@@ -9,6 +9,8 @@ import fs from "fs";
 // In test environments, vi.resetModules() + re-import gives a fresh instance.
 let _db: ReturnType<typeof drizzle> | undefined;
 let _sqlite: Database.Database | undefined;
+/** Exported so other modules (e.g., test setup) can read the path without triggering init */
+export let DB_PATH: string;
 
 function getDbPath(): string {
   const DB_DIR = path.join(process.cwd(), "..", "data");
@@ -17,7 +19,7 @@ function getDbPath(): string {
 
 function ensureDb(): void {
   if (_db) return;
-  const DB_PATH = getDbPath();
+  DB_PATH = getDbPath();
   const DB_DIR = path.dirname(DB_PATH);
   if (!fs.existsSync(DB_DIR)) {
     fs.mkdirSync(DB_DIR, { recursive: true });
@@ -169,6 +171,22 @@ CREATE TABLE IF NOT EXISTS user_stats (
   skills_downloaded INTEGER NOT NULL DEFAULT 0,
   updated_at INTEGER NOT NULL DEFAULT (unixepoch())
 );
+
+-- provider_keys table — multi-key pool for rate-limit sharding
+CREATE TABLE IF NOT EXISTS provider_keys (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  provider TEXT NOT NULL,
+  encrypted_key TEXT NOT NULL,
+  key_hash TEXT NOT NULL,
+  quota INTEGER NOT NULL,
+  window_used INTEGER NOT NULL DEFAULT 0,
+  window_start INTEGER NOT NULL,
+  enabled INTEGER NOT NULL DEFAULT 1,
+  created_at INTEGER NOT NULL DEFAULT (unixepoch())
+);
+CREATE INDEX IF NOT EXISTS provider_keys_by_provider ON provider_keys(provider);
+CREATE INDEX IF NOT EXISTS provider_keys_enabled ON provider_keys(enabled);
+CREATE UNIQUE INDEX IF NOT EXISTS provider_keys_hash_unique ON provider_keys(key_hash);
 `;
   try {
     sqlite.exec(safeMigrations);
@@ -178,14 +196,13 @@ CREATE TABLE IF NOT EXISTS user_stats (
 }
 
 // Override ensureDb to run migrations on first init
-const _ensureDb = ensureDb;
+const _ensureDb2 = ensureDb;
+let _migrationsRun = false;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-ensureDb = function (): void {
-  if (_db) return;
-  _ensureDb();
-  if (_sqlite) {
+(ensureDb as any) = function (): void {
+  _ensureDb2();
+  if (_sqlite && !_migrationsRun) {
+    _migrationsRun = true;
     runMigrations(_sqlite);
   }
 };
-
-export { DB_PATH };

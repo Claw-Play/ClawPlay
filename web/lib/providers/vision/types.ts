@@ -29,8 +29,8 @@ export interface SegmentMask {
 }
 
 export type VisionAnalyzeResponse =
-  | { type: "text"; text: string }
-  | { type: "json"; data: DetectedObject[] | SegmentMask[] };
+  | { type: "text"; text: string; usage?: { inputTokens: number; outputTokens: number } }
+  | { type: "json"; data: DetectedObject[] | SegmentMask[]; usage?: { inputTokens: number; outputTokens: number } };
 
 export interface VisionProvider {
   analyze(req: VisionAnalyzeRequest): Promise<VisionAnalyzeResponse>;

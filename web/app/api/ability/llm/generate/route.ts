@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const result = await provider.generate({ prompt, model, maxTokens, temperature });
-    analytics.quota.use(payload.userId, "llm.generate", 0);
+    analytics.quota.use(payload.userId, "llm.generate", 0, result.usage);
     return NextResponse.json(result);
   } catch (err) {
     analytics.quota.error(payload.userId, "llm.generate", "llm", (err as NodeJS.ErrnoException).code ?? "UNKNOWN");

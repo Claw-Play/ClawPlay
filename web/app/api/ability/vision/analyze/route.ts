@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
 
     // 5. Deduct quota after success
     await incrementQuota(payload.userId, ABILITY);
-    analytics.quota.use(payload.userId, ABILITY, COST);
+    analytics.quota.use(payload.userId, ABILITY, COST, result.usage);
 
     return NextResponse.json({ ...result, _quota: { used: COST, remaining: quotaCheck.remaining! - COST } });
   } catch (err) {
