@@ -6,6 +6,7 @@ import { eq, and } from "drizzle-orm";
 import matter from "gray-matter";
 import { scanSkillContent } from "@/lib/skill-security-scan";
 import { llmSafetyReview } from "@/lib/skill-llm-safety";
+import { analytics } from "@/lib/analytics";
 
 // Generate a slug from name
 function slugify(name: string): string {
@@ -166,6 +167,8 @@ export async function POST(request: NextRequest) {
       content: skillMdContent,
       parsedMetadata: JSON.stringify(parsedMetadata),
     });
+
+    analytics.skill.submit(skillId, "pending");
 
     return NextResponse.json(
       {

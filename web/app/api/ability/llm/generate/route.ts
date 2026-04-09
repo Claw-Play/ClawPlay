@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { decryptToken } from "@/lib/token";
+import { decryptToken, type TokenPayload } from "@/lib/token";
 import { getLLMProvider, type LLMGenerateRequest } from "@/lib/providers/llm";
+import { analytics } from "@/lib/analytics";
 
 /**
  * Relay LLM text generation through ClawPlay (free, no quota deduction).
@@ -17,8 +18,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Authorization required." }, { status: 401 });
   }
 
+  let payload: TokenPayload;
   try {
-    decryptToken(token);
+    payload = decryptToken<TokenPayload>(token);
   } catch {
     return NextResponse.json({ error: "Invalid token." }, { status: 401 });
   }
@@ -42,8 +44,10 @@ export async function POST(request: NextRequest) {
 
   try {
     const result = await provider.generate({ prompt, model, maxTokens, temperature });
+    analytics.quota.use(payload.userId, "llm.generate", 0);
     return NextResponse.json(result);
   } catch (err) {
+    analytics.quota.error(payload.userId, "llm.generate", "llm", (err as NodeJS.ErrnoException).code ?? "UNKNOWN");
     const err_ = err as NodeJS.ErrnoException;
     if (err_.code === "PROVIDER_RATE_LIMITED") {
       console.warn("[ability/llm/generate] provider rate limited");

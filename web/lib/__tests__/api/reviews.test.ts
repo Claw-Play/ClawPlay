@@ -5,6 +5,15 @@ import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
 import { tempDbPath, cleanupDb, seedUser } from "../helpers/db";
 import { makeRequest } from "../helpers/request";
 
+// ── Analytics mock (prevents analytics → db chain from early-init during preload) ───
+vi.mock("@/lib/analytics", () => ({
+  analytics: {
+    skill: { review: vi.fn() },
+  },
+  logEvent: vi.fn(),
+  incrementSkillStat: vi.fn(),
+}));
+
 vi.mock("@upstash/redis", () => ({
   Redis: vi.fn().mockImplementation(() => ({
     get: vi.fn().mockResolvedValue(null),

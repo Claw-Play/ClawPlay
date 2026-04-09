@@ -4,23 +4,46 @@ import * as schema from "./schema";
 import path from "path";
 import fs from "fs";
 
-// Database file path — stored in project root, git-ignored
-const DB_DIR = path.join(process.cwd(), "..", "data");
-const DB_PATH = process.env.DATABASE_URL ?? path.join(DB_DIR, "clawplay.db");
+// ── Lazy DB init: created on first access, not on import ────────────────────────
+// This ensures DATABASE_URL can be set before the DB is actually opened.
+// In test environments, vi.resetModules() + re-import gives a fresh instance.
+let _db: ReturnType<typeof drizzle> | undefined;
+let _sqlite: Database.Database | undefined;
 
-// Ensure data directory exists
-if (!fs.existsSync(DB_DIR)) {
-  fs.mkdirSync(DB_DIR, { recursive: true });
+function getDbPath(): string {
+  const DB_DIR = path.join(process.cwd(), "..", "data");
+  return process.env.DATABASE_URL ?? path.join(DB_DIR, "clawplay.db");
 }
 
-const sqlite = new Database(DB_PATH);
-sqlite.pragma("journal_mode = WAL");
-sqlite.pragma("foreign_keys = ON");
+function ensureDb(): void {
+  if (_db) return;
+  const DB_PATH = getDbPath();
+  const DB_DIR = path.dirname(DB_PATH);
+  if (!fs.existsSync(DB_DIR)) {
+    fs.mkdirSync(DB_DIR, { recursive: true });
+  }
+  _sqlite = new Database(DB_PATH);
+  _sqlite.pragma("journal_mode = WAL");
+  _sqlite.pragma("foreign_keys = ON");
+  _db = drizzle(_sqlite, { schema });
+}
 
-export const db = drizzle(sqlite, { schema });
+// Lazily initialized db — first .query/.insert/... call triggers init
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const db: any = new Proxy({} as ReturnType<typeof drizzle>, {
+  get(_target, prop) {
+    ensureDb();
+    const val = (_db as any)[prop];
+    if (typeof val === "function") {
+      return val.bind(_db);
+    }
+    return val;
+  },
+});
 
-// Run migrations (create tables if not exist)
-const migrationSQL = `
+// Run migrations lazily on first ensureDb() call
+function runMigrations(sqlite: Database.Database): void {
+  const migrationSQL = `
 CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL DEFAULT '',
@@ -65,6 +88,11 @@ CREATE TABLE IF NOT EXISTS skills (
   moderation_flags TEXT NOT NULL DEFAULT '[]',
   latest_version_id TEXT,
   stats_stars INTEGER NOT NULL DEFAULT 0,
+  stats_ratings_count INTEGER NOT NULL DEFAULT 0,
+  stats_views INTEGER NOT NULL DEFAULT 0,
+  stats_downloads INTEGER NOT NULL DEFAULT 0,
+  stats_installs INTEGER NOT NULL DEFAULT 0,
+  is_featured INTEGER NOT NULL DEFAULT 0,
   deleted_at INTEGER,
   created_at INTEGER NOT NULL DEFAULT (unixepoch()),
   updated_at INTEGER NOT NULL DEFAULT (unixepoch())
@@ -97,15 +125,10 @@ CREATE TABLE IF NOT EXISTS user_tokens (
 CREATE INDEX IF NOT EXISTS user_tokens_by_user ON user_tokens(user_id);
 `;
 
-// Run migrations on import
-sqlite.exec(migrationSQL);
+  sqlite.exec(migrationSQL);
 
-// Add columns/tables if not exist (safe to re-run)
-const safeMigrations = `
--- skills table: add new columns (no-op if already exist)
-ALTER TABLE skills ADD COLUMN stats_ratings_count INTEGER NOT NULL DEFAULT 0;
-ALTER TABLE skills ADD COLUMN is_featured INTEGER NOT NULL DEFAULT 0;
-
+  // Add columns/tables if not exist (safe to re-run)
+  const safeMigrations = `
 -- skill_ratings table
 CREATE TABLE IF NOT EXISTS skill_ratings (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -117,11 +140,52 @@ CREATE TABLE IF NOT EXISTS skill_ratings (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS skill_ratings_user_skill ON skill_ratings(user_id, skill_id);
 CREATE INDEX IF NOT EXISTS skill_ratings_by_skill ON skill_ratings(skill_id);
+
+-- event_logs table — analytics event stream
+CREATE TABLE IF NOT EXISTS event_logs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  event TEXT NOT NULL,
+  user_id INTEGER REFERENCES users(id),
+  target_type TEXT,
+  target_id TEXT,
+  metadata TEXT NOT NULL DEFAULT '{}',
+  ip_address TEXT,
+  user_agent TEXT,
+  created_at INTEGER NOT NULL DEFAULT (unixepoch())
+);
+CREATE INDEX IF NOT EXISTS idx_event_logs_event ON event_logs(event);
+CREATE INDEX IF NOT EXISTS idx_event_logs_target ON event_logs(target_type, target_id);
+CREATE INDEX IF NOT EXISTS idx_event_logs_user ON event_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_event_logs_created ON event_logs(created_at);
+
+-- user_stats table — aggregated user metrics
+CREATE TABLE IF NOT EXISTS user_stats (
+  user_id INTEGER PRIMARY KEY REFERENCES users(id),
+  login_count INTEGER NOT NULL DEFAULT 0,
+  last_login_at INTEGER,
+  last_active_at INTEGER,
+  total_quota_used INTEGER NOT NULL DEFAULT 0,
+  skills_submitted INTEGER NOT NULL DEFAULT 0,
+  skills_downloaded INTEGER NOT NULL DEFAULT 0,
+  updated_at INTEGER NOT NULL DEFAULT (unixepoch())
+);
 `;
-try {
-  sqlite.exec(safeMigrations);
-} catch {
-  // Columns may already exist — ignore
+  try {
+    sqlite.exec(safeMigrations);
+  } catch {
+    // Tables may already exist — ignore
+  }
 }
+
+// Override ensureDb to run migrations on first init
+const _ensureDb = ensureDb;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ensureDb = function (): void {
+  if (_db) return;
+  _ensureDb();
+  if (_sqlite) {
+    runMigrations(_sqlite);
+  }
+};
 
 export { DB_PATH };

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { decryptToken, type TokenPayload } from "@/lib/token";
 import { checkAndIncrementQuota, ABILITY_COSTS } from "@/lib/redis";
+import { analytics } from "@/lib/analytics";
 
 const TTS_API_URL = "https://openspeech.bytedance.com/api/v3/tts";
 const TTS_API_KEY = process.env.ARK_TTS_API_KEY ?? "";
@@ -25,6 +26,7 @@ export async function POST(request: NextRequest) {
 
   const quotaResult = await checkAndIncrementQuota(payload.userId, ABILITY);
   if (!quotaResult.allowed) {
+    analytics.quota.exceeded(payload.userId, ABILITY, quotaResult.remaining ?? 0, (quotaResult.remaining ?? 0) + COST);
     return NextResponse.json(
       { error: "Quota exceeded.", reason: quotaResult.reason, remaining: quotaResult.remaining },
       { status: 429 }
@@ -70,11 +72,13 @@ export async function POST(request: NextRequest) {
     }
 
     const data = await providerRes.json();
+    analytics.quota.use(payload.userId, ABILITY, COST);
     return NextResponse.json({
       ...data,
       _quota: { used: COST, remaining: quotaResult.remaining },
     });
   } catch (err) {
+    analytics.quota.error(payload.userId, ABILITY, "tts", (err as NodeJS.ErrnoException).code ?? "UNKNOWN");
     console.error("[ability/tts/synthesize]", err);
     return NextResponse.json({ error: "Failed to synthesize speech." }, { status: 500 });
   }

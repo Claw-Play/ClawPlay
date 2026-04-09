@@ -5,6 +5,7 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
 import { tempDbPath, cleanupDb, seedUser } from "../helpers/db";
 import { makeRequest } from "../helpers/request";
+import { encryptToken } from "@/lib/token";
 
 // ── Redis mock ────────────────────────────────────────────────────────────────
 vi.mock("@upstash/redis", () => ({
@@ -158,6 +159,109 @@ describe("POST /api/user/token/revoke", () => {
       cookie,
     });
     const res = await POST_revoke(req);
+    expect(res.status).toBe(404);
+  });
+
+  it("unauthenticated revoke → 401", async () => {
+    cookieStore.token = undefined;
+    const req = makeRequest("POST", "/api/user/token/revoke");
+    const res = await POST_revoke(req);
+    expect(res.status).toBe(401);
+  });
+
+  it("already revoked token → 404", async () => {
+    const { user, cookie } = await seedUser(db);
+    cookieStore.token = cookie.replace("clawplay_token=", "");
+
+    // Generate a token
+    const genRes = await POST_generate();
+    expect(genRes.status).toBe(200);
+
+    const { userTokens } = await import("@/lib/db/schema");
+    const { eq } = await import("drizzle-orm");
+    const record = await db.query.userTokens.findFirst({
+      where: eq(userTokens.userId, user.id),
+    });
+
+    // Revoke it first time
+    const req1 = makeRequest("POST", "/api/user/token/revoke", {
+      body: { tokenId: record.id },
+      cookie,
+    });
+    expect((await POST_revoke(req1)).status).toBe(200);
+
+    // Try to revoke again — should be 404
+    const req2 = makeRequest("POST", "/api/user/token/revoke", {
+      body: { tokenId: record.id },
+      cookie,
+    });
+    const res2 = await POST_revoke(req2);
+    expect(res2.status).toBe(404);
+  });
+
+  it("revoke current active token (no tokenId) → 200", async () => {
+    const { cookie } = await seedUser(db);
+    cookieStore.token = cookie.replace("clawplay_token=", "");
+
+    // Generate a token
+    const genRes = await POST_generate();
+    expect(genRes.status).toBe(200);
+
+    // Revoke without providing tokenId (should revoke current active)
+    const req = makeRequest("POST", "/api/user/token/revoke", { cookie });
+    const res = await POST_revoke(req);
+    expect(res.status).toBe(200);
+  });
+});
+
+describe("GET /api/user/me — Bearer token", () => {
+  it("Bearer CLAWPLAY_TOKEN (AES-256-GCM) → 200", async () => {
+    const { user } = await seedUser(db);
+
+    // Create an encrypted CLAWPLAY_TOKEN
+    const encryptedToken = encryptToken({
+      userId: user.id,
+      quotaFree: user.quotaFree,
+      quotaUsed: user.quotaUsed,
+    });
+
+    // Store it in DB
+    const { userTokens } = await import("@/lib/db/schema");
+    const { hashToken } = await import("@/lib/token");
+    await db.insert(userTokens).values({
+      id: "bearer-token-1",
+      userId: user.id,
+      tokenHash: hashToken(encryptedToken),
+      encryptedPayload: encryptedToken,
+    });
+
+    cookieStore.token = undefined; // no JWT cookie
+    const req = makeRequest("GET", "/api/user/me", {
+      headers: { Authorization: `Bearer ${encryptedToken}` },
+    });
+    const res = await GET_me(req);
+    const json = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(json.user.id).toBe(user.id);
+  });
+
+  it("Bearer token with invalid format → 401", async () => {
+    cookieStore.token = undefined;
+    const req = makeRequest("GET", "/api/user/me", {
+      headers: { Authorization: "Bearer not-valid-base64!!!" },
+    });
+    const res = await GET_me(req);
+    expect(res.status).toBe(401);
+  });
+
+  it("Bearer token for non-existent user → 404", async () => {
+    const fakeToken = encryptToken({ userId: 999998, quotaFree: 1000, quotaUsed: 0 });
+    cookieStore.token = undefined;
+    const req = makeRequest("GET", "/api/user/me", {
+      headers: { Authorization: `Bearer ${fakeToken}` },
+    });
+    const res = await GET_me(req);
     expect(res.status).toBe(404);
   });
 });

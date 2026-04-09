@@ -4,6 +4,7 @@ import { users, userIdentities } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { signJWT, buildSetCookieHeader } from "@/lib/auth";
+import { analytics } from "@/lib/analytics";
 
 export async function POST(request: NextRequest) {
   try {
@@ -69,6 +70,7 @@ export async function POST(request: NextRequest) {
     });
 
     const token = await signJWT({ userId: user.id, role: user.role as "user" | "admin" });
+    analytics.user.register(user.id, "email");
 
     const response = NextResponse.json(
       { user: { id: user.id, email, role: user.role }, message: "Account created successfully." },

@@ -4,6 +4,7 @@ import { users, userIdentities } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { verifySmsCode } from "@/lib/sms";
 import { signJWT, buildSetCookieHeader } from "@/lib/auth";
+import { analytics } from "@/lib/analytics";
 
 const PHONE_RE = /^1[3-9]\d{9}$/;
 
@@ -27,6 +28,7 @@ export async function POST(request: NextRequest) {
     // Test bypass: "000000" always passes (for E2E testing only)
     const valid = code === "000000" || (await verifySmsCode(phone, code));
     if (!valid) {
+      analytics.user.smsVerifyFail(phone, "invalid_code");
       return NextResponse.json(
         { error: "验证码错误或已过期，请重新获取。" },
         { status: 401 }
@@ -64,9 +66,11 @@ export async function POST(request: NextRequest) {
 
       userId = user.id;
       role = user.role as "user" | "admin";
+      analytics.user.register(user.id, "phone");
     }
 
     const token = await signJWT({ userId, role });
+    analytics.user.login(userId, "phone");
     const response = NextResponse.json({ user: { id: userId, phone, role } });
     response.headers.set("Set-Cookie", buildSetCookieHeader(token));
     return response;

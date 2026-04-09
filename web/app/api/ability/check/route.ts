@@ -4,6 +4,7 @@ import { getQuota } from "@/lib/redis";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
+import { analytics } from "@/lib/analytics";
 
 /** Check quota status for the authenticated user */
 export async function GET(request: NextRequest) {
@@ -25,6 +26,7 @@ export async function GET(request: NextRequest) {
     // Get current quota (Redis, fall back to DB)
     const quota = await getQuota(payload.userId);
     if (quota) {
+      analytics.quota.check(payload.userId, quota.used, quota.limit);
       return NextResponse.json({
         userId: payload.userId,
         used: quota.used,
@@ -42,6 +44,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "User not found." }, { status: 404 });
     }
 
+    analytics.quota.check(payload.userId, user.quotaUsed, user.quotaFree);
     return NextResponse.json({
       userId: payload.userId,
       used: user.quotaUsed,
