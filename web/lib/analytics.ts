@@ -240,11 +240,11 @@ export const analytics = {
       userId: number,
       ability: string,
       cost: number,
-      usage?: { inputTokens?: number; outputTokens?: number }
+      usage?: { inputTokens?: number; outputTokens?: number; totalTokens?: number }
     ) => {
       const inputTokens = usage?.inputTokens ?? 0;
       const outputTokens = usage?.outputTokens ?? 0;
-      const totalTokens = inputTokens + outputTokens;
+      const totalTokens = usage?.totalTokens ?? inputTokens + outputTokens;
       logEvent({
         event: "quota.use",
         userId,

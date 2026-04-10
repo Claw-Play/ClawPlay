@@ -118,7 +118,11 @@ export class ArkVisionProvider implements VisionProvider {
     const content = data.choices?.[0]?.message?.content ?? "";
 
     const usage = data.usage
-      ? { inputTokens: data.usage.prompt_tokens ?? 0, outputTokens: data.usage.completion_tokens ?? 0 }
+      ? {
+          inputTokens: data.usage.prompt_tokens ?? 0,
+          outputTokens: data.usage.completion_tokens ?? 0,
+          totalTokens: (data.usage.prompt_tokens ?? 0) + (data.usage.completion_tokens ?? 0),
+        }
       : undefined;
 
     if (req.mode === "detect") {

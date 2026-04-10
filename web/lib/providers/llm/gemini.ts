@@ -48,6 +48,7 @@ export class GeminiProvider implements LLMProvider {
       usageMetadata?: {
         promptTokenCount?: number;
         candidatesTokenCount?: number;
+        totalTokenCount?: number;
       };
     };
 
@@ -61,6 +62,7 @@ export class GeminiProvider implements LLMProvider {
           ? {
               inputTokens: data.usageMetadata.promptTokenCount ?? 0,
               outputTokens: data.usageMetadata.candidatesTokenCount ?? 0,
+              totalTokens: data.usageMetadata.totalTokenCount ?? 0,
             }
           : undefined,
     };
