@@ -26,8 +26,8 @@ test.describe("Submit skill page", () => {
   test("breadcrumb: Dashboard > Submit Skill", async ({ page }) => {
     await loginAs(page, TEST_EMAIL, "submitpass123");
     await page.goto("/submit");
-    await expect(page.getByText("Dashboard")).toBeVisible();
-    await expect(page.getByText("Submit Skill")).toBeVisible();
+    await expect(page.getByText(/控制台|dashboard/i)).toBeVisible();
+    await expect(page.getByText(/提交 Skill|submit skill/i)).toBeVisible();
   });
 
   test("emoji picker selection updates selected emoji styling", async ({ page }) => {
@@ -45,10 +45,10 @@ test.describe("Submit skill page", () => {
     await loginAs(page, TEST_EMAIL, "submitpass123");
     await page.goto("/submit");
 
-    await page.getByLabel("Skill name").fill("Form Validation Skill");
-    await page.getByLabel("One-line summary").fill("Testing validation");
+    await page.getByLabel(/Skill.*名称|skill name/i).fill("Form Validation Skill");
+    await page.getByLabel(/简介|summary/i).fill("Testing validation");
     // SKILL.md is empty (required) — submit should stay on page
-    await page.getByRole("button", { name: /submit for review/i }).click({ force: true });
+    await page.getByRole("button", { name: /提交审核|submit for review/i }).click({ force: true });
     await expect(page).toHaveURL(/\/submit/);
   });
 
@@ -56,10 +56,10 @@ test.describe("Submit skill page", () => {
     await loginAs(page, TEST_EMAIL, "submitpass123");
     await page.goto("/submit");
 
-    await page.getByLabel("Skill name").fill("Form Success Skill");
-    await page.getByLabel("One-line summary").fill("Testing success flow");
-    await page.getByLabel("SKILL.md content").fill(SAMPLE_SKILL_MD);
-    await page.getByRole("button", { name: /submit for review/i }).click();
+    await page.getByLabel(/Skill.*名称|skill name/i).fill("Form Success Skill");
+    await page.getByLabel(/简介|summary/i).fill("Testing success flow");
+    await page.getByLabel(/SKILL.md 内容|SKILL.md content/i).fill(SAMPLE_SKILL_MD);
+    await page.getByRole("button", { name: /提交审核|submit for review/i }).click();
     await expect(page).toHaveURL("/dashboard", { timeout: 15_000 });
   });
 
@@ -67,16 +67,16 @@ test.describe("Submit skill page", () => {
     await loginAs(page, TEST_EMAIL, "submitpass123");
     await page.goto("/submit");
     await expect(
-      page.getByRole("heading", { name: /how it works/i })
+      page.getByRole("heading", { name: /工作原理|how it works/i })
     ).toBeVisible();
-    await expect(page.getByText(/fill in the form|step 1/i)).toBeVisible();
+    await expect(page.getByText(/填写表单|fill in the form|step 1/i)).toBeVisible();
   });
 
   test("SKILL.md template sidebar renders frontmatter example", async ({ page }) => {
     await loginAs(page, TEST_EMAIL, "submitpass123");
     await page.goto("/submit");
     await expect(
-      page.getByRole("heading", { name: /skill\.md template/i })
+      page.getByRole("heading", { name: /SKILL.md.*模板|skill\.md template/i })
     ).toBeVisible();
     await expect(page.getByText(/name: my skill/i)).toBeVisible();
   });

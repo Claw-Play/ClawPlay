@@ -348,7 +348,7 @@ export async function initKeysFromEnv(): Promise<void> {
 }
 
 // Auto-init on first call (idempotent — uses globalThis so it only runs once per process)
-const _alreadyInit = globalThis.__clawplay_keypool_init as Promise<void> | undefined;
+const _alreadyInit = (globalThis as Record<string, unknown>).__clawplay_keypool_init as Promise<void> | undefined;
 if (!_alreadyInit) {
   const p = initKeysFromEnv();
   (globalThis as Record<string, unknown>).__clawplay_keypool_init = p;

@@ -1,6 +1,6 @@
 import { db, raw } from "@/lib/db";
-import { userIdentities, users } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { userIdentities, users, userTokens } from "@/lib/db/schema";
+import { eq, and, isNull } from "drizzle-orm";
 import { getAuthFromCookies } from "@/lib/auth";
 import { getQuota, DEFAULT_QUOTA_FREE } from "@/lib/redis";
 import { redirect } from "next/navigation";
@@ -14,9 +14,10 @@ async function getDashboardData(userId: number) {
   });
   if (!user) return null;
 
-  const identities = await db.query.userIdentities.findMany({
-    where: eq(userIdentities.userId, userId),
-  });
+  const identities = await db
+    .select()
+    .from(userIdentities)
+    .where(eq(userIdentities.userId, userId)) as { provider: string; providerAccountId: string | null }[];
 
   const email = identities.find((i) => i.provider === "email")?.providerAccountId ?? null;
   const phone = identities.find((i) => i.provider === "phone")?.providerAccountId ?? null;
@@ -38,11 +39,12 @@ async function getDashboardData(userId: number) {
     quota = quotaFromRedis;
   }
 
-  const activeToken = await db.query.userTokens.findFirst({
-    columns: { id: true, createdAt: true, encryptedPayload: true },
-    where: (t, { and, eq, isNull }) =>
-      and(eq(t.userId, userId), isNull(t.revokedAt)),
-  });
+  const tokenRows = await db
+    .select({ id: userTokens.id, createdAt: userTokens.createdAt, encryptedPayload: userTokens.encryptedPayload })
+    .from(userTokens)
+    .where(and(eq(userTokens.userId, userId), isNull(userTokens.revokedAt)))
+    .limit(1);
+  const activeToken = tokenRows[0] ?? null;
 
   return {
     user: {

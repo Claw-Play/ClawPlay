@@ -4,7 +4,7 @@
  */
 import { db } from "../lib/db";
 import { skills } from "../lib/db/schema";
-import { sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 
 function uid() {
   return crypto.randomUUID();
@@ -37,7 +37,7 @@ const pendingSkills = [
 
 async function main() {
   // First clear existing pending skills
-  await db.execute(sql`DELETE FROM skills WHERE moderation_status = 'pending'`);
+  await db.delete(skills).where(eq(skills.moderationStatus, "pending"));
 
   for (let i = 0; i < pendingSkills.length; i++) {
     const skill = pendingSkills[i];
@@ -47,21 +47,28 @@ async function main() {
     const createdAtOffset = i * 1800; // 30 min apart
     const createdAt = now - createdAtOffset;
 
-    await db.execute(sql`
-      INSERT INTO skills (
-        id, slug, name, summary, author_name, author_email,
-        repo_url, icon_emoji, moderation_status, moderation_reason,
-        moderation_flags, latest_version_id, stats_stars, stats_ratings_count,
-        stats_installs, stats_active_users, created_at, updated_at, deleted_at
-      ) VALUES (
-        ${id}, ${slug}, ${skill.name}, ${skill.summary},
-        ${skill.authorName}, ${skill.authorEmail},
-        'https://github.com/example/' || ${slug}, '🤖',
-        'pending', '', '[]', NULL,
-        0, 0, 0, 0,
-        ${createdAt}, ${createdAt}, NULL
-      )
-    `);
+    // @ts-expect-error drizzle typing complex with Proxy db
+    await db.insert(skills).values([{
+      id,
+      slug,
+      name: skill.name,
+      summary: skill.summary,
+      authorName: skill.authorName,
+      authorEmail: skill.authorEmail,
+      repoUrl: "https://github.com/example/" + slug,
+      iconEmoji: "🤖",
+      moderationStatus: "pending",
+      moderationReason: "",
+      moderationFlags: "[]",
+      latestVersionId: null,
+      statsStars: 0,
+      statsRatingsCount: 0,
+      statsViews: 0,
+      statsDownloads: 0,
+      statsInstalls: 0,
+      createdAt,
+      updatedAt: createdAt,
+    }]);
     process.stdout.write(".");
   }
   console.log(`\nDone! Inserted ${pendingSkills.length} pending skills.`);

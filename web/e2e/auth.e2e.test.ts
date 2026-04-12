@@ -69,10 +69,10 @@ test.describe("Auth flow", () => {
 
   test("login with invalid credentials shows error", async ({ page }) => {
     await page.goto("/login");
-    await page.getByRole("button", { name: "邮箱" }).click();
-    await page.getByLabel("邮箱").fill("wrong@example.com");
-    await page.getByLabel("密码").fill("wrongpassword");
-    await page.getByRole("button", { name: "登录" }).click();
+    await page.getByRole("button", { name: /账号|account/i }).click();
+    await page.getByLabel(/邮箱|email/i).fill("wrong@example.com");
+    await page.getByLabel(/密码|password/i).fill("wrongpassword");
+    await page.getByRole("button", { name: /登录|login/i }).click();
     await expect(
       page.getByText(/invalid email or password/i, { timeout: 15_000 })
     ).toBeVisible();
@@ -94,11 +94,11 @@ test.describe("Auth flow", () => {
     expect(res.status()).toBe(201);
   });
 
-  test("login page — tab switcher visible with 手机号/微信/邮箱 tabs", async ({ page }) => {
+  test("login page — tab switcher visible with 手机号/微信/账号 tabs", async ({ page }) => {
     await page.goto("/login");
-    await expect(page.getByRole("button", { name: "手机号" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "微信" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "邮箱" })).toBeVisible();
+    await expect(page.getByRole("button", { name: /手机号|phone/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /微信|wechat/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /账号|account/i })).toBeVisible();
   });
 
   test("phone tab — send code button visible", async ({ page }) => {

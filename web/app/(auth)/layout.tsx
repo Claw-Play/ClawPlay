@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 
 export const metadata: Metadata = {
   title: "ClawPlay",
@@ -22,10 +23,12 @@ export default function AuthLayout({
         className="absolute inset-0 pointer-events-none overflow-clip"
         data-name="Immersive Background Illustration Container"
       >
-        <img
+        <Image
           alt=""
-          className="absolute h-[125%] left-0 max-w-none top-[-12.5%] w-full object-cover object-left-top"
+          fill
+          className="object-cover object-left-top"
           src={bgIllustration}
+          style={{ objectPosition: "left top" }}
         />
         {/* Warm overlay to ensure readability and warmth */}
         <div

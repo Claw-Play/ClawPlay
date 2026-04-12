@@ -18,8 +18,7 @@ export async function POST(request: NextRequest) {
   let token;
   if (!tokenId) {
     token = await db.query.userTokens.findFirst({
-      where: (t, { and, eq, isNull }) =>
-        and(eq(t.userId, auth.userId), isNull(t.revokedAt)),
+      where: and(eq(userTokens.userId, auth.userId), isNull(userTokens.revokedAt)),
     });
   } else {
     token = await db.query.userTokens.findFirst({

@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthFromCookies } from "@/lib/auth";
 import { decryptToken, type TokenPayload } from "@/lib/token";
 import { db } from "@/lib/db";
-import { users, userIdentities } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { users, userIdentities, userTokens } from "@/lib/db/schema";
+import { eq, and, isNull } from "drizzle-orm";
 import { getQuota, DEFAULT_QUOTA_FREE } from "@/lib/redis";
 
 export async function GET(request: NextRequest) {
@@ -50,8 +50,7 @@ export async function GET(request: NextRequest) {
   // Get current active token (not revoked, belongs to this user)
   const activeToken = await db.query.userTokens.findFirst({
     columns: { id: true, createdAt: true },
-    where: (t, { and, eq, isNull }) =>
-      and(eq(t.userId, auth.userId), isNull(t.revokedAt)),
+    where: and(eq(userTokens.userId, auth.userId), isNull(userTokens.revokedAt)),
   });
 
   return NextResponse.json({

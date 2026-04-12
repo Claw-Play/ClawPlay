@@ -2,7 +2,7 @@ import { ArkVisionProvider } from "./ark";
 import { GeminiVisionProvider } from "./gemini";
 import type { VisionProvider } from "./types";
 
-export type { VisionProvider, VisionAnalyzeRequest, VisionAnalyzeResponse, VisionMode } from "./types";
+export type { VisionProvider, VisionAnalyzeRequest, VisionAnalyzeResponse, VisionMode, VisionImage } from "./types";
 
 let _arkProvider: VisionProvider | null = null;
 

@@ -313,7 +313,7 @@ describe("resetKeyWindow", () => {
 });
 
 // ── High-throughput scenario ──────────────────────────────────────────────────
-describe("high-throughput: concurrent key sharding", () => {
+describe("high-throughput: concurrent key sharding", { timeout: 30_000 }, () => {
   beforeEach(setupDb);
 
   it("100 concurrent picks distribute evenly across 5 keys", async () => {

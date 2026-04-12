@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getAuthFromCookies } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { skills, skillVersions } from "@/lib/db/schema";
-import { eq, and, isNull, desc } from "drizzle-orm";
+import { eq, and, isNull, desc, asc } from "drizzle-orm";
 
 export async function GET() {
   const auth = await getAuthFromCookies();
@@ -19,7 +19,7 @@ export async function GET() {
       eq(skills.moderationStatus, "pending"),
       isNull(skills.deletedAt)
     ),
-    orderBy: (skills, { asc }) => [asc(skills.createdAt)],
+    orderBy: [asc(skills.createdAt)],
   });
 
   // Attach latest version content to each skill

@@ -1,5 +1,5 @@
 import Database from "better-sqlite3";
-import { drizzle } from "drizzle-orm/better-sqlite3";
+import { drizzle, BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import * as schema from "./schema";
 import path from "path";
 import fs from "fs";
@@ -7,7 +7,8 @@ import fs from "fs";
 // ── Lazy DB init: created on first access, not on import ────────────────────────
 // This ensures DATABASE_URL can be set before the DB is actually opened.
 // In test environments, vi.resetModules() + re-import gives a fresh instance.
-let _db: ReturnType<typeof drizzle> | undefined;
+type DBSchema = typeof schema;
+let _db: BetterSQLite3Database<DBSchema> | undefined;
 let _sqlite: Database.Database | undefined;
 /** Exported so other modules (e.g., test setup) can read the path without triggering init */
 export let DB_PATH: string;
@@ -31,9 +32,8 @@ function ensureDb(): void {
 }
 
 // Lazily initialized db — first .query/.insert/... call triggers init
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const db: any = new Proxy({} as ReturnType<typeof drizzle>, {
-  get(_target, prop) {
+export const db = new Proxy({} as BetterSQLite3Database<DBSchema>, {
+  get(_target, prop: string | symbol) {
     ensureDb();
     // Expose raw sqlite for arbitrary SQL (analytics aggregations)
     if (prop === "raw") {
@@ -42,7 +42,7 @@ export const db: any = new Proxy({} as ReturnType<typeof drizzle>, {
           ? (_sqlite as Database.Database).prepare(sqlStr).bind(...params).all()
           : (_sqlite as Database.Database).prepare(sqlStr).all();
     }
-    const val = (_db as unknown as Record<string, unknown>)[prop];
+    const val = (_db as unknown as Record<string, unknown>)[prop as string];
     if (typeof val === "function") {
       return val.bind(_db);
     }

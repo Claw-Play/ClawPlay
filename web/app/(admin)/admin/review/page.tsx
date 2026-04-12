@@ -16,7 +16,7 @@ interface Skill {
 
 const PAGE_SIZE = 10;
 
-function timeAgo(dateStr: string, t: (key: string) => string): string {
+function timeAgo(dateStr: string, t: (key: string, values?: Record<string, string | number>) => string): string {
   const now = Date.now();
   const then = new Date(dateStr).getTime();
   const diff = now - then;

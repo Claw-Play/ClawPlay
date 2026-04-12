@@ -20,6 +20,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const tCommon = useT("common");
   const isSkillsRoute = pathname.startsWith("/skills");
   const [user, setUser] = useState<{
+    id?: number;
     name?: string;
     role?: string;
     avatarColor?: string;

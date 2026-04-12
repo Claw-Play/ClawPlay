@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
         )
       );
 
-    let results = await query;
+    let results: { id: string; slug: string; name: string; summary: string; authorName: string; iconEmoji: string; moderationStatus: "pending" | "approved" | "rejected"; latestVersionId: string | null; statsStars: number; createdAt: Date | null }[] = await query;
 
     // Filter by emoji (client-side as it's not indexed for now)
     if (emoji) {

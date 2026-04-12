@@ -42,11 +42,10 @@ test.describe("Register form validation", () => {
     });
 
     await page.goto("/login");
-    await page.getByLabel("昵称（可选）").fill("Bypass Test");
-    await page.getByLabel("手机号").fill("13800138000");
-    await page.getByRole("button", { name: "获取验证码" }).click();
+    await page.getByLabel(/手机号|phone/i).fill("13800138000");
+    await page.getByRole("button", { name: /获取验证码|send code/i }).click();
     // Fill test bypass code
-    await page.getByPlaceholder("6位验证码").fill("000000");
+    await page.getByPlaceholder(/6位验证码|verification code/i).fill("000000");
     await page.getByRole("button", { name: /^注册$/ }).click();
     // Should redirect to dashboard on success
     await expect(page).toHaveURL("/dashboard", { timeout: 15_000 });
