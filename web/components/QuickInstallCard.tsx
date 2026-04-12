@@ -61,7 +61,7 @@ export function QuickInstallCard({ slug, repoUrl, auth }: QuickInstallCardProps)
         </div>
         {!auth && (
           <Link
-            href="/register"
+            href="/login"
             className="mt-3 block w-full text-center px-4 py-3 bg-gradient-to-r from-[#a23f00] to-[#fa7025] hover:opacity-90 text-white text-sm font-semibold rounded-[40px] shadow-[0_6px_24px_rgba(162,63,0,0.2)] transition-all font-heading"
           >
             {t("get_free_token")}

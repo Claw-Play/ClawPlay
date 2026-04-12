@@ -15,7 +15,7 @@ ClawPlay lets AI Agents (via X Claw) generate images, analyze vision, and synthe
 ### 1. Get your CLI token
 
 ```bash
-# Sign up at https://clawplay.example.com, then copy from Dashboard:
+# Sign up at https://clawplay.cc, then copy from Dashboard:
 export CLAWPLAY_TOKEN=eyJh...
 ```
 
@@ -23,8 +23,6 @@ export CLAWPLAY_TOKEN=eyJh...
 
 ```bash
 npm install -g clawplay
-# or
-curl -sSL https://raw.githubusercontent.com/nura-space/clawplay/main/install.sh | bash
 ```
 
 ### 3. Verify
@@ -79,8 +77,9 @@ User → Agent → clawplay CLI → ClawPlay Server (Relay)
                                       ↓
                                1. Decrypt Token → userId
                                2. Check quota (Redis)
-                               3. Call Provider API (Ark / Gemini)
-                               4. Return result
+                               3. Select Ark key from Key Pool (RPM sharding)
+                               4. Call Provider API (Ark / Gemini)
+                               5. Return result
                                       ↓
 CLI writes file → stdout: /tmp/avatar.png
 ```
@@ -89,9 +88,11 @@ CLI writes file → stdout: /tmp/avatar.png
 
 **Multi-provider**: Image generation, vision analysis, and LLM text generation all support both Ark and Google Gemini, switchable on demand.
 
+**Key Pool**: Ark API keys are sharded across multiple keys with per-minute RPM limits. Vision and image keys use separate pools.
+
 ### Token Security
 
-Tokens are AES-256-GCM encrypted on the server. The plaintext (userId, quota info, expiry) is decryptable by the CLI locally but cannot be forged. Token hashes are stored in DB for revocation.
+Tokens are AES-256-GCM encrypted on the server. The plaintext (userId, expiry) is decryptable by the CLI locally but cannot be forged. Token hashes are stored in DB for revocation. Quota is always read from Redis/DB at relay time.
 
 ### Relay API Endpoints
 
@@ -137,7 +138,11 @@ Open [http://localhost:3000](http://localhost:3000).
 | `CLAWPLAY_SECRET_KEY` | 32-byte AES-256-GCM key (`openssl rand -hex 32`) |
 | `UPSTASH_REDIS_REST_URL` | Upstash Redis REST URL |
 | `UPSTASH_REDIS_REST_TOKEN` | Upstash Redis REST Token |
-| `ARK_API_KEY` | Ark API key (server-side, image/vision/LLM) |
+| `ARK_API_KEY` | Fallback Ark key (used if `ARK_IMAGE_KEYS` is not set) |
+| `ARK_IMAGE_KEYS` | Comma-separated Ark image keys (takes precedence over `ARK_API_KEY`) |
+| `ARK_VISION_KEYS` | Comma-separated Ark vision keys |
+| `ARK_KEY_QUOTA` | Per-key RPM limit for image keys (default: 500) |
+| `ARK_VISION_KEY_QUOTA` | Per-key RPM limit for vision keys (default: 30000) |
 | `GEMINI_API_KEY` | Google Gemini API key (optional, multi-provider fallback) |
 | `DATABASE_URL` | SQLite path (default: `../data/clawplay.db`) |
 
@@ -156,17 +161,20 @@ ClawPlay/
 ├── web/                          # Next.js 14 app
 │   ├── app/
 │   │   ├── (auth)/               # Login / register pages
-│   │   ├── (app)/                # Authenticated pages (Dashboard, Skills, Submit)
+│   │   ├── (app)/                # Authenticated pages (Dashboard, Skills, Submit, Community)
 │   │   ├── (admin)/              # Admin review panel
-│   │   ├── api/                  # API routes (22 total)
+│   │   ├── api/                  # API routes (~26 total)
 │   │   └── page.tsx              # Homepage
-│   ├── components/               # Shared React components
+│   ├── components/
+│   │   └── charts/               # LineChart, PieChart
 │   └── lib/
 │       ├── db/                   # Drizzle ORM + SQLite schema
 │       ├── auth.ts               # JWT helpers
 │       ├── token.ts              # AES-256-GCM token crypto
 │       ├── redis.ts              # Upstash Redis quota helpers
+│       ├── analytics.ts          # Event tracking system
 │       └── providers/            # Multi-provider integrations (Ark, Gemini)
+│           ├── key-pool.ts       # Multi-key sharding with RPM limits
 │           ├── image/            # Image generation
 │           ├── vision/           # Vision analysis
 │           └── llm/              # Text generation
@@ -234,7 +242,6 @@ See [ROADMAP.md](./ROADMAP.md) for full details.
 
 - [CLI Command Reference](docs/clawplay-commands.md) — All commands, parameters, examples, error handling
 - [Skill Authoring Guide](docs/skill-authoring-guide.md) — Flow diagram design, prompt templates, reliability patterns
-- [Provider API Reference](docs/providers/) — Ark & Google Gemini parameter docs
 
 ---
 

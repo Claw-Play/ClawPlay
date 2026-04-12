@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { decryptToken, type TokenPayload } from "@/lib/token";
-import { checkQuota, incrementQuota, ABILITY_COSTS } from "@/lib/redis";
+import { checkQuota, incrementQuota } from "@/lib/redis";
 import { getImageProvider, type ImageGenerateRequest } from "@/lib/providers/image";
 import { analytics } from "@/lib/analytics";
 
 const ABILITY = "image.generate";
-const COST = ABILITY_COSTS[ABILITY] ?? 10;
 
 /** Proxy image generation through ClawPlay (quota-protected) */
 export async function POST(request: NextRequest) {
@@ -25,10 +24,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid token." }, { status: 401 });
   }
 
-  // 2. Check quota (pre-check, not yet deducted)
+  // 2. Check quota (pre-check with conservative estimate)
   const quotaCheck = await checkQuota(payload.userId, ABILITY);
   if (!quotaCheck.allowed) {
-    analytics.quota.exceeded(payload.userId, ABILITY, quotaCheck.remaining ?? 0, (quotaCheck.remaining ?? 0) + COST);
+    analytics.quota.exceeded(payload.userId, ABILITY, quotaCheck.remaining ?? 0, quotaCheck.remaining ?? 0);
     return NextResponse.json(
       { error: "Quota exceeded.", reason: quotaCheck.reason, remaining: quotaCheck.remaining },
       { status: 429 }
@@ -59,15 +58,21 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    const providerName = process.env.IMAGE_PROVIDER ?? "ark";
     const result = await provider.generate({ prompt, size, quality, refImages, webSearch });
 
-    // 5. Deduct quota after successful generation
-    await incrementQuota(payload.userId, ABILITY);
-    analytics.quota.use(payload.userId, ABILITY, COST, {
-      outputTokens: result.usage?.totalTokens ?? 0,
-    });
+    // 5. Deduct quota after successful generation using actual tokens
+    const actualTokens = result.usage?.totalTokens ?? 0;
+    const incr = await incrementQuota(payload.userId, actualTokens);
+    analytics.quota.use(payload.userId, ABILITY, actualTokens, { ...result.usage, provider: providerName });
 
-    return NextResponse.json({ ...result, _quota: { used: COST, remaining: quotaCheck.remaining! - COST } });
+    if (!incr.ok) {
+      return NextResponse.json(
+        { error: "Quota exceeded.", remaining: 0 },
+        { status: 429 }
+      );
+    }
+    return NextResponse.json({ ...result, _quota: { used: actualTokens, remaining: incr.remaining ?? 0 } });
   } catch (err) {
     analytics.quota.error(payload.userId, ABILITY, "image", (err as NodeJS.ErrnoException).code ?? "UNKNOWN");
     const code = (err as NodeJS.ErrnoException).code;

@@ -2,15 +2,15 @@ import { test, expect } from "@playwright/test";
 import { registerUser } from "./helpers/auth";
 
 test.describe("Register form validation", () => {
-  test("phone tab is active by default on register page", async ({ page }) => {
-    await page.goto("/register");
+  test("phone tab is active by default on login/register page", async ({ page }) => {
+    await page.goto("/login");
     await expect(page.getByRole("button", { name: "手机号" })).toBeVisible();
     // Phone input visible in default tab
     await expect(page.getByLabel("手机号")).toBeVisible();
   });
 
   test("phone tab — invalid phone number shows error when requesting code", async ({ page }) => {
-    await page.goto("/register");
+    await page.goto("/login");
     // Already on phone tab (default)
     await page.getByLabel("手机号").fill("12345");
     await page.getByRole("button", { name: "获取验证码" }).click();
@@ -18,7 +18,7 @@ test.describe("Register form validation", () => {
   });
 
   test("phone tab — countdown starts after sending code (mocked)", async ({ page }) => {
-    await page.goto("/register");
+    await page.goto("/login");
     // Mock the SMS send endpoint
     await page.route("**/api/auth/sms/send", async (route) => {
       await route.fulfill({
@@ -41,7 +41,7 @@ test.describe("Register form validation", () => {
       });
     });
 
-    await page.goto("/register");
+    await page.goto("/login");
     await page.getByLabel("昵称（可选）").fill("Bypass Test");
     await page.getByLabel("手机号").fill("13800138000");
     await page.getByRole("button", { name: "获取验证码" }).click();
@@ -53,7 +53,7 @@ test.describe("Register form validation", () => {
   });
 
   test("wechat tab — shows wechat register/login link", async ({ page }) => {
-    await page.goto("/register");
+    await page.goto("/login");
     await page.getByRole("button", { name: "微信" }).click();
     await expect(
       page.getByRole("link", { name: /微信一键注册|微信注册|微信登录/ })
@@ -61,7 +61,7 @@ test.describe("Register form validation", () => {
   });
 
   test("'登录' link navigates to /login", async ({ page }) => {
-    await page.goto("/register");
+    await page.goto("/login");
     await page.getByRole("link", { name: "登录" }).click();
     await expect(page).toHaveURL(/\/login/);
   });

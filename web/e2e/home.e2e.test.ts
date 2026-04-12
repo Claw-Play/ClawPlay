@@ -10,7 +10,7 @@ test.describe("Home page", () => {
     ).toBeVisible();
     const ctaBtn = page.getByRole("link", { name: /start for free/i });
     await expect(ctaBtn).toBeVisible();
-    await expect(ctaBtn).toHaveAttribute("href", "/register");
+    await expect(ctaBtn).toHaveAttribute("href", "/login");
     await expect(page.getByRole("link", { name: /browse skills/i })).toBeVisible();
   });
 

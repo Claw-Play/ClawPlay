@@ -6,15 +6,36 @@ export const metadata: Metadata = {
   description: "AI Skills Ecosystem",
 };
 
+// Background illustration from Figma design
+const bgIllustration =
+  "https://www.figma.com/api/mcp/asset/e95ad92a-bc78-409a-a88b-c0713ff11f60";
+
 export default function AuthLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#fefae0] via-[#faf3d0] to-[#f5ecb8] flex flex-col">
+    <div className="h-screen overflow-hidden relative flex flex-col" data-name="Registration">
+      {/* Immersive Background */}
+      <div
+        className="absolute inset-0 pointer-events-none overflow-clip"
+        data-name="Immersive Background Illustration Container"
+      >
+        <img
+          alt=""
+          className="absolute h-[125%] left-0 max-w-none top-[-12.5%] w-full object-cover object-left-top"
+          src={bgIllustration}
+        />
+        {/* Warm overlay to ensure readability and warmth */}
+        <div
+          className="absolute inset-0 bg-[rgba(162,63,0,0.05)] mix-blend-multiply"
+          data-name="Overlay"
+        />
+      </div>
+
       {/* Header */}
-      <header className="p-6">
+      <header className="relative z-10 p-6">
         <Link href="/" className="flex items-center gap-2 group">
           <span className="text-2xl">🦐</span>
           <span className="text-xl font-bold font-heading text-[#564337] group-hover:text-[#a23f00] transition-colors">
@@ -23,26 +44,17 @@ export default function AuthLayout({
         </Link>
       </header>
 
-      {/* Main */}
-      <main className="flex-1 flex items-center justify-center px-4 py-8">
-        <div className="w-full max-w-md">
-          {/* Warm card */}
-          <div className="bg-[#fffdf7] card-radius card-shadow p-8 md:p-10 space-y-6 border border-[#e8dfc8]" style={{ writingMode: "horizontal-tb", textOrientation: "mixed" }}>
-            {children}
-          </div>
-
-          <p className="text-center text-sm text-[#7a6a5a] mt-6 font-body">
-            By continuing, you agree to the{" "}
-            <Link href="/terms" className="underline hover:text-[#a23f00]">
-              Terms of Service
-            </Link>{" "}
-            and{" "}
-            <Link href="/privacy" className="underline hover:text-[#a23f00]">
-              Privacy Policy
-            </Link>
-          </p>
-        </div>
+      {/* Main — centered canvas */}
+      <main className="relative z-10 flex-1 flex items-center justify-center px-8 py-11 overflow-y-auto">
+        {children}
       </main>
+
+      {/* Simple branding footer */}
+      <footer className="relative z-10 flex justify-center py-6">
+        <span className="text-xs text-[#564337] font-body">
+          © {new Date().getFullYear()} ClawPlay AI Community
+        </span>
+      </footer>
     </div>
   );
 }

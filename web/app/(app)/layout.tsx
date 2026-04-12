@@ -19,15 +19,49 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const t = useT("nav");
   const tCommon = useT("common");
   const isSkillsRoute = pathname.startsWith("/skills");
-  const [user, setUser] = useState<{ name?: string; role?: string } | null>(null);
+  const [user, setUser] = useState<{
+    name?: string;
+    role?: string;
+    avatarColor?: string;
+    avatarInitials?: string;
+    avatarUrl?: string | null;
+  } | null>(null);
+  const [loading, setLoading] = useState(true);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const userCache = useRef<{ user: typeof user; loaded: boolean }>({ user: null, loaded: false });
 
+  // Fetch user on mount (only once due to cache)
+  const fetchRef = useRef(false);
   useEffect(() => {
+    if (fetchRef.current) return;
+    fetchRef.current = true;
+    if (userCache.current.loaded) {
+      setUser(userCache.current.user);
+      setLoading(false);
+      return;
+    }
     fetch("/api/user/me")
       .then((r) => r.ok ? r.json() : null)
-      .then((data) => { if (data) setUser(data.user); })
-      .catch(() => {});
+      .then((data) => {
+        if (data) {
+          userCache.current = { user: data.user, loaded: true };
+          setUser(data.user);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  // Listen for profile updates from DashboardClient
+  useEffect(() => {
+    function onProfileUpdate(e: Event) {
+      const detail = (e as CustomEvent).detail;
+      userCache.current = { user: detail, loaded: true };
+      setUser(detail);
+    }
+    window.addEventListener("clawplay:profile-updated", onProfileUpdate);
+    return () => window.removeEventListener("clawplay:profile-updated", onProfileUpdate);
   }, []);
 
   useEffect(() => {
@@ -60,7 +94,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         : false,
   }));
 
-  const avatarInitial = user?.name?.[0]?.toUpperCase() ?? "?";
+  const avatarUrl = user
+    ? `https://api.dicebear.com/7.x/pixel-art/svg?seed=${user.id}&backgroundColor=ff6b35,fa7025,a23f00`
+    : null;
 
   return (
     <div className="min-h-screen bg-[#fefae0]">
@@ -96,20 +132,28 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </nav>
 
           <div className="flex items-center gap-4">
+            {/* Loading skeleton */}
+            {loading && (
+              <div className="w-10 h-10 rounded-full bg-[#e8dfc8] animate-pulse" />
+            )}
+            {!loading && user && (
             <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => setDropdownOpen((o) => !o)}
-                className="w-10 h-10 rounded-full bg-[#faf3d0] border-2 border-[#e8dfc8] flex items-center justify-center text-sm font-bold font-heading text-[#586330] hover:border-[#a23f00] transition-all cursor-pointer"
+                className="w-10 h-10 rounded-full overflow-hidden border-2 border-[#e8dfc8] flex items-center justify-center hover:border-[#a23f00] transition-all cursor-pointer"
                 title={tCommon("dashboard")}
               >
-                {avatarInitial}
+                {avatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+                ) : null}
               </button>
 
               {dropdownOpen && (
                 <div className="absolute right-0 top-full mt-2 w-52 bg-white rounded-[24px] shadow-[0_8px_32px_rgba(86,67,55,0.12)] border border-[#e8dfc8] overflow-hidden z-50">
                   <div className="px-4 py-3 border-b border-[#ede9cf]">
                     <p className="text-sm font-semibold text-[#1d1c0d] font-body truncate">
-                      {user?.name || tCommon("anonymous")}
+                      {user ? (user.name || tCommon("anonymous")) : ""}
                     </p>
                     <p className="text-xs text-[#7a6a5a] font-body mt-0.5">{t("account_settings")}</p>
                   </div>
@@ -128,13 +172,22 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     >
                       <span className="text-base">✦</span> {tCommon("submit")}
                     </Link>
-                    {user?.role === "admin" && (
+                    {(user && user.role === "admin") && (
                       <Link
                         href="/admin"
                         className="flex items-center gap-3 px-4 py-2.5 text-sm text-[#a23f00] hover:bg-[#faf3d0] font-body transition-colors font-semibold"
                         onClick={() => setDropdownOpen(false)}
                       >
                         <span className="text-base">🛡</span> {tCommon("admin_panel")}
+                      </Link>
+                    )}
+                    {(user && user.role === "reviewer") && (
+                      <Link
+                        href="/admin/review"
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-[#a23f00] hover:bg-[#faf3d0] font-body transition-colors font-semibold"
+                        onClick={() => setDropdownOpen(false)}
+                      >
+                        <span className="text-base">📝</span> {tCommon("pending_reviews")}
                       </Link>
                     )}
                   </div>
@@ -154,6 +207,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 </div>
               )}
             </div>
+            )}
           </div>
         </div>
       </header>

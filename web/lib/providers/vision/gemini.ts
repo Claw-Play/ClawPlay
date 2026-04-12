@@ -82,6 +82,7 @@ export class GeminiVisionProvider implements VisionProvider {
       usageMetadata?: {
         promptTokenCount?: number;
         candidatesTokenCount?: number;
+        totalTokenCount?: number;
       };
     };
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";

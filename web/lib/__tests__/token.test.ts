@@ -18,36 +18,22 @@ describe("Token encryption (AES-256-GCM)", () => {
   });
 
   it("encrypts and decrypts a payload correctly", () => {
-    const payload: TokenPayload = {
-      userId: 42,
-      quotaFree: 1000,
-      quotaUsed: 10,
-      exp: Math.floor(Date.now() / 1000) + 3600,
-    };
+    const payload: TokenPayload = { userId: 42 };
 
     const encrypted = encryptToken(payload);
     expect(typeof encrypted).toBe("string");
     expect(encrypted.length).toBeGreaterThan(0);
 
-    // Encrypted text should not contain plaintext JSON keys or string representations
+    // Encrypted text should not contain plaintext JSON keys
     expect(encrypted).not.toContain("userId");
-    expect(encrypted).not.toContain("quotaFree");
 
     // Decrypt
     const decrypted = decryptToken<TokenPayload>(encrypted);
     expect(decrypted.userId).toBe(42);
-    expect(decrypted.quotaFree).toBe(1000);
-    expect(decrypted.quotaUsed).toBe(10);
-    expect(decrypted.exp).toBe(payload.exp);
   });
 
   it("produces different ciphertext each time (random IV)", () => {
-    const payload: TokenPayload = {
-      userId: 1,
-      quotaFree: 100,
-      quotaUsed: 0,
-      exp: Math.floor(Date.now() / 1000) + 60,
-    };
+    const payload: TokenPayload = { userId: 1 };
 
     const enc1 = encryptToken(payload);
     const enc2 = encryptToken(payload);
@@ -61,12 +47,7 @@ describe("Token encryption (AES-256-GCM)", () => {
   });
 
   it("throws on tampered ciphertext", () => {
-    const payload: TokenPayload = {
-      userId: 99,
-      quotaFree: 500,
-      quotaUsed: 0,
-      exp: Math.floor(Date.now() / 1000) + 60,
-    };
+    const payload: TokenPayload = { userId: 99 };
 
     const encrypted = encryptToken(payload);
     const tampered = encrypted.slice(0, -4) + "XXXX";
@@ -94,7 +75,7 @@ describe("Token encryption (AES-256-GCM)", () => {
     const saved = process.env.CLAWPLAY_SECRET_KEY;
     delete process.env.CLAWPLAY_SECRET_KEY;
     // NODE_ENV is "test", not "production" — should use dev fallback key silently
-    const payload: TokenPayload = { userId: 7, quotaFree: 100, quotaUsed: 0, exp: 9999999999 };
+    const payload: TokenPayload = { userId: 7 };
     const enc = encryptToken(payload);
     const dec = decryptToken<TokenPayload>(enc);
     expect(dec.userId).toBe(7);

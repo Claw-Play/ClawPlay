@@ -14,10 +14,8 @@ export default defineConfig({
       "**/dist/**",
       "**/coverage/**",
       "**/*.e2e.test.ts",
-      // Component tests run in separate jsdom config
-      "components/__tests__/**",
-      "app/__tests__/**",
-      "app/**/__tests__/**",
+      // Component tests run in jsdom environment (vitest.component.config.ts)
+      "lib/__tests__/components/**",
     ],
     coverage: {
       provider: "v8",

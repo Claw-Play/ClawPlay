@@ -2,7 +2,7 @@ import { Redis } from "@upstash/redis";
 
 let redis: Redis | null = null;
 
-function getRedis(): Redis | null {
+export function getRedis(): Redis | null {
   if (redis) return redis;
 
   const url = process.env.UPSTASH_REDIS_REST_URL;
@@ -18,18 +18,24 @@ function getRedis(): Redis | null {
   }
 }
 
-// Quota costs per ability (units)
+// In-memory cache for getQuota — reduces Redis round-trips per SSR page load
+// TTL of 5s is safe: quota changes only from incrementQuota (post-call)
+const quotaCache = new Map<number, { data: QuotaInfo; expires: number }>();
+const QUOTA_CACHE_TTL_MS = 5000;
+
+// Quota costs per ability (used only for pre-check estimates)
+// Actual quota deduction uses real token counts from provider responses.
 export const ABILITY_COSTS: Record<string, number> = {
   "image.generate": 10,
   "tts.synthesize": 5,
   "voice.synthesize": 5,
   "vision.analyze": 5,
-  "llm.generate": 0,    // 免费：Skill 开发辅助工具，不占用户配额
+  "llm.generate": 5,
   "whoami": 0,
 };
 
 // Default free tier quota
-export const DEFAULT_QUOTA_FREE = 1000;
+export const DEFAULT_QUOTA_FREE = 100000;
 
 export interface QuotaInfo {
   used: number;
@@ -39,9 +45,13 @@ export interface QuotaInfo {
 
 /**
  * Get current quota for a user.
- * Non-blocking — Redis timeout returns null immediately without waiting.
+ * Cached in-memory for 5s to avoid repeated Redis round-trips per SSR page load.
  */
 export async function getQuota(userId: number): Promise<QuotaInfo | null> {
+  const now = Date.now();
+  const cached = quotaCache.get(userId);
+  if (cached && cached.expires > now) return cached.data;
+
   try {
     const r = getRedis();
     if (!r) return null;
@@ -50,11 +60,17 @@ export async function getQuota(userId: number): Promise<QuotaInfo | null> {
       new Promise<null>((resolve) => setTimeout(() => resolve(null), 2000)),
     ]);
     if (!data) return null;
-    const remaining = Math.max(0, data.limit - data.used);
-    return { used: data.used, limit: data.limit, remaining };
+    const result: QuotaInfo = { used: data.used, limit: data.limit, remaining: Math.max(0, data.limit - data.used) };
+    quotaCache.set(userId, { data: result, expires: now + QUOTA_CACHE_TTL_MS });
+    return result;
   } catch {
-    return null; // Redis not configured in dev
+    return null;
   }
+}
+
+/** Invalidate cache entry after quota increment */
+export function invalidateQuotaCache(userId: number): void {
+  quotaCache.delete(userId);
 }
 
 /**
@@ -100,17 +116,16 @@ export async function checkQuota(
  * Atomically increment quota using a Lua script.
  * Returns { ok: true, remaining } or { ok: false } if quota would be exceeded.
  * Call this AFTER the provider succeeds (post-deduct strategy).
+ * @param actualTokens — actual token count deducted from provider response.
  */
 export async function incrementQuota(
   userId: number,
-  ability: string
+  actualTokens: number
 ): Promise<{ ok: boolean; remaining?: number }> {
-  const cost = ABILITY_COSTS[ability] ?? 1;
-
   try {
     const r = getRedis();
     if (!r) {
-      console.warn("[redis/incrementQuota] Redis unavailable — skipping quota deduction", { userId, ability });
+      console.warn("[redis/incrementQuota] Redis unavailable — skipping quota deduction", { userId, actualTokens });
       return { ok: true, remaining: 999 };
     }
     const key = `clawplay:quota:${userId}`;
@@ -134,11 +149,12 @@ export async function incrementQuota(
       return limit - data.used
     `;
 
-    const remaining = await r.eval(lua, [key], [String(cost), String(DEFAULT_QUOTA_FREE)]) as number;
+    const remaining = await r.eval(lua, [key], [String(actualTokens), String(DEFAULT_QUOTA_FREE)]) as number;
     if (remaining < 0) return { ok: false };
+    invalidateQuotaCache(userId); // stale cache no longer valid
     return { ok: true, remaining };
   } catch {
-    console.warn("[redis/incrementQuota] Redis unavailable — rejecting request", { userId, ability });
+    console.warn("[redis/incrementQuota] Redis unavailable — rejecting request", { userId, actualTokens });
     return { ok: false };
   }
 }
@@ -151,9 +167,10 @@ export async function checkAndIncrementQuota(
   userId: number,
   ability: string
 ): Promise<{ allowed: boolean; remaining?: number; reason?: string }> {
+  const cost = ABILITY_COSTS[ability] ?? 1;
   const check = await checkQuota(userId, ability);
   if (!check.allowed) return check;
-  const incr = await incrementQuota(userId, ability);
+  const incr = await incrementQuota(userId, cost);
   if (!incr.ok) {
     return { allowed: false, reason: "Quota exceeded (concurrent request)." };
   }

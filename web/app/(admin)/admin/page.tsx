@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import OverviewClient from "./OverviewClient";
 
-export default function AdminRootPage() {
-  redirect("/admin/review");
+export default function AdminOverviewPage() {
+  return <OverviewClient />;
 }

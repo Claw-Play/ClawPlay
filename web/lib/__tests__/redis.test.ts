@@ -9,8 +9,8 @@ describe("Quota constants", () => {
     expect(ABILITY_COSTS["whoami"]).toBe(0);
   });
 
-  it("DEFAULT_QUOTA_FREE is 1000", () => {
-    expect(DEFAULT_QUOTA_FREE).toBe(1000);
+  it("DEFAULT_QUOTA_FREE is 100000", () => {
+    expect(DEFAULT_QUOTA_FREE).toBe(100000);
   });
 
   it("costs are non-negative integers", () => {

@@ -10,6 +10,7 @@ interface Skill {
   authorName: string | null;
   iconEmoji: string | null;
   statsStars: number | null;
+  statsRatingsCount: number | null;
   createdAt: Date | null;
 }
 
@@ -114,9 +115,6 @@ export function SkillsGrid({ initialSkills, allEmojis }: SkillsGridProps) {
               className="bg-[#fffdf7] card-radius p-5 border border-[#e8dfc8] card-shadow card-shadow-hover transition-all duration-200"
             >
               <div className="flex items-start gap-3 mb-3">
-                <span className="text-3xl flex-shrink-0">
-                  {s.iconEmoji ?? "🦐"}
-                </span>
                 <div className="min-w-0">
                   <h3 className="font-semibold text-[#564337] truncate font-heading">
                     {s.name}
@@ -131,7 +129,7 @@ export function SkillsGrid({ initialSkills, allEmojis }: SkillsGridProps) {
               </p>
               <div className="flex items-center gap-3 mt-3 pt-3 border-t border-[#e8dfc8]">
                 <span className="text-xs text-[#a89888] font-body">
-                  ⭐ {s.statsStars ?? 0}
+                  ⭐ {s.statsRatingsCount ? (s.statsStars! / s.statsRatingsCount).toFixed(1) : "0.0"}
                 </span>
                 {s.createdAt && (
                   <span className="text-xs text-[#a89888] font-body">

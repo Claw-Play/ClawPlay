@@ -67,9 +67,7 @@ export default async function SkillDetailPage({
           <div className="lg:col-span-2 space-y-6">
             {/* Header */}
             <div className="bg-[#fffdf7] card-radius p-6 border border-[#e8dfc8] card-shadow">
-              <div className="flex items-start gap-4 mb-4">
-                <span className="text-5xl">{skill.iconEmoji}</span>
-                <div>
+              <div className="flex flex-col gap-1">
                   <h1 className="text-2xl font-bold font-heading text-[#564337]">{skill.name}</h1>
                   <p className="text-[#7a6a5a] mt-1 font-body">
                     {tCommon("by")} <span className="font-semibold">{skill.authorName || tCommon("anonymous")}</span>
@@ -80,7 +78,6 @@ export default async function SkillDetailPage({
                     {skill.summary || tCommon("no_description")}
                   </p>
                 </div>
-              </div>
 
               {/* Status badge */}
               <div className="flex items-center gap-2">

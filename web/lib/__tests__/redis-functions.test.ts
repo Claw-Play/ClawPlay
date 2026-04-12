@@ -96,20 +96,20 @@ describe("Redis quota functions", () => {
   describe("incrementQuota", () => {
     it("returns ok=true with remaining when Lua script succeeds", async () => {
       mockFns.eval.mockResolvedValueOnce(990);
-      const result = await incrementQuota(1, "image.generate");
+      const result = await incrementQuota(1, 10); // actual token cost
       expect(result.ok).toBe(true);
       expect(result.remaining).toBe(990);
     });
 
     it("returns ok=false when Lua script returns -1 (quota exceeded)", async () => {
       mockFns.eval.mockResolvedValueOnce(-1);
-      const result = await incrementQuota(1, "image.generate");
+      const result = await incrementQuota(1, 5000);
       expect(result.ok).toBe(false);
     });
 
     it("returns ok=false on Redis error (fail-safe)", async () => {
       mockFns.eval.mockRejectedValueOnce(new Error("Redis down"));
-      const result = await incrementQuota(1, "image.generate");
+      const result = await incrementQuota(1, 10);
       expect(result.ok).toBe(false);
     });
   });

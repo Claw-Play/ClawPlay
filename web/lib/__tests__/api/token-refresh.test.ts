@@ -65,11 +65,7 @@ describe("POST /api/user/token/refresh", () => {
     const { user } = await seedUser(db);
 
     // Create a CLAWPLAY_TOKEN (AES-256-GCM encrypted)
-    const encryptedToken = encryptToken({
-      userId: user.id,
-      quotaFree: user.quotaFree,
-      quotaUsed: user.quotaUsed,
-    });
+    const encryptedToken = encryptToken({ userId: user.id });
 
     // Also store it in DB (mimics real generate flow)
     const { userTokens } = await import("@/lib/db/schema");
@@ -128,11 +124,7 @@ describe("POST /api/user/token/refresh", () => {
 
   it("token for non-existent user → 404", async () => {
     // Create a token with a userId that doesn't exist
-    const fakeToken = encryptToken({
-      userId: 999999,
-      quotaFree: 1000,
-      quotaUsed: 0,
-    });
+    const fakeToken = encryptToken({ userId: 999999 });
     const req = makeRequest("POST", "/api/user/token/refresh", {
       headers: { Authorization: `Bearer ${fakeToken}` },
     });

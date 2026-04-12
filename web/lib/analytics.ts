@@ -4,12 +4,10 @@
  * 设计原则：
  * - 服务端埋点为主（防伪造）
  * - 异步写 DB，不阻塞主请求
- * - 关键事件同时写 JSONL 审计日志（保留不可篡改性）
  */
 
 import { db } from "@/lib/db";
 import { eventLogs, userStats, skills } from "@/lib/db/schema";
-import { appendAuditLog } from "@/lib/audit";
 import { eq, sql } from "drizzle-orm";
 import { headers } from "next/headers";
 
@@ -45,15 +43,7 @@ export type AnalyticsEvent =
   | "token.invalid";
 
 // Events that are also written to the append-only JSONL audit log
-const AUDIT_EVENTS: AnalyticsEvent[] = [
-  "skill.approve",
-  "skill.reject",
-  "skill.feature",
-  "skill.unfeature",
-  "token.generate",
-  "token.revoke",
-  "user.login_failed",
-];
+// AUDIT_EVENTS: 已废弃，audit.jsonl 已停用
 
 export interface EventParams {
   event: AnalyticsEvent;
@@ -83,7 +73,6 @@ function getClientInfo(): { ip?: string; ua?: string } {
 /**
  * 记录一个分析事件到 event_logs 表。
  * 异步执行，不等待完成，不阻塞主请求。
- * 关键事件同时写 JSONL 审计日志。
  */
 export function logEvent(params: EventParams): void {
   // Fire-and-forget — do not await
@@ -109,22 +98,6 @@ async function doLogEvent(params: EventParams): Promise<void> {
     console.error(`[analytics] Failed to log event "${event}":`, err);
   }
 
-  // Dual-write to JSONL audit log for sensitive events
-  if (AUDIT_EVENTS.includes(event)) {
-    try {
-      appendAuditLog({
-        ts: new Date().toISOString(),
-        actorId: userId ?? 0,
-        action: event as never,
-        targetType: (targetType as "skill" | "user_token" | "user") ?? "user",
-        targetId: targetId ?? "",
-        metadata,
-      });
-    } catch (err) {
-      console.error(`[analytics] Failed to write audit log for "${event}":`, err);
-    }
-  }
-
   // Update userStats if applicable
   if (userId && event in USER_STATS_MAP) {
     try {
@@ -140,10 +113,6 @@ const USER_STATS_MAP: Partial<Record<AnalyticsEvent, (m: Record<string, unknown>
   "user.login": () => ({
     loginCount: sql`login_count + 1`,
     lastLoginAt: new Date(),
-    lastActiveAt: new Date(),
-  }),
-  "quota.use": (m) => ({
-    totalQuotaUsed: sql`total_quota_used + ${Number(m.cost ?? 0)}`,
     lastActiveAt: new Date(),
   }),
   "skill.submit": () => ({
@@ -239,22 +208,23 @@ export const analytics = {
     use: (
       userId: number,
       ability: string,
-      cost: number,
-      usage?: { inputTokens?: number; outputTokens?: number; totalTokens?: number }
+      actualTokens: number,
+      usage?: { inputTokens?: number; outputTokens?: number; totalTokens?: number; provider?: string }
     ) => {
       const inputTokens = usage?.inputTokens ?? 0;
       const outputTokens = usage?.outputTokens ?? 0;
-      const totalTokens = usage?.totalTokens ?? inputTokens + outputTokens;
+      const totalTokens = actualTokens;
+      const provider = usage?.provider;
       logEvent({
         event: "quota.use",
         userId,
         targetType: "ability",
         targetId: ability,
-        metadata: { ability, cost, inputTokens, outputTokens, totalTokens },
+        metadata: { inputTokens, outputTokens, totalTokens, ...(provider ? { provider } : {}) },
       });
     },
     exceeded: (userId: number, ability: string, current: number, limit: number) =>
-      logEvent({ event: "quota.exceeded", userId, targetType: "ability", targetId: ability, metadata: { ability, current, limit } }),
+      logEvent({ event: "quota.exceeded", userId, targetType: "ability", targetId: ability, metadata: { current, limit } }),
     error: (userId: number, ability: string, provider: string, code: string) =>
       logEvent({ event: "ability.error", userId, targetType: "ability", targetId: ability, metadata: { provider, code } }),
   },

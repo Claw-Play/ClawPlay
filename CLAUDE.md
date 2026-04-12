@@ -1,80 +1,5 @@
 # ClawPlay — Developer Context
 
-## What is this project?
-
-ClawPlay is an open-source community hub for X Claw social/entertainment Skills. Phase 1 (✅ done as of 2026-04-06):
-
-1. **Unified Multimodal CLI** (`clawplay`) — one CLI for image, vision, LLM, TTS; replaces raw API keys
-2. **Web App** (Next.js 14) — Skill registry with human review, user registration, free tier quotas
-3. **Token System** — AES-256-GCM encrypted tokens that protect provider API keys from Skill developers
-4. **Multi-Provider Relay** — Ark + Gemini, routed server-side; quota enforced at relay layer
-5. **One-click setup** — Homepage generates `export CLAWPLAY_TOKEN=...` for X Claw environment
-
-> **Documentation is bilingual**: [English](./README.md) / [中文](./README.zh.md)
-
-## Tech Stack
-
-| Module | Choice | Why |
-|--------|--------|-----|
-| Web | Next.js 14 App Router | Stable, SSR + API Routes |
-| DB | SQLite + Drizzle ORM | Zero-ops, file-based |
-| Quota | Upstash Redis | Free tier (90K/day), serverless |
-| Auth | JWT via httpOnly Cookie | XSS-safe, Secure + SameSite=Strict |
-| CLI | Shell Script | OpenClaw is bash; aligns with take-your-claw pattern |
-| Style | Tailwind CSS v3 | From create-next-app |
-| Testing | Vitest + Playwright | Consistent with ClawHub |
-
-## Project Structure
-
-```
-ClawPlay/
-├── web/                          # Next.js 14 app
-│   ├── app/
-│   │   ├── (auth)/               # Login/register pages
-│   │   ├── (app)/                # Authenticated pages (dashboard, skills, submit); layout provides nav shell on Skills routes
-│   │   ├── (admin)/              # Admin review panel (admin/audit, admin/review, admin/settings)
-│   │   ├── api/                  # 22 API routes
-│   │   ├── page.tsx              # Homepage (one-click token copy)
-│   │   └── layout.tsx
-│   ├── components/               # Shared React components
-│   └── lib/
-│       ├── db/
-│       │   ├── schema.ts         # Tables: users, skills, skill_versions, user_tokens
-│       │   └── index.ts          # SQLite connection + auto-migration
-│       ├── auth.ts               # JWT signing/verification, httpOnly cookie helpers
-│       ├── token.ts              # AES-256-GCM token encryption/decryption
-│       ├── redis.ts              # Upstash Redis client + quota helpers
-│       ├── audit.ts              # Append-only JSONL audit log writer
-│       ├── sms.ts                # SMS OTP provider (Aliyun)
-│       ├── wechat.ts             # WeChat OAuth client
-│       └── providers/            # Multi-provider abstraction layer
-│           ├── image/            # image generation: ark + gemini
-│           ├── vision/           # image understanding: ark + gemini
-│           └── llm/              # text generation: ark + gemini
-├── cli/                          # Shell CLI
-│   ├── clawplay                  # Main entry (subcommand router)
-│   ├── lib/
-│   │   ├── token.sh              # Read + decrypt CLAWPLAY_TOKEN locally
-│   │   ├── image.sh              # Relay client: POST /api/ability/image/generate
-│   │   ├── vision.sh             # Relay client: POST /api/ability/vision/analyze
-│   │   ├── llm.sh                # Relay client: POST /api/ability/llm/generate
-│   │   └── api.sh                # HTTP call helpers
-│   └── skill/                    # Skill authoring toolkit
-│       ├── lint.mjs              # SKILL.md syntax + bash static analysis
-│       ├── diagram.mjs           # SKILL.md → Mermaid flow diagram
-│       └── types.mjs             # TypeScript type inference from frontmatter
-├── docs/
-│   ├── clawplay-commands.md      # CLI command reference
-│   ├── skill-authoring-guide.md  # Advanced skill development guide
-│   └── providers/                # Provider API parameter docs (Ark + Gemini)
-├── data/                         # SQLite DB (git-ignored)
-│   └── clawplay.db
-├── README.md                     # English (GitHub default)
-├── README.zh.md                  # 中文
-├── ROADMAP.md                    # Phases 1–6 roadmap
-└── CLAUDE.md                     # This file
-```
-
 ## Key Patterns
 
 ### Database (SQLite + Drizzle)
@@ -128,12 +53,27 @@ const encrypted = await encryptAES(payload, secretKey);
 const payload = await decryptAES(encryptedToken, secretKey);
 ```
 
-### Skill Frontmatter Parsing
+### Analytics Event Tracking
 
 ```ts
-import matter from "gray-matter";
-const { data, content } = matter(skillMdContent);
-// data.metadata.clawdbot.requires.env / bins
+import { analytics } from "@/lib/analytics";
+
+// Fire-and-forget — logs to eventLogs table asynchronously
+analytics.quota.use(userId, "image", 1000, { inputTokens: 500, outputTokens: 500, totalTokens: 1000, provider: "ark" });
+analytics.user.login(userId);
+analytics.skill.submit(userId, skillSlug, true);
+```
+
+### Key Pool (Multi-Key Sharding)
+
+Keys are loaded from env vars on server start and stored encrypted in `providerKeys` table. Each key has a per-minute RPM limit with automatic window reset via cron.
+
+```ts
+// Env vars for key pool
+ARK_IMAGE_KEYS=key1,key2     // comma-separated, ARK_API_KEY as fallback
+ARK_VISION_KEYS=key3,key4
+ARK_KEY_QUOTA=500            // per-key RPM limit for image keys
+ARK_VISION_KEY_QUOTA=30000  // per-key RPM limit for vision keys
 ```
 
 ## Environment Variables
@@ -146,7 +86,11 @@ JWT_SECRET=                # 32-byte hex or base64 for jose
 CLAWPLAY_SECRET_KEY=       # 32-byte hex for AES-256-GCM
 UPSTASH_REDIS_REST_URL=    # Upstash Redis REST URL
 UPSTASH_REDIS_REST_TOKEN=  # Upstash Redis REST Token
-ARK_API_KEY=               # Volcengine Ark API Key (server-side only)
+ARK_API_KEY=               # Fallback Ark key for images (if ARK_IMAGE_KEYS not set)
+ARK_IMAGE_KEYS=            # Comma-separated Ark image keys (takes precedence over ARK_API_KEY)
+ARK_VISION_KEYS=           # Comma-separated Ark vision keys
+ARK_KEY_QUOTA=500          # Per-key RPM limit for image keys
+ARK_VISION_KEY_QUOTA=30000 # Per-key RPM limit for vision keys
 GEMINI_API_KEY=            # Google Gemini API Key (optional, multi-provider fallback)
 ```
 
@@ -173,7 +117,8 @@ ClawPlay Server（Relay）:
   1. 解密 Token → userId
   2. Redis WATCH quota:{userId} → 检查 used+10 ≤ limit
   3. INCR quota_used
-  4. 调用 Provider API（Ark 或 Gemini）→ 返回图片
+  4. 从 Key Pool 选择 Ark Key（按 RPM 窗口轮询）
+  5. 调用 Provider API（Ark 或 Gemini）→ 返回图片
   ↓
 CLI: 写入 /tmp/avatar.png
   ↓
@@ -185,7 +130,7 @@ Agent 继续使用图片（发回用户）
 - Relay 返回 base64 → CLI 解码写文件 → stdout 只 echo 路径
 - Agent 上下文看到的是 `✓ /tmp/avatar.png`，不是图片数据
 
-## All API Routes (22 total)
+## All API Routes (~26 total)
 
 **Ability/Relay Routes（5个）**
 ```
@@ -207,28 +152,39 @@ POST /api/auth/wechat/route        — 发起微信 OAuth
 POST /api/auth/wechat/callback     — 微信 OAuth 回调
 ```
 
-**User Routes（3个）**
+**User Routes（5个）**
 ```
 GET  /api/user/me                  — 当前用户信息
 POST /api/user/token/generate      — 生成加密 CLAWPLAY_TOKEN
-POST /api/user/token/revoke        — 撤销 Token
+POST /api/user/token/refresh       — 刷新 Token（撤销旧 Token，生成新 Token）
+POST /api/user/token/revoke         — 撤销 Token
+GET  /api/user/analytics/          — 用户级分析数据（配额使用趋势等）
 ```
 
-**Skills Routes（4个 + reviews）**
+**Skills Routes（6个）**
 ```
 GET  /api/skills                   — Skill 列表（SSR，筛选已审核）
 GET  /api/skills/[slug]            — Skill 详情
 GET  /api/skills/[slug]/versions   — 版本历史
-POST /api/skills/submit            — 提交 Skill（pending 状态）
+POST /api/skills/submit            — 提交 Skill（pending 状态 + LLM 安全预审）
 GET  /api/skills/[slug]/reviews    — 获取评论列表
 POST /api/skills/[slug]/reviews    — 提交评分/评论
 ```
 
-**Admin Routes（3个）**
+**Admin Routes（7个）**
 ```
 GET  /api/admin/skills             — 审核队列（pending 过滤）
-PATCH /api/admin/skills/[id]       — 通过/拒绝（写 JSONL 审计日志）
+PATCH /api/admin/skills/[id]        — 通过/拒绝（写 JSONL 审计日志）
 GET  /api/admin/audit-logs         — 读取 append-only 审计日志
+GET  /api/admin/analytics/overview — 平台总览数据（用户数/Skill数/配额使用）
+GET  /api/admin/analytics/events   — 事件流数据（eventLogs 聚合查询）
+GET  /api/admin/analytics/users    — 用户统计数据（userStats 聚合）
+GET  /api/admin/keys/              — Provider Key Pool 管理
+```
+
+**Cron Routes（1个）**
+```
+POST /api/cron/reset-key-windows   — 重置 Key Pool RPM 窗口计数器（每分钟调用）
 ```
 
 ## Multi-Provider Abstraction
@@ -241,49 +197,12 @@ All abilities route through a provider abstraction layer in `web/lib/providers/`
 | Vision analysis | Volcengine Ark | Gemini | Ark supports `file://` direct upload (512MB); Gemini requires base64 |
 | LLM text generation | Gemini | Volcengine Ark | Both support streaming; Ark optimized for Chinese |
 
+**Key Pool Sharding**: Ark keys are sharded across multiple keys with per-minute RPM limits. Selection uses round-robin with availability checks. Vision keys use a separate pool with higher limits.
+
 **Provider-specific notes**:
 - Ark: `response_format: "url"` for images; supports web search
 - Gemini: base64 inline; `gemini-3.1-flash-image-preview` for images; inline media < 20MB total request body
 - Rate limit (429) from any provider: **do NOT deduct quota** (fail-open, no double-penalty)
-
-## Common Commands (Makefile)
-
-Run from the project root:
-
-| Command | Purpose |
-|---------|---------|
-| `make dev` | Clean restart — kills port 3000, clears `.next` cache, starts dev server |
-| `make restart` | Fast restart — kills process only, no cache clear |
-| `make build` | Production build (`web/`) |
-| `make test` | Unit tests (Vitest) |
-| `make e2e` | Playwright E2E tests (requires dev server) |
-| `make clean` | Full clean — removes `.next` + `node_modules`, reinstalls |
-
-> Use `make dev` whenever you see "missing required error components" or stale bundle errors.
-
-## Key Files to Read First
-
-- `web/lib/db/schema.ts` — All table definitions (incl. `skillRatings`, `isFeatured`, `statsRatingsCount`)
-- `web/lib/db/index.ts` — DB connection + auto-migration
-- `web/lib/i18n/` — Custom i18n: `getT` for server components, `I18nProvider` + `useT` for client components
-- `web/lib/skill-llm-safety.ts` — LLM pre-screening on Skill submit (UNSAFE/REVIEW/SAFE)
-- `web/lib/skill-security-scan.ts` — Bash injection detection on Skill submit
-- `web/lib/auth.ts` — JWT signing/verification helpers
-- `web/lib/token.ts` — AES-256-GCM encryption
-- `web/lib/redis.ts` — Quota management (atomic WATCH+MULTI+EXEC)
-- `web/lib/audit.ts` — Append-only JSONL audit log writer
-- `web/lib/providers/*/index.ts` — Provider routing logic
-- `web/app/api/` — All 22 API routes
-- `cli/clawplay` — CLI subcommand router
-- `cli/skill/` — Skill authoring tools (lint, diagram, types)
-- `docs/clawplay-commands.md` — CLI command reference
-- `docs/skill-authoring-guide.md` — Advanced skill development guide
-
-## Reference Implementations
-
-- `take-your-claw/scripts/draw.sh` — Provider script pattern (API call + error handling)
-- `take-your-claw/SKILL.md` — Skill frontmatter structure
-- `/Users/mindstorm/Projects/opensource/clawhub/` — Full-stack reference (skills registry, moderation, versioned releases)
 
 ## Important Gotchas
 
@@ -297,68 +216,22 @@ Run from the project root:
 - **Relay is mandatory for quota**: Direct `ARK_API_KEY` in CLI env bypasses relay and quota; this is the intended Pro mode, not a bug
 - **Provider 429 = skip quota deduction**: When Ark/Gemini rate-limits, return error without deducting quota to avoid double-penalty; log the skip
 - **Base64 memory pressure**: Gemini returns inline base64; large concurrent requests strain Node memory. Ark returns URLs → CLI downloads → less memory pressure
-- **Ark wrong endpoint historically**: Old CLI used `/api/v3/chat/completions` for images; correct endpoint is `/api/v3/images/generations`; response parsing also differs (`data[0].b64_json` not `choices[0].message`)
-- **Image file size limits**: Ark single image < 10MB; Gemini request body < 20MB total; CLI should warn for > 20MB files
+- **Key Pool vs single key**: `ARK_IMAGE_KEYS` takes precedence over `ARK_API_KEY` for image; `ARK_VISION_KEYS` is separate pool; both use same `ARK_KEY_QUOTA` / `ARK_VISION_KEY_QUOTA` for per-key limits
 
 ### Database & Quota
 - **Redis optional**: Without Upstash, quota falls back to DB (slower, no atomic increment); log a warning when falling back
-- **WATCH+MULTI+EXEC race condition**: Under high concurrency, naive Redis transactions can lose quota updates; consider a Lua script for true atomicity in Phase 3
 - **Soft delete**: Skills use `deletedAt` nullable timestamp, not hard delete; queries must filter `deletedAt IS NULL`
 - **Token revocation**: Set `revokedAt` in `user_tokens`; CLI checks this field after decrypting
+- **Token refresh**: New tokens only store `userId` (no quota fields); quota is always read from Redis/DB at relay time
 
 ### CLI & Skill Authoring
 - **stdout = file path only**: Never output base64, binary, or JSON to stdout; errors go to stderr with `[clawplay <subcommand>]` prefix
 - **CLI does Base64 encoding**: For vision analysis, CLI Base64-encodes images before POST to reduce relay bandwidth; server receives base64, not raw files
 - **MIME type detection**: For unknown file extensions, use `file -b --mime-type`; fallback to `image/png`
-- **Figma designs > current code**: Some pages in Figma (Reviews section) are aspirational and NOT in Phase 1; do not implement Figma-only features without confirmation. Implemented so far: Dashboard full-width layout with sidebar, Skills horizontal card list with hero + filters.
-- **i18n is custom (not next-intl)**: `web/lib/i18n/index.ts` provides `getT<K>(ns)` for server components (no await needed); `web/lib/i18n/context.tsx` provides `useT<K>(ns)` for client components via `I18nProvider` in `(app)/layout.tsx`. `web/i18n/request.ts` was deleted (incompatible with App Router cache); `next-intl/plugin` removed from `next.config.mjs`
+- **i18n is custom (not next-intl)**: `web/lib/i18n/index.ts` provides `getT<K>(ns)` for server components; `web/lib/i18n/context.tsx` provides `useT<K>(ns)` for client components via `I18nProvider` in `(app)/layout.tsx`
 
 ### Testing
 - **No real network calls in unit tests**: Mock Upstash Redis, mock Volcengine/Gemini API responses
 - **E2E tests**: Run against live dev server (`localhost:3000`); use `e2e/helpers/auth.ts` for `loginAs` + `registerUser` helpers
-- **SMS/WeChat can be mocked**: These routes exist but UI wiring and full OAuth flow may not be complete; test with mock responses
-- **CLI unit tests**: Pure bash, zero external dependencies; `curl` is mocked via function override in isolated subprocesses. Run with `bash cli/tests/run-all.sh` or via `make test`. Test files live in `cli/tests/` — one file per lib (`token`, `api`, `image`, `llm`, `vision`, `install`); shared harness in `cli/tests/helpers.sh`
+- **CLI unit tests**: Pure bash, zero external dependencies; `curl` is mocked via function override in isolated subprocesses. Run with `bash cli/tests/run-all.sh` or via `make test`
 - **`make test`** runs both web unit tests (`cd web && npm test`) and CLI bash tests in sequence
-- **New web test files**: `skill-llm-safety.test.ts`, `skill-security-scan.test.ts`, `reviews.test.ts`, `skill-download.test.ts`, `i18n-context.test.tsx` — all in `web/lib/__tests__/`
-
-## Bilingual Documentation Convention
-
-All user-facing documentation must be maintained in both English and Chinese:
-- `README.md` — English (GitHub default, shown to international visitors)
-- `README.zh.md` — 中文 (links to English at top)
-- `docs/` — English-only for technical docs (universal developer audience)
-- Code comments — bilingual for critical logic (auth, token, quota)
-- API responses — English only (developer API contract)
-
-When adding features, update both README files and keep them in sync.
-
-## Design Decisions Log
-
-| Date | Decision | Reason |
-|------|----------|--------|
-| 2026-04-03 | Shell Script CLI | OpenClaw is bash; Python SDK not applicable |
-| 2026-04-03 | httpOnly Cookie for JWT | Avoids XSS risk of localStorage |
-| 2026-04-03 | SQLite (not PostgreSQL) | Zero-ops for community project |
-| 2026-04-03 | Upstash Redis for quota | Free tier matches design doc; serverless = no state loss on restart |
-| 2026-04-03 | JSONL for audit logs | Append-only immutability; Phase 1 scale sufficient |
-| 2026-04-03 | Single repo (not monorepo) | Phase 1 simplicity; can split to workspaces later |
-| 2026-04-03 | Next.js 14 (not 15) | Phase 1 doesn't need v15 features |
-| 2026-04-03 | Warm Light design | Differentiates from ClawHub dark + Tencent corporate blue |
-| 2026-04-04 | Relay 模式控制配额 | 无 Relay = 无法控制配额；Relay 是配额控制的唯一手段 |
-| 2026-04-04 | Shell Installer 分发 CLI | SKILL.md 中指引用户 curl install.sh 安装，全局复用一份 CLI |
-| 2026-04-05 | Multi-provider abstraction | Ark + Gemini routed server-side; CLI sends generic params only |
-| 2026-04-05 | JSONL audit (not DB table) | Append-only immutability; avoids DB write bottleneck under load |
-| 2026-04-06 | 分语言 README | GitHub 默认展示英文；中文用户通过 README.zh.md 访问 |
-| 2026-04-06 | Dashboard 页面改版 | 全宽布局 + 左侧边栏，与 Figma 设计对齐；去掉占位符卡片（Community Status / Auto-Refill / 2FA / Cloud Sync）；Token 生成时间改为从 DB 读取 |
-| 2026-04-06 | Skills 技能库页面改版 | Hero 标题 + 搜索栏 + 分类筛选 + 横向卡片布局，与 Figma 设计对齐；(app)/layout.tsx 提供 Skills 路由专用导航壳（顶部导航 + 左侧边栏） |
-| 2026-04-06 | Phase 2 i18n | next-intl v4 + middleware cookie locale detection; NEXT_LOCALE env var for CN/overseas default; localePrefix: never (clean URLs); zh default |
-| 2026-04-06 | CLI bash 单元测试 | 纯 bash + curl mock（函数覆盖），零外部依赖；84 个用例覆盖全部 lib（token/api/image/llm/vision/install）；`make test` 同时跑 web + CLI |
-| 2026-04-06 | mktemp 不带扩展名 | macOS BSD mktemp 要求 X 在末尾，带 .png/.zip 后缀时返回字面量路径；image.sh / install.sh 统一改用 `mktemp` |
-| 2026-04-06 | Phase 6 并入 Phase 2 | 原 Phase 6（GitHub OAuth / Stripe / 多区域部署 / 英文社区）并入 Phase 2；Phase 2 现为"社区与生态 + 国际化"；原 Phase 3/4/5 序号前移 |
-| 2026-04-08 | 自定义 i18n（替换 next-intl） | next-intl 插件与 App Router cache 不兼容；改用自定义 `getT`（服务端，直接读 JSON）+ `I18nProvider` + `useT`（客户端）；删除 `next-intl/plugin`；`web/i18n/request.ts` 已删除 |
-| 2026-04-08 | Admin 面板路由重构 | Admin 路由从 `(admin)/audit/` + `(admin)/review/` 改为 `(admin)/admin/audit/` + `(admin)/admin/review/` + `(admin)/admin/settings/`；layout 使用 `useT` 翻译所有 nav label |
-| 2026-04-08 | Featured Skill 路由 | 首页按 `isFeatured` DESC → `createdAt` DESC 排序；`FeaturedCarousel` 组件；admin 可 feature/unfeature；Schema 新增 `isFeatured`、`statsRatingsCount` 字段 |
-| 2026-04-08 | Skill 评分与评论系统 | `skillRatings` 表（userId + skillId 唯一约束）；`/api/skills/[slug]/reviews/` GET/POST；`ReviewsSection` + `ReviewForm` 组件；详情页展示平均分和评论列表 |
-| 2026-04-08 | Phase 3 全部完成 | Skill 评分与评论、Featured Skill 轮播均已 ✅；Phase 3 其他项（分享卡片、通知中心等）待实现 |
-| 2026-04-08 | LLM 安全预审层 | `web/lib/skill-llm-safety.ts` — 提交时调用 LLM 对 SKILL.md 做安全评估；UNSAFE 直接拒绝，REVIEW 存入 `moderationFlags`，安全 Skill 继续人工审核 |
-| 2026-04-08 | Skill 安全扫描 | `web/lib/skill-security-scan.ts` — bash 注入检测（`rm -rf /`、`eval $VAR`、`curl \| sh` 等）；与 `skill-llm-safety.ts` 共同构成双重防护 |

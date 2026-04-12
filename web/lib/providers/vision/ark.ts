@@ -113,7 +113,7 @@ export class ArkVisionProvider implements VisionProvider {
 
     const data = await res.json() as {
       choices: Array<{ message: { content: string } }>;
-      usage?: { prompt_tokens?: number; completion_tokens?: number };
+      usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
     };
     const content = data.choices?.[0]?.message?.content ?? "";
 
@@ -121,7 +121,7 @@ export class ArkVisionProvider implements VisionProvider {
       ? {
           inputTokens: data.usage.prompt_tokens ?? 0,
           outputTokens: data.usage.completion_tokens ?? 0,
-          totalTokens: (data.usage.prompt_tokens ?? 0) + (data.usage.completion_tokens ?? 0),
+          totalTokens: data.usage.total_tokens ?? 0,
         }
       : undefined;
 

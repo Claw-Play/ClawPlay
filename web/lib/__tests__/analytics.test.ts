@@ -30,10 +30,6 @@ vi.mock("@/lib/db", () => ({
   },
 }));
 
-vi.mock("@/lib/audit", () => ({
-  appendAuditLog: vi.fn(),
-}));
-
 vi.mock("next/headers", () => ({
   headers: vi.fn().mockReturnValue({
     get: (name: string) => {
@@ -252,7 +248,7 @@ describe("analytics.quota — helper functions", () => {
     expect(mockInsertTable).toHaveBeenCalled();
   });
 
-  it("use → calls db.insert (event_logs + userStats for totalQuotaUsed)", async () => {
+  it("use → calls db.insert (event_logs only, no userStats update)", async () => {
     const { analytics } = await import("@/lib/analytics");
     analytics.quota.use(42, "image.generate", 10);
 
@@ -264,7 +260,7 @@ describe("analytics.quota — helper functions", () => {
 
   it("use with usage → records inputTokens, outputTokens, totalTokens in metadata", async () => {
     const { analytics } = await import("@/lib/analytics");
-    analytics.quota.use(42, "llm.generate", 0, { inputTokens: 150, outputTokens: 320 });
+    analytics.quota.use(42, "llm.generate", 470, { inputTokens: 150, outputTokens: 320 });
 
     await vi.waitFor(() => {
       expect(mockInsertValues).toHaveBeenCalled();
@@ -278,17 +274,15 @@ describe("analytics.quota — helper functions", () => {
     const metaStr = typeof values.metadata === "string" ? values.metadata : JSON.stringify(values.metadata);
     const parsed = JSON.parse(metaStr);
     expect(parsed).toMatchObject({
-      ability: "llm.generate",
-      cost: 0,
       inputTokens: 150,
       outputTokens: 320,
       totalTokens: 470,
     });
   });
 
-  it("use without usage → totalTokens is 0 (Ark may not return usage)", async () => {
+  it("use without usage → totalTokens equals actualTokens passed", async () => {
     const { analytics } = await import("@/lib/analytics");
-    analytics.quota.use(42, "image.generate", 10, undefined);
+    analytics.quota.use(42, "image.generate", 1024, undefined);
 
     await vi.waitFor(() => {
       expect(mockInsertValues).toHaveBeenCalled();
@@ -302,11 +296,9 @@ describe("analytics.quota — helper functions", () => {
     const metaStr = typeof values.metadata === "string" ? values.metadata : JSON.stringify(values.metadata);
     const parsed = JSON.parse(metaStr);
     expect(parsed).toMatchObject({
-      ability: "image.generate",
-      cost: 10,
       inputTokens: 0,
       outputTokens: 0,
-      totalTokens: 0,
+      totalTokens: 1024,
     });
   });
 
@@ -408,63 +400,5 @@ describe("fire-and-forget: logEvent does not throw", () => {
     expect(() => {
       incrementSkillStat("skill-x", "statsViews");
     }).not.toThrow();
-  });
-});
-
-describe("logEvent with AUDIT_EVENTS → dual-writes to JSONL", () => {
-  beforeEach(async () => {
-    const { appendAuditLog } = await import("@/lib/audit");
-    vi.mocked(appendAuditLog).mockClear();
-    mockInsertTable.mockResolvedValue(undefined);
-    mockUpdateTable.mockResolvedValue(undefined);
-  });
-
-  it("skill.approve → also calls appendAuditLog", async () => {
-    const { analytics } = await import("@/lib/analytics");
-    const { appendAuditLog } = await import("@/lib/audit");
-    vi.mocked(appendAuditLog).mockImplementation(() => {});
-
-    analytics.skill.approve("skill-approve-jsonl", 1);
-
-    await vi.waitFor(() => {
-      expect(vi.mocked(appendAuditLog)).toHaveBeenCalled();
-    });
-  });
-
-  it("skill.reject → also calls appendAuditLog", async () => {
-    const { analytics } = await import("@/lib/analytics");
-    const { appendAuditLog } = await import("@/lib/audit");
-    vi.mocked(appendAuditLog).mockImplementation(() => {});
-
-    analytics.skill.reject("skill-reject-jsonl", 1, "bad content");
-
-    await vi.waitFor(() => {
-      expect(vi.mocked(appendAuditLog)).toHaveBeenCalled();
-    });
-  });
-
-  it("user.login_failed → also calls appendAuditLog", async () => {
-    const { analytics } = await import("@/lib/analytics");
-    const { appendAuditLog } = await import("@/lib/audit");
-    vi.mocked(appendAuditLog).mockImplementation(() => {});
-
-    analytics.user.loginFailed("bad@example.com", "wrong_password");
-
-    await vi.waitFor(() => {
-      expect(vi.mocked(appendAuditLog)).toHaveBeenCalled();
-    });
-  });
-
-  it("skill.view → does NOT call appendAuditLog (not an audit event)", async () => {
-    const { analytics } = await import("@/lib/analytics");
-    const { appendAuditLog } = await import("@/lib/audit");
-    vi.mocked(appendAuditLog).mockClear();
-
-    analytics.skill.view("skill-no-audit", "no-audit-skill");
-
-    await vi.waitFor(() => {
-      expect(mockInsertTable).toHaveBeenCalled();
-    });
-    expect(vi.mocked(appendAuditLog)).not.toHaveBeenCalled();
   });
 });

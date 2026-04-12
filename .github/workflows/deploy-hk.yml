@@ -1,0 +1,42 @@
+name: Deploy to Hong Kong (Overseas)
+
+on:
+  push:
+    branches: [main]
+
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    env:
+      DEPLOY_REGION: HK
+      CLAWPLAY_API_URL: https://clawplay.cc
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to Hong Kong server via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEPLOY_HOST_HK }}
+          username: ${{ secrets.DEPLOY_USER_HK }}
+          key: ${{ secrets.DEPLOY_KEY_HK }}
+          timeout: 10m
+          envs: DEPLOY_REGION,DEPLOY_PATH
+          script: |
+            echo "DEPLOY_REGION=$DEPLOY_REGION" >> /etc/environment
+            echo "CLAWPLAY_API_URL=$CLAWPLAY_API_URL" >> /etc/environment
+            source /etc/environment
+            cd $DEPLOY_PATH
+            git fetch origin
+            git checkout ${{ secrets.DEPLOY_BRANCH_HK }}
+            git pull origin ${{ secrets.DEPLOY_BRANCH_HK }}
+            cd web
+            npm ci --prefer-offline
+            npm run build
+            pm2 restart clawplay || pm2 start npm --name clawplay -- start --prefix $(pwd)
+            pm2 save

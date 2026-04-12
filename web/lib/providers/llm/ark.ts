@@ -47,7 +47,7 @@ export class ArkProvider implements LLMProvider {
     const data = await res.json() as {
       model?: string;
       choices?: Array<{ message?: { content?: string } }>;
-      usage?: { prompt_tokens?: number; completion_tokens?: number };
+      usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
     };
 
     const text = data.choices?.[0]?.message?.content ?? "";
@@ -60,7 +60,7 @@ export class ArkProvider implements LLMProvider {
       model: data.model ?? model,
       usage:
         data.usage
-          ? { inputTokens, outputTokens, totalTokens: inputTokens + outputTokens }
+          ? { inputTokens, outputTokens, totalTokens: data.usage.total_tokens ?? 0 }
           : undefined,
     };
   }

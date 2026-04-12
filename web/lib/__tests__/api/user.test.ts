@@ -38,6 +38,7 @@ process.env.UPSTASH_REDIS_REST_TOKEN = "mock-token";
 let dbPath: string;
 let db: any;
 let GET_me: (req: any) => Promise<Response>;
+let PATCH_me: (req: any) => Promise<Response>;
 let POST_generate: () => Promise<Response>;
 let POST_revoke: (req: any) => Promise<Response>;
 
@@ -54,6 +55,7 @@ beforeAll(async () => {
   const revokeMod = await import("@/app/api/user/token/revoke/route");
 
   GET_me = meMod.GET;
+  PATCH_me = meMod.PATCH;
   POST_generate = generateMod.POST;
   POST_revoke = revokeMod.POST;
 });
@@ -78,7 +80,7 @@ describe("GET /api/user/me", () => {
     expect(res.status).toBe(200);
     expect(json.user.id).toBe(user.id);
     expect(json.user.email).toBe(email); // email comes from userIdentities join
-    expect(json.quota).toMatchObject({ limit: 1000, used: 0, remaining: 1000 });
+    expect(json.quota).toMatchObject({ limit: 100000, used: 0, remaining: 100000 });
   });
 
   it("no cookie → 401", async () => {
@@ -219,11 +221,7 @@ describe("GET /api/user/me — Bearer token", () => {
     const { user } = await seedUser(db);
 
     // Create an encrypted CLAWPLAY_TOKEN
-    const encryptedToken = encryptToken({
-      userId: user.id,
-      quotaFree: user.quotaFree,
-      quotaUsed: user.quotaUsed,
-    });
+    const encryptedToken = encryptToken({ userId: user.id });
 
     // Store it in DB
     const { userTokens } = await import("@/lib/db/schema");
@@ -256,12 +254,176 @@ describe("GET /api/user/me — Bearer token", () => {
   });
 
   it("Bearer token for non-existent user → 404", async () => {
-    const fakeToken = encryptToken({ userId: 999998, quotaFree: 1000, quotaUsed: 0 });
+    const fakeToken = encryptToken({ userId: 999998 });
     cookieStore.token = undefined;
     const req = makeRequest("GET", "/api/user/me", {
       headers: { Authorization: `Bearer ${fakeToken}` },
     });
     const res = await GET_me(req);
     expect(res.status).toBe(404);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe("PATCH /api/user/me", () => {
+  it("unauthenticated → 401", async () => {
+    cookieStore.token = undefined;
+    const req = makeRequest("PATCH", "/api/user/me", { body: { name: "New Name" } });
+    const res = await PATCH_me(req);
+    expect(res.status).toBe(401);
+  });
+
+  it("update name successfully → 200", async () => {
+    const { cookie } = await seedUser(db);
+    cookieStore.token = cookie.replace("clawplay_token=", "");
+
+    const req = makeRequest("PATCH", "/api/user/me", {
+      body: { name: "Alice Updated" },
+      cookie,
+    });
+    const res = await PATCH_me(req);
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.name).toBe("Alice Updated");
+  });
+
+  it("name too short (< 2 chars) → 400", async () => {
+    const { cookie } = await seedUser(db);
+    cookieStore.token = cookie.replace("clawplay_token=", "");
+
+    const req = makeRequest("PATCH", "/api/user/me", {
+      body: { name: "A" },
+      cookie,
+    });
+    const res = await PATCH_me(req);
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toMatch(/2.*32|Name must be/);
+  });
+
+  it("name too long (> 32 chars) → 400", async () => {
+    const { cookie } = await seedUser(db);
+    cookieStore.token = cookie.replace("clawplay_token=", "");
+
+    const req = makeRequest("PATCH", "/api/user/me", {
+      body: { name: "A".repeat(33) },
+      cookie,
+    });
+    const res = await PATCH_me(req);
+    expect(res.status).toBe(400);
+  });
+
+  it("update avatarColor with valid hex → 200", async () => {
+    const { cookie } = await seedUser(db);
+    cookieStore.token = cookie.replace("clawplay_token=", "");
+
+    const req = makeRequest("PATCH", "/api/user/me", {
+      body: { avatarColor: "#FF5733" },
+      cookie,
+    });
+    const res = await PATCH_me(req);
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.avatarColor).toBe("#FF5733");
+  });
+
+  it("update avatarColor with invalid format → 400", async () => {
+    const { cookie } = await seedUser(db);
+    cookieStore.token = cookie.replace("clawplay_token=", "");
+
+    const req = makeRequest("PATCH", "/api/user/me", {
+      body: { avatarColor: "not-a-color" },
+      cookie,
+    });
+    const res = await PATCH_me(req);
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toMatch(/color|Invalid/i);
+  });
+
+  it("update avatarUrl with valid https URL → 200", async () => {
+    const { cookie } = await seedUser(db);
+    cookieStore.token = cookie.replace("clawplay_token=", "");
+
+    const req = makeRequest("PATCH", "/api/user/me", {
+      body: { avatarUrl: "https://example.com/avatar.png" },
+      cookie,
+    });
+    const res = await PATCH_me(req);
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.avatarUrl).toBe("https://example.com/avatar.png");
+  });
+
+  it("update avatarUrl with data URL → 200", async () => {
+    const { cookie } = await seedUser(db);
+    cookieStore.token = cookie.replace("clawplay_token=", "");
+
+    const req = makeRequest("PATCH", "/api/user/me", {
+      body: { avatarUrl: "data:image/png;base64,SGVsbG8=" },
+      cookie,
+    });
+    const res = await PATCH_me(req);
+    expect(res.status).toBe(200);
+  });
+
+  it("clear avatarUrl with null → 200", async () => {
+    const { cookie } = await seedUser(db);
+    cookieStore.token = cookie.replace("clawplay_token=", "");
+
+    const req = makeRequest("PATCH", "/api/user/me", {
+      body: { avatarUrl: null },
+      cookie,
+    });
+    const res = await PATCH_me(req);
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.avatarUrl).toBeNull();
+  });
+
+  it("avatarUrl invalid format → 400", async () => {
+    const { cookie } = await seedUser(db);
+    cookieStore.token = cookie.replace("clawplay_token=", "");
+
+    const req = makeRequest("PATCH", "/api/user/me", {
+      body: { avatarUrl: "ftp://example.com/file.png" },
+      cookie,
+    });
+    const res = await PATCH_me(req);
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toMatch(/avatar|URL/i);
+  });
+
+  it("update avatarInitials → trimmed, uppercased", async () => {
+    const { cookie } = await seedUser(db);
+    cookieStore.token = cookie.replace("clawplay_token=", "");
+
+    const req = makeRequest("PATCH", "/api/user/me", {
+      body: { avatarInitials: "ab" },
+      cookie,
+    });
+    const res = await PATCH_me(req);
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.avatarInitials).toBe("AB");
+  });
+
+  it("multiple fields updated in one PATCH → 200", async () => {
+    const { cookie } = await seedUser(db);
+    cookieStore.token = cookie.replace("clawplay_token=", "");
+
+    const req = makeRequest("PATCH", "/api/user/me", {
+      body: {
+        name: "Multi Update",
+        avatarColor: "#AABBCC",
+        avatarInitials: "mu",
+      },
+      cookie,
+    });
+    const res = await PATCH_me(req);
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.name).toBe("Multi Update");
+    expect(json.avatarColor).toBe("#AABBCC");
+    expect(json.avatarInitials).toBe("MU");
   });
 });

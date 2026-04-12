@@ -4,11 +4,13 @@ import { sqliteTable, text, integer, uniqueIndex, index } from "drizzle-orm/sqli
 export const users = sqliteTable("users", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   name: text("name").notNull().default(""),
-  role: text("role", { enum: ["user", "admin"] })
+  role: text("role", { enum: ["user", "admin", "reviewer"] })
     .notNull()
     .default("user"),
-  quotaFree: integer("quota_free").notNull().default(1000),
-  quotaUsed: integer("quota_used").notNull().default(0),
+  quotaFree: integer("quota_free").notNull().default(100000),
+  avatarColor: text("avatar_color").notNull().default("#586330"),
+  avatarInitials: text("avatar_initials").notNull().default(""),
+  avatarUrl: text("avatar_url"),
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()
     .$defaultFn(() => new Date()),
@@ -201,7 +203,6 @@ export const userStats = sqliteTable(
     loginCount: integer("login_count").notNull().default(0),
     lastLoginAt: integer("last_login_at", { mode: "timestamp" }),
     lastActiveAt: integer("last_active_at", { mode: "timestamp" }),
-    totalQuotaUsed: integer("total_quota_used").notNull().default(0),
     skillsSubmitted: integer("skills_submitted").notNull().default(0),
     skillsDownloaded: integer("skills_downloaded").notNull().default(0),
     updatedAt: integer("updated_at", { mode: "timestamp" })
@@ -209,6 +210,35 @@ export const userStats = sqliteTable(
       .$defaultFn(() => new Date()),
   },
   (table) => []
+);
+
+// ProviderKeys table — multi-key pool for rate-limit sharding
+// Keys are AES-256-GCM encrypted; server never stores plaintext
+export const providerKeys = sqliteTable(
+  "provider_keys",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    // provider: 'ark_image' | 'ark_vision' | 'gemini_image' | 'gemini_vision'
+    provider: text("provider").notNull(),
+    // AES-256-GCM encrypted key (same format as user_tokens.encryptedPayload)
+    encryptedKey: text("encrypted_key").notNull(),
+    // SHA-256 hash for key identification and revocation
+    keyHash: text("key_hash").notNull(),
+    // RPM/IPM limit for this specific key
+    quota: integer("quota").notNull(),
+    // Current window usage (reset by cron every minute)
+    windowUsed: integer("window_used").notNull().default(0),
+    // Window start timestamp in seconds (minute-aligned)
+    windowStart: integer("window_start").notNull(),
+    enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => [
+    index("provider_keys_by_provider").on(table.provider),
+    index("provider_keys_enabled").on(table.enabled),
+  ]
 );
 
 // Type exports for use in API routes
@@ -230,3 +260,5 @@ export type EventLog = typeof eventLogs.$inferSelect;
 export type NewEventLog = typeof eventLogs.$inferInsert;
 export type UserStats = typeof userStats.$inferSelect;
 export type NewUserStats = typeof userStats.$inferInsert;
+export type ProviderKey = typeof providerKeys.$inferSelect;
+export type NewProviderKey = typeof providerKeys.$inferInsert;

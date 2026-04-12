@@ -17,6 +17,7 @@ vi.mock("@/lib/redis", () => ({
   incrementQuota: vi.fn(),
   checkAndIncrementQuota: vi.fn(),
   ABILITY_COSTS: {},
+  DEFAULT_QUOTA_FREE: 100000,
 }));
 
 vi.mock("next/headers", () => ({
@@ -33,13 +34,8 @@ let db: any;
 let GET_check: (req: any) => Promise<Response>;
 let userId: number;
 
-function makeToken(overrides: Partial<{ userId: number; exp: number }> = {}) {
-  return encryptToken({
-    userId: overrides.userId ?? userId,
-    quotaFree: 1000,
-    quotaUsed: 0,
-    exp: overrides.exp ?? Math.floor(Date.now() / 1000) + 3600,
-  });
+function makeToken(overrides: Partial<{ userId: number }> = {}) {
+  return encryptToken({ userId: overrides.userId ?? userId });
 }
 
 beforeAll(async () => {
@@ -79,7 +75,7 @@ describe("GET /api/ability/check", () => {
 
   it("valid token (no exp field) → 200 (tokens are permanent)", async () => {
     // Tokens are now permanent — exp field is optional and ignored
-    const token = encryptToken({ userId, quotaFree: 1000, quotaUsed: 0 });
+    const token = encryptToken({ userId });
     const req = makeRequest("GET", "/api/ability/check", {
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -107,7 +103,7 @@ describe("GET /api/ability/check", () => {
     expect(json.source).toBe("redis");
   });
 
-  it("valid token, Redis miss → falls back to DB → 200 with source=db", async () => {
+  it("valid token, Redis unavailable (dev) → 200 with source=none", async () => {
     getQuotaMock.mockResolvedValueOnce(null);
 
     const token = makeToken();
@@ -118,20 +114,20 @@ describe("GET /api/ability/check", () => {
     const json = await res.json();
 
     expect(res.status).toBe(200);
-    expect(json.source).toBe("db");
+    expect(json.source).toBe("none");
     expect(json.userId).toBe(userId);
     expect(typeof json.used).toBe("number");
     expect(typeof json.limit).toBe("number");
   });
 
-  it("valid token, user not in DB → 404", async () => {
-    getQuotaMock.mockResolvedValueOnce(null);
-
+  it("valid token → 200 regardless of whether user exists in DB (no DB check)", async () => {
+    // Route no longer checks DB for user existence — quota comes from Redis only
     const token = makeToken({ userId: 99999 });
     const req = makeRequest("GET", "/api/ability/check", {
       headers: { Authorization: `Bearer ${token}` },
     });
     const res = await GET_check(req);
-    expect(res.status).toBe(404);
+    // No DB user check — proceeds with whatever userId is in token
+    expect(res.status).toBe(200);
   });
 });

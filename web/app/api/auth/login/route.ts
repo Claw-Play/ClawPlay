@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "User not found." }, { status: 404 });
     }
 
-    const token = await signJWT({ userId: user.id, role: user.role as "user" | "admin" });
+    const token = await signJWT({ userId: user.id, role: user.role as "user" | "admin" | "reviewer" });
     analytics.user.login(user.id, "email");
 
     const response = NextResponse.json({

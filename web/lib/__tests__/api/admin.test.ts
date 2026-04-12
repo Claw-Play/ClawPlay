@@ -1,6 +1,6 @@
 /**
  * Integration tests for admin API routes.
- * Uses a real SQLite temp DB; Redis and audit log are mocked.
+ * Uses a real SQLite temp DB; Redis and analytics are mocked.
  */
 import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
 import { tempDbPath, cleanupDb, seedUser, seedAdmin } from "../helpers/db";
@@ -25,11 +25,6 @@ vi.mock("next/headers", () => ({
         ? { value: cookieStore.token }
         : undefined,
   })),
-}));
-
-// ── Audit log mock (avoids real file writes in tests) ────────────────────────
-vi.mock("@/lib/audit", () => ({
-  appendAuditLog: vi.fn(),
 }));
 
 // ── Analytics mock ────────────────────────────────────────────────────────────
@@ -144,7 +139,7 @@ describe("GET /api/admin/skills", () => {
 });
 
 describe("PATCH /api/admin/skills/[id]", () => {
-  it("approve → moderationStatus='approved' in DB, audit log called", async () => {
+  it("approve → moderationStatus='approved' in DB, analytics.skill.approve called", async () => {
     cookieStore.token = adminCookie.replace("clawplay_token=", "");
 
     const req = makeRequest("PATCH", `/api/admin/skills/${pendingSkillId}`, {

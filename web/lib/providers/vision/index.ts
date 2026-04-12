@@ -4,6 +4,8 @@ import type { VisionProvider } from "./types";
 
 export type { VisionProvider, VisionAnalyzeRequest, VisionAnalyzeResponse, VisionMode } from "./types";
 
+let _arkProvider: VisionProvider | null = null;
+
 export function getVisionProvider(provider = "ark"): VisionProvider {
   if (provider === "gemini") {
     const key = process.env.GEMINI_API_KEY;
@@ -11,7 +13,9 @@ export function getVisionProvider(provider = "ark"): VisionProvider {
     return new GeminiVisionProvider(key);
   }
 
-  const key = process.env.ARK_API_KEY;
-  if (!key) throw new Error("ARK_API_KEY is required when provider=ark");
-  return new ArkVisionProvider(key);
+  // Ark uses Key Pool — single shared instance
+  if (!_arkProvider) {
+    _arkProvider = new ArkVisionProvider();
+  }
+  return _arkProvider;
 }

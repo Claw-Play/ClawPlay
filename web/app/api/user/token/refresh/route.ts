@@ -45,12 +45,8 @@ export async function POST(request: NextRequest) {
     .set({ revokedAt: new Date() })
     .where(and(eq(userTokens.tokenHash, oldHash), isNull(userTokens.revokedAt)));
 
-  // Build new payload (permanent — no expiry)
-  const newPayload: TokenPayload = {
-    userId: payload.userId,
-    quotaFree: payload.quotaFree,
-    quotaUsed: payload.quotaUsed,
-  };
+  // Build new payload (permanent — no expiry, no quota fields)
+  const newPayload: TokenPayload = { userId: payload.userId };
 
   const newEncrypted = encryptToken(newPayload);
   const newTokenHash = hashToken(newEncrypted);

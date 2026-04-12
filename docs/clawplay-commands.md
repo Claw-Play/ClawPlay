@@ -320,6 +320,5 @@ clawplay quota check
 
 ## 下一步
 
-- 了解完整的 API 能力对比（Ark vs Gemini）：`docs/providers/image/`
 - 查看 Skill 示例：`example-skills/take-your-claw/SKILL.md`
 - Skill 流程设计与 Prompt 模板规范：`docs/skill-authoring-guide.md`

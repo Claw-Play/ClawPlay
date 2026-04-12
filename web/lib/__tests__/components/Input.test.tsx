@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { Input, Textarea } from "../Input";
+import { Input, Textarea } from "../../../components/Input";
 
 describe("Input", () => {
   it("renders label text when label prop is provided", () => {

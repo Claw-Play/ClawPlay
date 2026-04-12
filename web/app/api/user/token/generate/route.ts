@@ -24,12 +24,8 @@ export async function POST() {
     return NextResponse.json({ error: "User not found." }, { status: 404 });
   }
 
-  // Build payload (permanent — no expiry)
-  const payload: TokenPayload = {
-    userId: user.id,
-    quotaFree: user.quotaFree,
-    quotaUsed: user.quotaUsed,
-  };
+  // Build payload (permanent — no expiry, no quota fields)
+  const payload: TokenPayload = { userId: user.id };
 
   // Encrypt — throws if CLAWPLAY_SECRET_KEY missing in production
   const encrypted = encryptToken(payload);

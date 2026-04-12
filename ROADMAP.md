@@ -10,7 +10,7 @@
 - Skill 开发工具集：`clawplay skill lint / diagram / types`
 - 人工审核流程：pending → approve/reject + append-only JSONL 审计日志
 - Bash 单元测试：84 个用例覆盖全部 CLI lib，零外部依赖
-- 国际化：next-intl 双语 UI（中文/英文）+ middleware 语言切换
+- 国际化：自定义 i18n 系统（`getT` 服务端 + `useT` 客户端）
 
 ---
 
@@ -20,9 +20,10 @@
 
 ### 里程碑 0：正式部署
 
-- **生产环境配置**：域名 + SSL、Ark API Key 生产 KEY、Upstash Redis 生产 KEY、`JWT_SECRET`/`CLAWPLAY_SECRET_KEY` 强密钥
+- **生产环境配置**：域名 + SSL、Ark API Key 生产 Key、Upstash Redis 生产 Key、`JWT_SECRET`/`CLAWPLAY_SECRET_KEY` 强密钥
 - **生产 DB**：迁移 schema，创建第一个 admin
 - **日志监控**：Sentry 错误追踪
+- **Key Pool 生产配置**：`ARK_IMAGE_KEYS`/`ARK_VISION_KEYS` 环境变量配置多 Key；`ARK_KEY_QUOTA`/`ARK_VISION_KEY_QUOTA` 设置 RPM 限制
 
 ### 里程碑 1：第一个开发者全流程
 
@@ -66,18 +67,18 @@
 
 ---
 
-## Phase 3 — 社交与用户体验 ✅ 部分完成（2026-04-08）
+## Phase 3 — 社交与用户体验 ✅ 部分完成（2026-04-11）
 
 **目标：让用户分享玩耍心得，形成社区氛围，繁荣 Skill 生态**
 
-- **社媒分享功能**：用户分享玩耍心得、与其他用户交流，支持评论互动
-- **分享卡片**：参考 ChatGPT share link，Agent 执行完 Skill 后可自动生成分享卡片（含截图/命令/Skill 名）
 - **Skill 评分与评论**：✅ 完成 — 1-5星评分 + 文字评论，`skillRatings` 表，`/api/skills/[slug]/reviews` API，详情页 UI
 - **Featured Skill 轮播**：✅ 完成 — `isFeatured` 字段，`FeaturedCarousel` 组件，首页自动切换，admin feature/unfeature 开关
-- **数字统计动画**：滚动触发的数字增长动画
-- **使用量趋势图**：配额使用历史图表
-- **通知中心**：审核状态变更、评论回复等消息推送
-- **OpenClaw 自动分享集成**：Agent 执行完 Skill 后可自动生成分享卡片，形成传播飞轮
+- **Analytics 事件追踪系统**：✅ 完成 — `eventLogs` + `userStats` 表；fire-and-forget DB 写入；追踪 inputTokens/outputTokens/provider
+- **Admin Analytics APIs**：✅ 完成 — `/api/admin/analytics/overview`（平台总览）、`/api/admin/analytics/events`（事件流）、`/api/admin/analytics/users`（用户统计）
+- **分享卡片**：🔲 待完成 — 参考 ChatGPT share link，Agent 执行完 Skill 后可自动生成分享卡片（含截图/命令/Skill 名）
+- **数字统计动画**：🔲 待完成 — 滚动触发的数字增长动画
+- **通知中心**：🔲 待完成 — 审核状态变更、评论回复等消息推送
+- **使用量趋势图**：🔲 待完成 — 配额使用历史图表（已有 LineChart 组件）
 
 ---
 
@@ -86,7 +87,7 @@
 **目标：可持续运营，覆盖 Provider API 成本**
 
 - **多模态 Token Plan（free / pro / max）**：free 额度相对宽松用于引流，pro/max 档覆盖运营成本，探索赞助模式为 free tier 提供资金
-- **多 Provider 故障转移**：Ark + Gemini 负载均衡，Provider 故障时自动切换
+- **多 Provider 故障转移**：Ark + Gemini 负载均衡，Provider 故障时自动切换；Key Pool 已支持多 Key 轮询
 - **LLM 安全审查层**：✅ 完成 — 提交时调用 LLM 对 SKILL.md 内容做安全评估（`/lib/skill-llm-safety.ts`），UNSAFE 直接拒绝，REVIEW 存入 moderationFlags，优雅降级
 
 ---

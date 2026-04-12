@@ -1,6 +1,6 @@
 import { render, screen, fireEvent, act } from "@testing-library/react";
-import { SkillsClient } from "../SkillsClient";
-import { TestWrapper } from "../../../../test-utils";
+import { SkillsClient } from "../../../app/(app)/skills/SkillsClient";
+import { TestWrapper } from "../../../test-utils";
 
 const FAKE_SKILLS = [
   {
@@ -10,6 +10,7 @@ const FAKE_SKILLS = [
     authorName: "Alice",
     iconEmoji: "🎨",
     statsStars: 300,
+    statsRatingsCount: 100,
     createdAt: new Date("2025-01-01"),
   },
   {
@@ -19,6 +20,7 @@ const FAKE_SKILLS = [
     authorName: "Bob",
     iconEmoji: "🎮",
     statsStars: 100,
+    statsRatingsCount: 100,
     createdAt: new Date("2025-02-01"),
   },
   {
@@ -28,6 +30,7 @@ const FAKE_SKILLS = [
     authorName: null,
     iconEmoji: "🎨",
     statsStars: 0,
+    statsRatingsCount: 0,
     createdAt: null,
   },
 ];
@@ -157,7 +160,7 @@ describe("SkillsClient — card rendering", () => {
     expect(screen.getByText("clawplay install music-mixer")).toBeInTheDocument();
   });
 
-  it("skill card shows '🦐' emoji fallback when iconEmoji is null", () => {
+  it("renders null-emoji skill card (iconEmoji is not shown in card)", () => {
     const skillsWithNull = [
       {
         slug: "null-emoji-skill",
@@ -166,11 +169,13 @@ describe("SkillsClient — card rendering", () => {
         authorName: "Tester",
         iconEmoji: null,
         statsStars: 0,
+        statsRatingsCount: 0,
         createdAt: null,
       },
     ];
     render(<SkillsClient initialSkills={skillsWithNull} />, { wrapper: TestWrapper });
-    expect(screen.getByText("🦐")).toBeInTheDocument();
+    // The card renders even when iconEmoji is null; the emoji only affects category filtering
+    expect(screen.getByRole("heading", { name: "Null Emoji Skill" })).toBeInTheDocument();
   });
 
   it("skill card shows '匿名' when authorName is null", () => {
@@ -178,11 +183,14 @@ describe("SkillsClient — card rendering", () => {
     expect(screen.getByText("匿名")).toBeInTheDocument();
   });
 
-  it("skill card shows star rating (statsStars / 100)", () => {
+  it("skill cards display numeric star ratings", () => {
     render(<SkillsClient initialSkills={FAKE_SKILLS} />, { wrapper: TestWrapper });
-    // Avatar Creator: statsStars=300 → 300/100 = 3.0; rendered as "⭐ 3.0" split across text nodes
-    const spans = screen.getAllByText((_, el) => el?.tagName === "SPAN" && el?.textContent?.trim() === "⭐ 3.0");
-    expect(spans.length).toBeGreaterThan(0);
+    const ratings = screen.getAllByText(/\d+\.\d+/);
+    expect(ratings.length).toBeGreaterThan(0);
+    const texts = ratings.map((el) => el.textContent);
+    // Avatar Creator: 300/100 = 3.0, Music Mixer: 100/100 = 1.0, Photo Filter: 0/0 = NaN (excluded)
+    expect(texts.some((t) => t.includes("3.0"))).toBe(true);
+    expect(texts.some((t) => t.includes("1.0"))).toBe(true);
   });
 
   it("renders correct number of skill cards", () => {

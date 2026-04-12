@@ -4,8 +4,10 @@ import type { ImageProvider } from "./types";
 
 export type { ImageProvider, ImageGenerateRequest, ImageGenerateResponse } from "./types";
 
+let _arkProvider: ImageProvider | null = null;
+
 /**
- * Returns the configured image provider.
+ * Returns the configured image provider (singleton for Ark since it uses Key Pool).
  * Set IMAGE_PROVIDER=gemini in .env.local to use Gemini.
  * Defaults to Ark.
  */
@@ -18,7 +20,9 @@ export function getImageProvider(): ImageProvider {
     return new GeminiProvider(apiKey);
   }
 
-  const apiKey = process.env.ARK_API_KEY;
-  if (!apiKey) throw new Error("ARK_API_KEY is required when IMAGE_PROVIDER=ark");
-  return new ArkProvider(apiKey);
+  // Ark uses Key Pool — single shared instance
+  if (!_arkProvider) {
+    _arkProvider = new ArkProvider();
+  }
+  return _arkProvider;
 }
