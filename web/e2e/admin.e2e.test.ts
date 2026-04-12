@@ -66,7 +66,20 @@ test.describe("Admin moderation flow", () => {
   });
 
   test("admin sees pending skills count on review page", async ({ page }) => {
-    await loginAs(page, ADMIN_EMAIL, ADMIN_PASSWORD);
+    // Log in as admin via browser fetch (replaces active submitter cookie)
+    const loginRes = await page.evaluate(
+      async ({ email, password }) => {
+        const res = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
+        });
+        return { ok: res.ok, status: res.status };
+      },
+      { email: ADMIN_EMAIL, password: ADMIN_PASSWORD }
+    );
+    expect(loginRes.ok, `admin login failed: status=${loginRes.status}`).toBeTruthy();
+
     await page.goto("/admin/review");
     await expect(page).toHaveURL(/\/admin\/review/, { timeout: 10_000 });
     // Count badge shows pending skills count (e.g. "1 待审核")
@@ -74,7 +87,18 @@ test.describe("Admin moderation flow", () => {
   });
 
   test("admin review page shows approve and reject action buttons", async ({ page }) => {
-    await loginAs(page, ADMIN_EMAIL, ADMIN_PASSWORD);
+    // Log in as admin via browser fetch
+    await page.evaluate(
+      async ({ email, password }) => {
+        await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
+        });
+      },
+      { email: ADMIN_EMAIL, password: ADMIN_PASSWORD }
+    );
+
     await page.goto("/admin/review");
     await expect(page).toHaveURL(/\/admin\/review/, { timeout: 10_000 });
     await page.waitForLoadState("networkidle");
