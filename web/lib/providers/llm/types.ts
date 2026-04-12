@@ -15,6 +15,7 @@ export interface LLMGenerateResult {
   usage?: {
     inputTokens: number;
     outputTokens: number;
+    totalTokens: number;
   };
 }
 

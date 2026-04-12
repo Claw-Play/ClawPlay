@@ -6,9 +6,10 @@ interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "id"> {
   error?: string;
   id?: string;
   bg?: string;
+  p?: string;
 }
 
-export function Input({ label, error, className = "", id: providedId, bg, ...props }: InputProps) {
+export function Input({ label, error, className = "", id: providedId, bg, p = "px-8 py-3.5", ...props }: InputProps) {
   const inputId = providedId ?? (label ? label.toLowerCase().replace(/\s+/g, "-") : undefined);
 
   return (
@@ -21,7 +22,7 @@ export function Input({ label, error, className = "", id: providedId, bg, ...pro
       <input
         id={inputId}
         className={`
-          w-full px-8 py-3.5 input-radius border text-[#564337]
+          w-full ${p} input-radius border text-[#564337]
           ${bg ?? "bg-white"} placeholder-[#a89888]
           focus:outline-none focus:ring-2 focus:ring-[#a23f00]/30 focus:border-[#a23f00]
           transition-colors disabled:opacity-50 disabled:cursor-not-allowed

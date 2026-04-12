@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import Link from "next/link";
 import { useT } from "@/lib/i18n/context";
 
 interface Skill {
@@ -9,6 +10,7 @@ interface Skill {
   authorName: string | null;
   iconEmoji: string | null;
   statsStars: number | null;
+  statsRatingsCount: number | null;
   createdAt: Date | null;
 }
 
@@ -164,17 +166,12 @@ function SkillCard({
   const t = useT("skills");
   const tCommon = useT("common");
   const installCmd = `clawplay install ${skill.slug}`;
-  const stars = (skill.statsStars ?? 0) / 100;
+  const stars = skill.statsRatingsCount ? (skill.statsStars ?? 0) / skill.statsRatingsCount : 0;
 
   return (
     <div className="bg-white rounded-[48px] shadow-[0_8px_24px_rgba(86,67,55,0.06)] overflow-hidden flex flex-col">
-      {/* Card body */}
-      <div className="p-8 flex flex-col flex-1 gap-3">
-        {/* Emoji icon */}
-        <div className="w-12 h-12 rounded-full bg-[rgba(250,112,37,0.1)] flex items-center justify-center text-2xl mb-1">
-          {skill.iconEmoji ?? "🦐"}
-        </div>
-
+      {/* Card body — clickable link */}
+      <Link href={`/skills/${skill.slug}`} className="p-8 flex flex-col flex-1 gap-3 hover:opacity-80 transition-opacity">
         {/* Skill name */}
         <h3 className="text-xl font-bold font-heading text-[#1d1c0d] leading-snug">
           {skill.name}
@@ -201,7 +198,7 @@ function SkillCard({
             </span>
           </div>
         </div>
-      </div>
+      </Link>
 
       {/* Install command bar */}
       <div className="mx-6 mb-6">

@@ -16,6 +16,7 @@ export default async function SkillsPage() {
     authorName: string | null;
     iconEmoji: string | null;
     statsStars: number | null;
+    statsRatingsCount: number | null;
     createdAt: Date | null;
   }[] = [];
 
@@ -28,6 +29,7 @@ export default async function SkillsPage() {
         authorName: skills.authorName,
         iconEmoji: skills.iconEmoji,
         statsStars: skills.statsStars,
+        statsRatingsCount: skills.statsRatingsCount,
         createdAt: skills.createdAt,
       })
       .from(skills)

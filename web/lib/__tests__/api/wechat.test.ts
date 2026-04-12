@@ -12,6 +12,22 @@ vi.mock("next/headers", () => ({
   cookies: vi.fn().mockImplementation(() => ({ get: () => undefined })),
 }));
 
+// Stable mock functions shared across vi.mock factory calls
+const checkQuotaMock = vi.hoisted(() => vi.fn());
+const incrementQuotaMock = vi.hoisted(() => vi.fn());
+const getQuotaMock = vi.hoisted(() => vi.fn());
+
+// Re-export constants so auth routes can import DEFAULT_QUOTA_FREE without loading real Redis
+vi.mock("@/lib/redis", () => ({
+  DEFAULT_QUOTA_FREE: 100000,
+  ABILITY_COSTS: {},
+  checkQuota: checkQuotaMock,
+  incrementQuota: incrementQuotaMock,
+  getQuota: getQuotaMock,
+  initQuota: vi.fn(),
+  getRedis: vi.fn().mockReturnValue(null),
+}));
+
 // ── Env vars ──────────────────────────────────────────────────────────────────
 process.env.JWT_SECRET = "test-jwt-secret-32-bytes-long!!!";
 process.env.CLAWPLAY_SECRET_KEY = "a".repeat(64);

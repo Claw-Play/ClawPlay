@@ -113,7 +113,7 @@ describe("useT — zh translations", () => {
 
   it("translates dashboard.token_mgmt", () => {
     renderZh(<T ns="dashboard" k="token_mgmt" />);
-    expect(screen.getByTestId("t").textContent).toBe("Token 管理");
+    expect(screen.getByTestId("t").textContent).toBe("密钥管理");
   });
 
   it("translates auth.login", () => {

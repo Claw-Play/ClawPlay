@@ -128,6 +128,11 @@ export async function POST(
       .set({ statsStars: total, statsRatingsCount: count })
       .where(eq(skills.id, skill.id));
 
+    void (async () => {
+      const { analytics } = await import("@/lib/analytics");
+      analytics.skill.review(skill.id, auth.userId, rating);
+    })();
+
     return NextResponse.json(
       {
         message: "Review submitted.",

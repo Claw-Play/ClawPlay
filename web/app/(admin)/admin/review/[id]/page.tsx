@@ -64,7 +64,7 @@ export default function AdminReviewDetailPage() {
     manualLinkCheck: false,
   });
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  /* eslint-disable react-hooks/exhaustive-deps -- router and fetchSkill are stable */
   useEffect(() => {
     if (!skillId) {
       router.push("/admin/review");
@@ -72,6 +72,7 @@ export default function AdminReviewDetailPage() {
     }
     fetchSkill();
   }, [skillId]);
+  /* eslint-enable react-hooks/exhaustive-deps */
 
   async function fetchSkill() {
     const res = await fetch("/api/admin/skills");

@@ -1,7 +1,7 @@
 "use client";
-import { useState } from "react";
-import Link from "next/link";
+import { useState, useEffect } from "react";
 import { useT } from "@/lib/i18n/context";
+import { ProfileEditModal } from "@/components/ProfileEditModal";
 
 interface QuotaInfo {
   used: number;
@@ -16,6 +16,9 @@ interface UserInfo {
   wechat: string | null;
   name: string;
   role: string;
+  avatarColor: string;
+  avatarInitials: string;
+  avatarUrl: string | null;
   createdAt: string;
 }
 
@@ -36,9 +39,122 @@ interface DashboardClientProps {
   token: { id: string; createdAt: string; value: string } | null;
 }
 
-export function DashboardClient({ user, quota, token }: DashboardClientProps) {
+const ABILITY_COLORS: Record<string, string> = {
+  "llm.generate": "#a23f00",
+  "image.generate": "#fa7025",
+  "vision.analyze": "#586330",
+  "tts.synthesize": "#8a6040",
+  "voice.synthesize": "#5a7a4a",
+};
+
+function formatAbility(ability: string): string {
+  return ability
+    .replace("llm.generate", "LLM")
+    .replace("image.generate", "Image")
+    .replace("vision.analyze", "Vision")
+    .replace("tts.synthesize", "TTS")
+    .replace("voice.synthesize", "Voice");
+}
+
+function UsageStatsCard() {
   const t = useT("dashboard");
-  const tCommon = useT("common");
+  const [period, setPeriod] = useState<"7d" | "30d">("7d");
+  const [stats, setStats] = useState<{
+    events7d: number;
+    events30d: number;
+    quotaUsed7d: number;
+    quotaUsed30d: number;
+    abilityBreakdown7d: { ability: string; count: number }[];
+  } | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    fetch("/api/user/analytics/me")
+      .then((r) => r.json())
+      .then((d) => {
+        if (!d.error) setStats(d);
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading || !stats) {
+    return (
+      <div className="bg-white rounded-[32px] shadow-[0px 8px 24px_rgba(86,67,55,0.06)] p-8 border border-[rgba(220,193,177,0.1)]">
+        <div className="h-6 bg-[#e8dfc8] rounded w-1/3 mb-4 animate-pulse" />
+        <div className="flex gap-4">
+          <div className="flex-1 h-16 bg-[#e8dfc8] rounded-[20px] animate-pulse" />
+          <div className="flex-1 h-16 bg-[#e8dfc8] rounded-[20px] animate-pulse" />
+        </div>
+      </div>
+    );
+  }
+
+  const events = period === "7d" ? (stats.events7d ?? 0) : (stats.events30d ?? 0);
+  const quotaUsed = period === "7d" ? (stats.quotaUsed7d ?? 0) : (stats.quotaUsed30d ?? 0);
+
+  return (
+    <div className="bg-white rounded-[32px] shadow-[0px 8px 24px_rgba(86,67,55,0.06)] p-8 border border-[rgba(220,193,177,0.1)]">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h2 className="text-2xl font-extrabold font-heading text-[#1d1c0d] mb-1">{t("usage_stats")}</h2>
+          <p className="text-base text-[#564337] font-body">{t("your_activity")}</p>
+        </div>
+        <div className="flex gap-1 bg-[#f0e8d0] rounded-full p-1">
+          {(["7d", "30d"] as const).map((p) => (
+            <button
+              key={p}
+              onClick={() => setPeriod(p)}
+              className={`px-4 py-1 rounded-full text-sm font-body transition-all ${
+                period === p
+                  ? "bg-gradient-to-r from-[#a23f00] to-[#fa7025] text-white"
+                  : "text-[#586330] hover:bg-[#ede9cf]"
+              }`}
+            >
+              {p === "7d" ? t("last_7d") : t("last_30d")}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex gap-4 mb-6">
+        <div className="flex-1 bg-[#f8f4db] rounded-[20px] p-4 text-center">
+          <p className="text-3xl font-bold text-[#a23f00] font-heading">{events.toLocaleString()}</p>
+          <p className="text-xs text-[#564337] font-body mt-1">{t("api_calls")}</p>
+        </div>
+        <div className="flex-1 bg-[#f8f4db] rounded-[20px] p-4 text-center">
+          <p className="text-3xl font-bold text-[#586330] font-heading">{quotaUsed.toLocaleString()}</p>
+          <p className="text-xs text-[#564337] font-body mt-1">{t("quota_units")}</p>
+        </div>
+      </div>
+
+      {stats.abilityBreakdown7d.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs text-[#a89070] font-body font-semibold uppercase tracking-wider">{t("top_abilities")}</p>
+          <div className="flex flex-wrap gap-2">
+            {stats.abilityBreakdown7d.slice(0, 5).map((a) => (
+              <span
+                key={a.ability}
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-body font-semibold"
+                style={{
+                  backgroundColor: (ABILITY_COLORS[a.ability] ?? "#a89070") + "15",
+                  color: ABILITY_COLORS[a.ability] ?? "#a89070",
+                }}
+              >
+                {formatAbility(a.ability)}
+                <span className="text-xs opacity-70">{a.count}</span>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function DashboardClient({ user: initialUser, quota, token }: DashboardClientProps) {
+  const t = useT("dashboard");
+  const [user, setUser] = useState(initialUser);
   const [generating, setGenerating] = useState(false);
   const [activeToken, setActiveToken] = useState<{ id: string; createdAt: string; value: string } | null>(token);
   // Token 值持久化在 localStorage（key = token id），用于路由跳转后恢复
@@ -47,7 +163,29 @@ export function DashboardClient({ user, quota, token }: DashboardClientProps) {
   );
   const [copied, setCopied] = useState(false);
   const [revoking, setRevoking] = useState(false);
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
 
+  async function handleProfileSave(data: {
+    name: string;
+    avatarUrl: string | null;
+    avatarInitials: string;
+  }) {
+    const res = await fetch("/api/user/me", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error ?? t("save_error"));
+    const updatedUser = {
+      ...user,
+      name: json.name,
+      avatarUrl: json.avatarUrl,
+      avatarInitials: json.avatarInitials,
+    };
+    setUser(updatedUser);
+    window.dispatchEvent(new CustomEvent("clawplay:profile-updated", { detail: updatedUser }));
+  }
   async function generateToken() {
     setGenerating(true);
     try {
@@ -95,7 +233,6 @@ export function DashboardClient({ user, quota, token }: DashboardClientProps) {
   const progressColor =
     quotaPct > 80 ? "bg-[#DC2626]" : quotaPct > 50 ? "bg-[#fa7025]" : "bg-[#586330]";
 
-  const userId = String(user.id).padStart(4, "0");
   const displayName = user.name || user.phone || user.email?.split("@")[0] || "用户";
   const joinedAt = user.createdAt
     ? new Date(user.createdAt).toLocaleDateString("zh-CN", {
@@ -121,26 +258,43 @@ export function DashboardClient({ user, quota, token }: DashboardClientProps) {
       <div className="grid grid-cols-12 gap-8">
         {/* Left column */}
         <div className="col-span-12 md:col-span-4">
-          <div className="bg-white rounded-[32px] shadow-[0px_8px_24px_rgba(86,67,55,0.06)] p-8 relative">
-            <div className="absolute top-8 right-8 text-5xl">🦐</div>
-            <h2 className="text-lg font-bold text-[#a23f00] font-heading mb-6">{t("user_info")}</h2>
+          <div className="bg-white rounded-[32px] shadow-[0px_8px_24px_rgba(86,67,55,0.06)] p-8">
+            {/* Header: avatar + name + edit */}
+            <div className="flex items-center gap-4 mb-6">
+              <div className="w-16 h-16 rounded-full overflow-hidden flex items-center justify-center flex-shrink-0">
+                {user.avatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={user.avatarUrl}
+                    alt="Avatar"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={`https://api.dicebear.com/7.x/pixel-art/svg?seed=${user.id}&backgroundColor=ff6b35,fa7025,a23f00`}
+                    alt="Avatar"
+                    className="w-full h-full object-cover"
+                  />
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] font-semibold text-[#897365] uppercase tracking-wider font-body mb-0.5">{t("user_name")}</p>
+                <p className="text-xl font-bold text-[#1d1c0d] font-heading truncate">{user.name || t("anonymous")}</p>
+                <p className="text-xs text-[#a89070] font-body">{user.phone || user.email || "—"}</p>
+              </div>
+              <button
+                onClick={() => setProfileModalOpen(true)}
+                className="flex-shrink-0 px-5 py-2.5 rounded-full bg-gradient-to-r from-[#a23f00] to-[#fa7025] text-white text-sm font-semibold font-heading shadow-[0_4px_12px_rgba(162,63,0,0.2)] hover:opacity-90 transition-opacity"
+              >
+                ⚙ {t("edit")}
+              </button>
+            </div>
+            {/* Divider */}
+            <div className="border-t border-[#f0e8d0] mb-5" />
             <div className="space-y-5">
               <div>
-                <p className="text-[10px] font-semibold text-[#897365] uppercase tracking-wider mb-2 font-body">{t("account_id")}</p>
-                <div className="inline-block bg-[#f8f4db] rounded-full px-4 py-1 font-mono-custom text-sm text-[#564337]">
-                  SUN-{userId}
-                </div>
-              </div>
-              <div>
-                <p className="text-[10px] font-semibold text-[#897365] uppercase tracking-wider mb-2 font-body">
-                  {user.phone ? t("phone") : t("email_label")}
-                </p>
-                <p className="text-base text-[#1d1c0d] font-medium font-body">
-                  {user.phone || user.email || "—"}
-                </p>
-              </div>
-              <div>
-                <p className="text-[10px] font-semibold text-[#897365] uppercase tracking-wider mb-2 font-body">{t("registered_at")}</p>
+                <p className="text-xs font-semibold text-[#897365] uppercase tracking-wider mb-2 font-body">{t("registered_at")}</p>
                 <p className="text-base text-[#1d1c0d] font-medium font-body">{joinedAt}</p>
               </div>
             </div>
@@ -174,6 +328,9 @@ export function DashboardClient({ user, quota, token }: DashboardClientProps) {
               </p>
             </div>
           </div>
+
+          {/* Personal Usage Stats */}
+          <UsageStatsCard />
 
           {/* Token Card */}
           <div className="bg-white rounded-[32px] shadow-[0px 8px 24px_rgba(86,67,55,0.06)] p-8 border border-[rgba(220,193,177,0.1)] relative overflow-hidden">
@@ -249,21 +406,14 @@ export function DashboardClient({ user, quota, token }: DashboardClientProps) {
         </div>
       </div>
 
-      {/* Quick Links */}
-      <div className="flex gap-4">
-        <Link
-          href="/skills"
-          className="flex-1 text-center px-6 py-4 bg-white border-2 border-[#e8dfc8] text-[#7a6a5a] text-sm font-semibold rounded-full hover:border-[#a23f00] hover:text-[#a23f00] transition-colors font-heading"
-        >
-          {tCommon("skills")}
-        </Link>
-        <Link
-          href="/submit"
-          className="flex-1 text-center px-6 py-4 bg-gradient-to-r from-[#a23f00] to-[#fa7025] hover:opacity-90 text-white text-sm font-semibold rounded-full shadow-[0_6px_24px_rgba(162,63,0,0.2)] transition-all font-heading"
-        >
-          {tCommon("submit")}
-        </Link>
-      </div>
+      <ProfileEditModal
+        isOpen={profileModalOpen}
+        onClose={() => setProfileModalOpen(false)}
+        initialName={user.name}
+        userId={user.id}
+        initialAvatarUrl={user.avatarUrl}
+        onSave={handleProfileSave}
+      />
     </div>
   );
 }

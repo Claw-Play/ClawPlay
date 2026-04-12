@@ -1,7 +1,7 @@
 import type { LLMProvider, LLMGenerateRequest, LLMGenerateResult } from "./types";
 
 const ARK_ENDPOINT = "https://ark.cn-beijing.volces.com/api/v3/chat/completions";
-const DEFAULT_MODEL = process.env.LLM_MODEL_ARK ?? "ep-20260124121016-r7b86";
+const DEFAULT_MODEL = process.env.LLM_MODEL_ARK ?? "ep-20260408230057-cgq9s";
 
 export class ArkProvider implements LLMProvider {
   private apiKey: string;
@@ -47,17 +47,20 @@ export class ArkProvider implements LLMProvider {
     const data = await res.json() as {
       model?: string;
       choices?: Array<{ message?: { content?: string } }>;
-      usage?: { prompt_tokens?: number; completion_tokens?: number };
+      usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
     };
 
     const text = data.choices?.[0]?.message?.content ?? "";
+
+    const inputTokens = data.usage?.prompt_tokens ?? 0;
+    const outputTokens = data.usage?.completion_tokens ?? 0;
 
     return {
       text,
       model: data.model ?? model,
       usage:
         data.usage
-          ? { inputTokens: data.usage.prompt_tokens ?? 0, outputTokens: data.usage.completion_tokens ?? 0 }
+          ? { inputTokens, outputTokens, totalTokens: data.usage.total_tokens ?? 0 }
           : undefined,
     };
   }

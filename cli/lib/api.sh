@@ -2,7 +2,22 @@
 # lib/api.sh — HTTP calls to ClawPlay server
 # Exports CLAWPLAY_API_URL and provides api_call with 401 auto-refresh.
 
-export CLAWPLAY_API_URL="${CLAWPLAY_API_URL:-http://localhost:3000}"
+# Auto-detect nearest server based on user IP (CN → domestic, otherwise → overseas).
+# Explicit CLAWPLAY_API_URL always takes priority.
+_auto_detect_api_url() {
+  local country
+  country=$(curl -s --max-time 3 "https://ipapi.co/country/" 2>/dev/null) || country=""
+
+  if [[ "$country" == "CN" ]]; then
+    echo "https://clawplay.com.cn"
+  else
+    echo "https://clawplay.cc"
+  fi
+}
+
+if [[ -z "${CLAWPLAY_API_URL:-}" ]]; then
+  export CLAWPLAY_API_URL="$(_auto_detect_api_url)"
+fi
 
 # Refresh CLAWPLAY_TOKEN using the refresh endpoint.
 # Returns 0 on success and prints the new token to stdout.

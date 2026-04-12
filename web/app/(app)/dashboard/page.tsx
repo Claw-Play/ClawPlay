@@ -1,7 +1,8 @@
-import { db } from "@/lib/db";
-import { userIdentities, users } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { db, raw } from "@/lib/db";
+import { userIdentities, users, userTokens } from "@/lib/db/schema";
+import { eq, and, isNull } from "drizzle-orm";
 import { getAuthFromCookies } from "@/lib/auth";
+import { getQuota, DEFAULT_QUOTA_FREE } from "@/lib/redis";
 import { redirect } from "next/navigation";
 import { DashboardClient } from "./DashboardClient";
 
@@ -13,26 +14,37 @@ async function getDashboardData(userId: number) {
   });
   if (!user) return null;
 
-  const identities = await db.query.userIdentities.findMany({
-    where: eq(userIdentities.userId, userId),
-  });
+  const identities = await db
+    .select()
+    .from(userIdentities)
+    .where(eq(userIdentities.userId, userId)) as { provider: string; providerAccountId: string | null }[];
 
   const email = identities.find((i) => i.provider === "email")?.providerAccountId ?? null;
   const phone = identities.find((i) => i.provider === "phone")?.providerAccountId ?? null;
   const wechat = identities.find((i) => i.provider === "wechat")?.providerAccountId ?? null;
 
-  // Get quota from DB immediately — Redis quota is fire-and-forget, non-blocking
-  const quota = {
-    used: user.quotaUsed,
-    limit: user.quotaFree,
-    remaining: user.quotaFree - user.quotaUsed,
-  };
+  // Get quota from Redis; fall back to event_logs total if Redis has no entry
+  // or if Redis shows zero (user may have used tokens before Redis was initialized)
+  const quotaFromRedis = await getQuota(userId);
+  let quota;
+  if (!quotaFromRedis || quotaFromRedis.used === 0) {
+    const rows = raw(
+      `SELECT COALESCE(SUM(CAST(json_extract(metadata, '$.totalTokens') AS INTEGER)), 0) as total
+       FROM event_logs WHERE user_id = ? AND event = 'quota.use'`,
+      [userId]
+    ) as { total: number }[];
+    const totalUsed = Number(rows[0]?.total ?? 0);
+    quota = { used: totalUsed, limit: DEFAULT_QUOTA_FREE, remaining: Math.max(0, DEFAULT_QUOTA_FREE - totalUsed) };
+  } else {
+    quota = quotaFromRedis;
+  }
 
-  const activeToken = await db.query.userTokens.findFirst({
-    columns: { id: true, createdAt: true, encryptedPayload: true },
-    where: (t, { and, eq, isNull }) =>
-      and(eq(t.userId, userId), isNull(t.revokedAt)),
-  });
+  const tokenRows = await db
+    .select({ id: userTokens.id, createdAt: userTokens.createdAt, encryptedPayload: userTokens.encryptedPayload })
+    .from(userTokens)
+    .where(and(eq(userTokens.userId, userId), isNull(userTokens.revokedAt)))
+    .limit(1);
+  const activeToken = tokenRows[0] ?? null;
 
   return {
     user: {
@@ -42,6 +54,9 @@ async function getDashboardData(userId: number) {
       email,
       phone,
       wechat,
+      avatarColor: user.avatarColor,
+      avatarInitials: user.avatarInitials,
+      avatarUrl: user.avatarUrl ?? null,
       createdAt: user.createdAt instanceof Date ? user.createdAt.toISOString() : user.createdAt,
     },
     quota,

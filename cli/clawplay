@@ -4,9 +4,30 @@
 
 set -euo pipefail
 
-CLAWPLAY_VERSION="0.1.0"
 CLI_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${CLI_DIR}/lib/api-env.sh"
+
+# Resolve package root: dev repo vs npm global install
+# npm global: CLI_DIR = <prefix>/bin, package lives at <prefix>/lib/node_modules/clawplay
+# dev repo:  CLI_DIR = <repo>/cli, package.json at <repo>/cli/package.json
+if [[ -f "${CLI_DIR}/package.json" ]]; then
+  CLI_ROOT="${CLI_DIR}"
+elif [[ -f "${CLI_DIR}/../package.json" ]]; then
+  CLI_ROOT="${CLI_DIR}/.."
+elif [[ -d "${CLI_DIR}/../lib/node_modules/clawplay" ]]; then
+  # npm global install layout
+  CLI_ROOT="${CLI_DIR}/../lib/node_modules/clawplay"
+else
+  CLI_ROOT=""
+fi
+
+# Version from package.json — always in sync with npm package version
+if [[ -n "${CLI_ROOT}" && -f "${CLI_ROOT}/package.json" ]]; then
+  CLAWPLAY_VERSION="$(grep '"version"' "${CLI_ROOT}/package.json" | sed 's/.*: *"\([^"]*\)".*/\1/')"
+else
+  CLAWPLAY_VERSION="unknown"
+fi
+
+source "${CLI_ROOT}/lib/api-env.sh"
 CLAWPLAY_TOKEN="${CLAWPLAY_TOKEN:-}"
 
 # Colors
@@ -54,9 +75,9 @@ EXAMPLES:
 
 ENVIRONMENT:
   CLAWPLAY_TOKEN   - Encrypted token (export CLAWPLAY_TOKEN=... from dashboard)
-  CLAWPLAY_API_URL - ClawPlay API URL (default: http://localhost:3000)
+  CLAWPLAY_API_URL - ClawPlay API URL (auto-detect: CN→clawplay.com.cn, other→clawplay.cc; override with env var)
 
-For full docs: https://clawplay.example.com/docs
+For full docs: https://clawplay.cc
 EOF
 }
 
@@ -99,7 +120,7 @@ cmd_setup() {
         else
           echo "Usage: clawplay setup [options]"
           echo "  --token VALUE      Pass token directly, non-interactive"
-          echo "  --open-browser     Auto-open browser (register/dashboard)"
+          echo "  --open-browser     Auto-open browser (login/dashboard)"
           echo "  --lang zh|en       Force language"
         fi
         return 0
@@ -120,16 +141,16 @@ cmd_setup() {
           step2)        echo "第二步：获取 Token" ;;
           step3)        echo "第三步：验证并保存" ;;
           no_account)   echo "还没有账号？" ;;
-          register_btn) echo "注册账号 →" ;;
+          register_btn) echo "登录/注册 →" ;;
           no_token)     echo "还没有 Token？" ;;
           generate_btn) echo "打开控制台 →" ;;
           skip_hint)    echo "（已有账号，跳过）" ;;
           token_hint)   echo "复制以下内容，粘贴到终端：" ;;
           account_q)    echo "你已经注册过 ClawPlay 了吗？" ;;
           opt1_label)   echo "已注册，直接去控制台生成 Token" ;;
-          opt2_label)   echo "还没注册，先去注册" ;;
+          opt2_label)   echo "还没账号，先去注册" ;;
           opt1_btn)     echo "打开控制台 →" ;;
-          opt2_btn)     echo "打开注册页 →" ;;
+          opt2_btn)     echo "打开登录页 →" ;;
           opt_prompt)   echo "↑↓ 选择，Enter 确认" ;;
           press_done)   echo "注册/登录完成后，按 Enter 继续" ;;
           arrow_hint)   echo "↑↓ 选择，Enter 确认" ;;
@@ -141,7 +162,7 @@ cmd_setup() {
           success)      echo "✅ 配置完成！" ;;
           failed)       echo "❌ 配置失败" ;;
           wrong_fmt)    echo "Token 格式错误，请重新运行" ;;
-          open_reg)     echo "正在打开注册页面..." ;;
+          open_reg)     echo "正在打开登录页面..." ;;
           open_dash)    echo "正在打开控制台..." ;;
           manual_hint)  echo "请手动添加到 shell 配置：" ;;
           quota_info)   echo "配额信息" ;;
@@ -155,16 +176,16 @@ cmd_setup() {
           step2)        echo "Step 2: Get Token" ;;
           step3)        echo "Step 3: Verify & Save" ;;
           no_account)   echo "Don't have an account?" ;;
-          register_btn) echo "Register →" ;;
+          register_btn) echo "Login / Register →" ;;
           no_token)     echo "Don't have a token?" ;;
           generate_btn) echo "Open Dashboard →" ;;
           skip_hint)    echo "（already have an account, skip）" ;;
           token_hint)   echo "Copy the following and paste into terminal:" ;;
           account_q)    echo "Have you registered a ClawPlay account?" ;;
           opt1_label)   echo "Yes — go to Dashboard to generate Token" ;;
-          opt2_label)   echo "No — register first" ;;
+          opt2_label)   echo "No — go register first" ;;
           opt1_btn)     echo "Open Dashboard →" ;;
-          opt2_btn)     echo "Open Register →" ;;
+          opt2_btn)     echo "Open Login →" ;;
           opt_prompt)   echo "↑↓ select, Enter to confirm" ;;
           press_done)   echo "After register/login, press Enter to continue" ;;
           arrow_hint)   echo "↑↓ select, Enter to confirm" ;;
@@ -176,7 +197,7 @@ cmd_setup() {
           success)      echo "✅ Setup complete!" ;;
           failed)       echo "❌ Setup failed" ;;
           wrong_fmt)    echo "Invalid token format, please run again" ;;
-          open_reg)     echo "Opening registration page..." ;;
+          open_reg)     echo "Opening login page..." ;;
           open_dash)    echo "Opening dashboard..." ;;
           manual_hint)  echo "Please add manually to shell config:" ;;
           quota_info)   echo "Quota info" ;;
@@ -188,7 +209,7 @@ cmd_setup() {
 
   # Derive web URL from API_URL (strip /api suffix if present)
   local web_url="${CLAWPLAY_API_URL%/api}"
-  local register_url="${web_url}/register"
+  local register_url="${web_url}/login"
   local dashboard_url="${web_url}/dashboard"
 
   echo ""

@@ -1,21 +1,20 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { useT } from "@/lib/i18n/context";
 import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
 
-type Tab = "email" | "phone" | "wechat";
+type Tab = "account" | "phone" | "wechat";
 
 export function LoginForm() {
   const router = useRouter();
   const t = useT("auth");
-  const [tab, setTab] = useState<Tab>("phone");
+  const [tab, setTab] = useState<Tab>("account");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Email tab
+  // Account tab
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
@@ -39,27 +38,7 @@ export function LoginForm() {
     }, 1000);
   }
 
-  async function sendCode() {
-    setError("");
-    if (!/^1[3-9]\d{9}$/.test(phone)) {
-      setError(t("invalid_phone"));
-      return;
-    }
-    try {
-      const res = await fetch("/api/auth/sms/send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone }),
-      });
-      const data = await res.json();
-      if (!res.ok) { setError(data.error ?? t("send_failed")); return; }
-      startCountdown();
-    } catch {
-      setError(t("network_error"));
-    }
-  }
-
-  async function handleEmailLogin(e: React.FormEvent) {
+  async function handleAccountLogin(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     setLoading(true);
@@ -77,6 +56,26 @@ export function LoginForm() {
       setError(t("network_error"));
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function sendCode() {
+    setError("");
+    if (!/^1[3-9]\d{9}$/.test(phone)) {
+      setError(t("invalid_phone"));
+      return;
+    }
+    try {
+      const res = await fetch("/api/auth/sms/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error ?? t("send_failed")); return; }
+      startCountdown();
+    } catch {
+      setError(t("network_error"));
     }
   }
 
@@ -102,9 +101,9 @@ export function LoginForm() {
   }
 
   const tabs: { key: Tab; label: string }[] = [
+    { key: "account", label: t("account") },
     { key: "phone", label: t("phone") },
     { key: "wechat", label: t("wechat") },
-    { key: "email", label: t("email") },
   ];
 
   return (
@@ -115,7 +114,7 @@ export function LoginForm() {
         <span className="text-2xl font-bold font-heading text-[#564337]">ClawPlay</span>
       </div>
 
-      <div className="bg-[#fffdf7] card-radius p-8 md:p-10 border border-[#e8dfc8] card-shadow space-y-6">
+      <div className="bg-[#fffdf7] card-radius p-8 md:p-10 border border-[#e8dfc8] card-shadow space-y-6 w-full max-w-sm md:w-96 md:max-w-none">
         <div className="text-center space-y-1">
           <h1 className="text-2xl md:text-3xl font-bold font-heading text-[#564337]">{t("login")}</h1>
           <p className="text-[#7a6a5a] text-sm font-body">{t("login_subtitle")}</p>
@@ -144,28 +143,29 @@ export function LoginForm() {
           </div>
         )}
 
-        {tab === "email" && (
-          <form onSubmit={handleEmailLogin} className="space-y-4">
+        {tab === "account" && (
+          <form onSubmit={handleAccountLogin} className="w-full space-y-4">
             <Input
               label={t("email")}
               type="email"
               placeholder="you@example.com"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => { setEmail(e.target.value); setError(""); }}
               required
               autoComplete="email"
+              className="w-full"
+              p="px-4 py-2.5"
             />
-            <div className="relative">
-              <Input
-                label={t("password")}
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                autoComplete="current-password"
-              />
-            </div>
+            <Input
+              label={t("password")}
+              type="password"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => { setPassword(e.target.value); setError(""); }}
+              required
+              autoComplete="current-password"
+              p="px-4 py-2.5"
+            />
             <Button type="submit" className="w-full" loading={loading}>
               {t("login_btn")}
             </Button>
@@ -173,21 +173,22 @@ export function LoginForm() {
         )}
 
         {tab === "phone" && (
-          <form onSubmit={handlePhoneLogin} className="space-y-4">
+          <form onSubmit={handlePhoneLogin} className="w-full space-y-4">
             <Input
               label={t("phone")}
               type="tel"
               placeholder="138 0000 0000"
               value={phone}
-              onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
+              onChange={(e) => { setPhone(e.target.value.replace(/\D/g, "")); setError(""); }}
               required
               autoComplete="tel"
+              p="px-4 py-2.5"
             />
-            <div>
+            <div className="space-y-1.5">
               <label className="block text-sm font-semibold text-[#564337] mb-1.5 font-body">
                 {t("verification_code")}
               </label>
-              <div className="flex gap-2">
+              <div className="flex items-center gap-2">
                 <input
                   type="text"
                   inputMode="numeric"
@@ -195,13 +196,13 @@ export function LoginForm() {
                   value={code}
                   onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
                   required
-                  className="flex-1 border border-[#e8dfc8] rounded-[20px] px-4 py-2.5 text-sm text-[#564337] bg-[#fefae0] focus:outline-none focus:ring-2 focus:ring-[#fa7025]/30 font-body"
+                  className="flex-1 h-[46px] border border-[#e0d4bc] rounded-[20px] px-4 text-sm text-[#564337] bg-white placeholder-[#a89888] focus:outline-none focus:ring-2 focus:ring-[#a23f00]/30 transition-colors font-body"
                 />
                 <button
                   type="button"
                   onClick={sendCode}
                   disabled={countdown > 0}
-                  className="shrink-0 px-4 py-2.5 rounded-[20px] text-sm font-semibold border border-[#e8dfc8] text-[#a23f00] bg-[#faf3d0] hover:bg-[#f5ecb8] disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-body"
+                  className="shrink-0 h-[46px] w-[104px] px-4 rounded-[20px] text-sm font-semibold border border-[#e0d4bc] text-[#a23f00] bg-[#faf3d0] hover:bg-[#f5ecb8] disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-body"
                 >
                   {countdown > 0 ? `${countdown}s` : t("get_code")}
                 </button>
@@ -210,9 +211,6 @@ export function LoginForm() {
             <Button type="submit" className="w-full" loading={loading}>
               {t("login_register_btn")}
             </Button>
-            <p className="text-xs text-center text-[#7a6a5a] font-body">
-              {t("first_login_auto_register")}
-            </p>
           </form>
         )}
 
@@ -232,16 +230,6 @@ export function LoginForm() {
             </p>
           </div>
         )}
-
-        <p className="text-center text-sm text-[#7a6a5a] font-body">
-          {t("no_account")}{" "}
-          <Link
-            href="/register"
-            className="font-semibold text-[#a23f00] hover:text-[#c45000] underline transition-colors"
-          >
-            {t("go_register")}
-          </Link>
-        </p>
       </div>
     </div>
   );

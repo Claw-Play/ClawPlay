@@ -1,27 +1,21 @@
 import { test, expect } from "@playwright/test";
 import { registerUser } from "./helpers/auth";
 
-/** Switch to the email tab on the login page */
-async function switchToEmailTab(page: import("@playwright/test").Page) {
-  await page.getByRole("button", { name: "邮箱" }).click();
-}
-
 test.describe("Login form validation", () => {
-  test("phone tab is active by default", async ({ page }) => {
+  test("account tab is active by default — email + password form visible", async ({ page }) => {
     await page.goto("/login");
-    await expect(page.getByRole("button", { name: "获取验证码" })).toBeVisible();
-  });
-
-  test("switching to email tab shows email/password form", async ({ page }) => {
-    await page.goto("/login");
-    await switchToEmailTab(page);
+    // Default tab is account (email) — no need to switch
     await expect(page.getByLabel("邮箱")).toBeVisible();
     await expect(page.getByLabel("密码")).toBeVisible();
   });
 
-  test("invalid email format shows error from API", async ({ page }) => {
-    // Browser blocks type="email" form submission for invalid format natively.
-    // Test the API directly to verify error handling.
+  test("switching to phone tab shows phone form", async ({ page }) => {
+    await page.goto("/login");
+    await page.getByRole("button", { name: "手机号" }).click();
+    await expect(page.getByLabel("手机号")).toBeVisible();
+  });
+
+  test("invalid email format → API returns error", async ({ page }) => {
     const res = await page.request.post("/api/auth/login", {
       data: { email: "not-an-email", password: "password123" },
     });
@@ -30,29 +24,21 @@ test.describe("Login form validation", () => {
     expect(body.error.toLowerCase()).toMatch(/invalid|email|password/i);
   });
 
-  test("wrong password shows error and stays on page", async ({ page }) => {
-    const email = "wrongpw_${date}_${random}@example.com".replace("\${date}", String(Date.now())).replace("\${random}", Math.random().toString(36).slice(2));
+  test("wrong password → error message shown, stays on /login", async ({ page }) => {
+    const email = `wrongpw_${Date.now()}_${Math.random().toString(36).slice(2)}@example.com`;
     await registerUser(page.request, email, "correctpass123", "WrongPW");
     await page.goto("/login");
-    await switchToEmailTab(page);
-    await page.getByLabel("邮箱").fill(email);
+    await page.locator('input[type="email"]').fill(email);
     await page.getByLabel("密码").fill("wrongpassword");
     await page.getByRole("button", { name: "登录" }).click();
     await expect(
-      page.getByText(/invalid|incorrect/i).first(), { timeout: 10_000 }
+      page.getByText(/invalid|incorrect|密码错误/i).first(), { timeout: 10_000 }
     ).toBeVisible();
     await expect(page).toHaveURL(/\/login/);
   });
 
-  test("'注册' link navigates to /register", async ({ page }) => {
+  test("loading state — login button disabled during API call", async ({ page }) => {
     await page.goto("/login");
-    await page.getByRole("link", { name: "注册" }).click();
-    await expect(page).toHaveURL(/\/register/);
-  });
-
-  test("loading state — email login button disabled during API call", async ({ page }) => {
-    await page.goto("/login");
-    await switchToEmailTab(page);
     await page.route("**/api/auth/login", async (route) => {
       await new Promise((r) => setTimeout(r, 1000));
       await route.fulfill({ status: 401, body: JSON.stringify({ error: "test" }) });
@@ -65,6 +51,7 @@ test.describe("Login form validation", () => {
 
   test("phone tab — invalid phone number shows error", async ({ page }) => {
     await page.goto("/login");
+    await page.getByRole("button", { name: "手机号" }).click();
     await page.getByLabel("手机号").fill("12345");
     await page.getByRole("button", { name: "获取验证码" }).click();
     await expect(page.getByText(/有效的手机号/)).toBeVisible();
@@ -72,6 +59,7 @@ test.describe("Login form validation", () => {
 
   test("phone tab — countdown starts after sending code", async ({ page }) => {
     await page.goto("/login");
+    await page.getByRole("button", { name: "手机号" }).click();
     await page.route("**/api/auth/sms/send", async (route) => {
       await route.fulfill({ status: 200, body: JSON.stringify({ message: "验证码已发送" }) });
     });
@@ -83,7 +71,7 @@ test.describe("Login form validation", () => {
   test("wechat tab — shows wechat login link", async ({ page }) => {
     await page.goto("/login");
     await page.getByRole("button", { name: "微信" }).click();
-    const wechatLink = page.getByRole("link", { name: /微信一键登录/ });
+    const wechatLink = page.getByRole("link", { name: /微信一键登录/i });
     await expect(wechatLink).toBeVisible();
     const href = await wechatLink.getAttribute("href");
     expect(href).toContain("/api/auth/wechat");

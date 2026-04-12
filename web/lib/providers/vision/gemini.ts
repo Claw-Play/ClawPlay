@@ -79,11 +79,24 @@ export class GeminiVisionProvider implements VisionProvider {
 
     const data = await res.json() as {
       candidates: Array<{ content: { parts: Array<{ text?: string }> } }>;
+      usageMetadata?: {
+        promptTokenCount?: number;
+        candidatesTokenCount?: number;
+        totalTokenCount?: number;
+      };
     };
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
 
+    const usage = data.usageMetadata
+      ? {
+          inputTokens: data.usageMetadata.promptTokenCount ?? 0,
+          outputTokens: data.usageMetadata.candidatesTokenCount ?? 0,
+          totalTokens: data.usageMetadata.totalTokenCount ?? 0,
+        }
+      : undefined;
+
     if (req.mode === "describe") {
-      return { type: "text", text };
+      return { type: "text", text, usage };
     }
 
     // Parse JSON response for detect/segment
@@ -108,7 +121,7 @@ export class GeminiVisionProvider implements VisionProvider {
           item.box_2d?.[2] ?? 0,
         ] as [number, number, number, number],
       }));
-      return { type: "json", data: objects };
+      return { type: "json", data: objects, usage };
     }
 
     // segment
@@ -123,6 +136,6 @@ export class GeminiVisionProvider implements VisionProvider {
       ] as [number, number, number, number],
       mask: item.mask ?? "",
     }));
-    return { type: "json", data: masks };
+    return { type: "json", data: masks, usage };
   }
 }

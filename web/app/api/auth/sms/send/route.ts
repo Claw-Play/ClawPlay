@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sendSmsCode } from "@/lib/sms";
+import { analytics } from "@/lib/analytics";
 
 const PHONE_RE = /^1[3-9]\d{9}$/;
 
@@ -16,6 +17,7 @@ export async function POST(request: NextRequest) {
     }
 
     await sendSmsCode(phone);
+    analytics.user.smsSend(phone);
 
     return NextResponse.json({ message: "验证码已发送，请在10分钟内使用。" });
   } catch (err) {

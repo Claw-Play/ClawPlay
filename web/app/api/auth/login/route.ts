@@ -4,6 +4,7 @@ import { users, userIdentities } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { signJWT, buildSetCookieHeader } from "@/lib/auth";
+import { analytics } from "@/lib/analytics";
 
 export async function POST(request: NextRequest) {
   try {
@@ -25,12 +26,14 @@ export async function POST(request: NextRequest) {
     });
 
     if (!identity || !identity.credential) {
+      analytics.user.loginFailed(email, "identity_not_found");
       console.warn("[auth/login] failed — identity not found", { email });
       return NextResponse.json({ error: "Invalid email or password." }, { status: 401 });
     }
 
     const valid = await bcrypt.compare(password, identity.credential);
     if (!valid) {
+      analytics.user.loginFailed(email, "wrong_password");
       console.warn("[auth/login] failed — wrong password", { email });
       return NextResponse.json({ error: "Invalid email or password." }, { status: 401 });
     }
@@ -43,7 +46,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "User not found." }, { status: 404 });
     }
 
-    const token = await signJWT({ userId: user.id, role: user.role as "user" | "admin" });
+    const token = await signJWT({ userId: user.id, role: user.role as "user" | "admin" | "reviewer" });
+    analytics.user.login(user.id, "email");
 
     const response = NextResponse.json({
       user: { id: user.id, email, role: user.role },

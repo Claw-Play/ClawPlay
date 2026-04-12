@@ -9,7 +9,7 @@ cmd_whoami() {
   if [[ -z "${CLAWPLAY_TOKEN:-}" ]]; then
     echo "[clawplay] ERROR: CLAWPLAY_TOKEN is not set." >&2
     echo "[clawplay] Run 'clawplay help' for usage." >&2
-    echo "[clawplay] Get your token at: https://clawplay.example.com/dashboard" >&2
+    echo "[clawplay] Get your token at: https://clawplay.cc/dashboard" >&2
     exit 1
   fi
 

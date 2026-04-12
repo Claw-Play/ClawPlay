@@ -48,9 +48,7 @@ export function FeaturedCarousel({ skills }: Props) {
         href={`/skills/${active.slug}`}
         className="block bg-[#fffdf7] card-radius p-6 border border-[#e8dfc8] card-shadow card-shadow-hover transition-all duration-200"
       >
-        <div className="flex items-start gap-4">
-          <span className="text-5xl flex-shrink-0">{active.iconEmoji}</span>
-          <div className="flex-1 min-w-0">
+        <div className="flex flex-col gap-1">
             <div className="flex items-center gap-3 mb-1">
               <h3 className="text-xl font-bold font-heading text-[#564337]">
                 {active.name}
@@ -68,7 +66,6 @@ export function FeaturedCarousel({ skills }: Props) {
               {tGrid("by")} {active.authorName || tGrid("anonymous")}
             </p>
           </div>
-        </div>
       </Link>
 
       {/* Navigation dots + prev/next */}
@@ -116,15 +113,13 @@ export function FeaturedCarousel({ skills }: Props) {
           <button
             key={s.slug}
             onClick={() => setCurrent(i)}
-            className={`flex-shrink-0 w-14 h-14 rounded-2xl border-2 flex items-center justify-center text-2xl transition-all focus:outline-none ${
+            className={`flex-shrink-0 w-10 h-10 rounded-full border-2 flex items-center justify-center transition-all focus:outline-none ${
               i === current
                 ? "border-[#a23f00] bg-[#fef0e8] shadow-sm"
                 : "border-[#e8dfc8] bg-[#fffdf7] hover:border-[#a23f00]/50"
             }`}
             aria-label={t("select_skill", { name: s.name })}
-          >
-            {s.iconEmoji}
-          </button>
+          />
         ))}
       </div>
     </div>

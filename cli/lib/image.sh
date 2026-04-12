@@ -62,7 +62,7 @@ _image_generate() {
 
   if [[ -z "${CLAWPLAY_TOKEN:-}" ]]; then
     echo "[clawplay image] ERROR: CLAWPLAY_TOKEN is not set." >&2
-    echo "[clawplay image] Get your token at https://clawplay.example.com/dashboard" >&2
+    echo "[clawplay image] Get your token at https://clawplay.cc/dashboard" >&2
     exit 1
   fi
 

@@ -1,6 +1,6 @@
 /**
  * Integration tests for GET /api/admin/audit-logs
- * Uses real SQLite temp DB; mocks next/headers and fs module.
+ * Reads from event_logs table (no longer reads audit.jsonl).
  */
 import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
 import { tempDbPath, cleanupDb, seedAdmin, seedUser } from "../helpers/db";
@@ -35,6 +35,8 @@ let db: any;
 let GET_auditLogs: (req: any) => Promise<Response>;
 let adminCookie: string;
 let userCookie: string;
+let adminId: number;
+let userId: number;
 
 beforeAll(async () => {
   dbPath = tempDbPath();
@@ -51,12 +53,27 @@ beforeAll(async () => {
   const user = await seedUser(db);
   adminCookie = admin.cookie;
   userCookie = user.cookie;
+  adminId = admin.id;
+  userId = user.id;
+
+  // Seed some event_logs records
+  const { eventLogs: events } = await import("@/lib/db/schema");
+  const now = new Date();
+  const ago60 = new Date(now.getTime() - 60_000);
+  const ago120 = new Date(now.getTime() - 120_000);
+  const ago180 = new Date(now.getTime() - 180_000);
+  await (db as any).insert(events).values([
+    { event: "skill.submit", userId, targetType: "skill", targetId: "skill-submit-1", metadata: "{}", createdAt: now },
+    { event: "skill.approve", userId: adminId, targetType: "skill", targetId: "skill-approve-1", metadata: "{}", createdAt: now },
+    { event: "skill.reject", userId: adminId, targetType: "skill", targetId: "skill-reject-1", metadata: "{}", createdAt: ago60 },
+    { event: "skill.feature", userId: adminId, targetType: "skill", targetId: "skill-feature-1", metadata: "{}", createdAt: ago120 },
+    { event: "user.login", userId, targetType: "user", targetId: String(userId), metadata: "{}", createdAt: ago180 },
+  ]);
 });
 
 afterAll(() => {
   cleanupDb(dbPath);
   delete process.env.DATABASE_URL;
-  delete process.env.AUDIT_LOG_PATH;
   cookieStore.token = undefined;
 });
 
@@ -75,46 +92,34 @@ describe("GET /api/admin/audit-logs", () => {
     expect(res.status).toBe(403);
   });
 
-  it("admin, no audit file → 200 with empty entries", async () => {
+  it("admin, tab=skills → only skill events returned", async () => {
     cookieStore.token = adminCookie.replace("clawplay_token=", "");
-    // Point to a path that doesn't exist
-    process.env.AUDIT_LOG_PATH = "/tmp/nonexistent-audit-log-clawplay.jsonl";
-
-    const req = makeRequest("GET", "/api/admin/audit-logs", { cookie: adminCookie });
+    const req = makeRequest("GET", "/api/admin/audit-logs?tab=skills", { cookie: adminCookie });
     const res = await GET_auditLogs(req);
-    const json = await res.json();
-
     expect(res.status).toBe(200);
-    expect(json.entries).toEqual([]);
-    expect(json.total).toBe(0);
+    const json = await res.json();
+    expect(json.total).toBe(4); // submit, approve, reject, feature
+    for (const entry of json.entries) {
+      expect(["skill.submit", "skill.approve", "skill.reject", "skill.feature"]).toContain(entry.event);
+    }
   });
 
-  it("admin, existing audit file → 200 with parsed entries", async () => {
+  it("admin, tab=all → all events returned", async () => {
     cookieStore.token = adminCookie.replace("clawplay_token=", "");
-
-    // Write a temp audit log file
-    const { writeFileSync } = await import("fs");
-    const tmpLog = `/tmp/clawplay-audit-test-${Date.now()}.jsonl`;
-    const entries = [
-      { action: "approve_skill", targetId: "s1", ts: "2026-04-01T00:00:00Z" },
-      { action: "reject_skill", targetId: "s2", ts: "2026-04-02T00:00:00Z" },
-    ];
-    writeFileSync(tmpLog, entries.map((e) => JSON.stringify(e)).join("\n"), "utf8");
-    process.env.AUDIT_LOG_PATH = tmpLog;
-
-    const req = makeRequest("GET", "/api/admin/audit-logs?limit=10&offset=0", {
-      cookie: adminCookie,
-    });
+    const req = makeRequest("GET", "/api/admin/audit-logs?tab=all", { cookie: adminCookie });
     const res = await GET_auditLogs(req);
-    const json = await res.json();
-
     expect(res.status).toBe(200);
-    expect(json.total).toBe(2);
-    expect(json.entries.length).toBeGreaterThan(0);
-    expect(json.entries[0]).toHaveProperty("action");
+    const json = await res.json();
+    expect(json.total).toBe(5); // all seeded events
+  });
 
-    // Cleanup temp file
-    const { unlinkSync } = await import("fs");
-    try { unlinkSync(tmpLog); } catch { /* ok */ }
+  it("admin, pagination → returns correct page", async () => {
+    cookieStore.token = adminCookie.replace("clawplay_token=", "");
+    const req = makeRequest("GET", "/api/admin/audit-logs?tab=all&limit=2&offset=0", { cookie: adminCookie });
+    const res = await GET_auditLogs(req);
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.total).toBe(5);
+    expect(json.entries.length).toBeLessThanOrEqual(2);
   });
 });

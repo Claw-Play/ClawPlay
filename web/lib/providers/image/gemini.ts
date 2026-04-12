@@ -27,6 +27,11 @@ interface GeminiResponse {
   candidates: Array<{
     content: { parts: GeminiPart[] };
   }>;
+  usageMetadata?: {
+    promptTokenCount?: number;
+    candidatesTokenCount?: number;
+    totalTokenCount?: number;
+  };
 }
 
 export class GeminiProvider implements ImageProvider {
@@ -88,6 +93,14 @@ export class GeminiProvider implements ImageProvider {
     const data = await res.json() as GeminiResponse;
     const parts2 = data.candidates?.[0]?.content?.parts ?? [];
 
+    const usage = data.usageMetadata
+      ? {
+          generatedImages: 1,
+          outputTokens: data.usageMetadata.candidatesTokenCount ?? 0,
+          totalTokens: data.usageMetadata.totalTokenCount ?? 0,
+        }
+      : undefined;
+
     // Skip thought parts, find the first inline image
     for (const part of parts2) {
       if (part.thought) continue;
@@ -96,6 +109,7 @@ export class GeminiProvider implements ImageProvider {
           type: "b64",
           b64: part.inlineData.data,
           mimeType: part.inlineData.mimeType ?? "image/png",
+          usage,
         };
       }
     }

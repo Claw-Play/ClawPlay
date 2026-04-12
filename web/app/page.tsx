@@ -74,15 +74,9 @@ export default async function HomePage() {
               <>
                 <Link
                   href="/login"
-                  className="text-sm font-medium text-[#7a6a5a] hover:text-[#a23f00] transition-colors font-body"
-                >
-                  {tCommon("login")}
-                </Link>
-                <Link
-                  href="/register"
                   className="px-5 py-2.5 bg-gradient-to-r from-[#a23f00] to-[#fa7025] hover:opacity-90 text-white text-sm font-semibold btn-pill shadow-[0_6px_24px_rgba(162,63,0,0.2)] transition-all font-heading"
                 >
-                  {tCommon("register")}
+                  {tCommon("login")}
                 </Link>
               </>
             )}
@@ -111,7 +105,7 @@ export default async function HomePage() {
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
             <Link
-              href={auth ? "/dashboard" : "/register"}
+              href={auth ? "/dashboard" : "/login"}
               className="px-8 py-4 bg-gradient-to-r from-[#a23f00] to-[#fa7025] hover:opacity-90 text-white text-base font-semibold btn-pill shadow-[0_6px_24px_rgba(162,63,0,0.2)] transition-all font-heading"
             >
               {t("cta_start")}
@@ -183,16 +177,13 @@ export default async function HomePage() {
                 href={`/skills/${featuredSkills[0].slug}`}
                 className="block bg-[#fffdf7] card-radius p-6 border border-[#e8dfc8] card-shadow"
               >
-                <div className="flex items-start gap-4">
-                  <span className="text-5xl">{featuredSkills[0].iconEmoji}</span>
-                  <div>
-                    <h3 className="text-xl font-bold font-heading text-[#564337]">
-                      {featuredSkills[0].name}
-                    </h3>
-                    <p className="text-sm text-[#7a6a5a] font-body mt-1">
-                      {featuredSkills[0].summary || tCommon("no_description")}
-                    </p>
-                  </div>
+                <div className="flex flex-col gap-1">
+                  <h3 className="text-xl font-bold font-heading text-[#564337]">
+                    {featuredSkills[0].name}
+                  </h3>
+                  <p className="text-sm text-[#7a6a5a] font-body mt-1">
+                    {featuredSkills[0].summary || tCommon("no_description")}
+                  </p>
                 </div>
               </Link>
             ) : (
@@ -212,7 +203,7 @@ export default async function HomePage() {
             {t("cta_desc")}
           </p>
           <Link
-            href="/register"
+            href="/login"
             className="inline-block px-8 py-4 bg-gradient-to-r from-[#a23f00] to-[#fa7025] hover:opacity-90 text-white font-semibold btn-pill shadow-[0_6px_24px_rgba(162,63,0,0.2)] transition-all font-heading"
           >
             {t("cta_create")}

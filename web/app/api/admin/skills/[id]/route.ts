@@ -3,7 +3,7 @@ import { getAuthFromCookies } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { skills } from "@/lib/db/schema";
 import { eq, and, isNull } from "drizzle-orm";
-import { appendAuditLog } from "@/lib/audit";
+import { analytics } from "@/lib/analytics";
 
 export async function PATCH(
   request: NextRequest,
@@ -14,7 +14,7 @@ export async function PATCH(
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
-  if (auth.role !== "admin") {
+  if (auth.role !== "admin" && auth.role !== "reviewer") {
     return NextResponse.json({ error: "Forbidden." }, { status: 403 });
   }
 
@@ -37,6 +37,11 @@ export async function PATCH(
       .update(skills)
       .set({ isFeatured: action === "feature" ? 1 : 0, updatedAt: new Date() })
       .where(and(eq(skills.id, id), isNull(skills.deletedAt)));
+    if (action === "feature") {
+      analytics.skill.feature(id, auth.userId);
+    } else {
+      analytics.skill.unfeature(id, auth.userId);
+    }
     return NextResponse.json({
       message: action === "feature" ? "Skill featured." : "Skill unfeatured.",
     });
@@ -61,14 +66,11 @@ export async function PATCH(
     })
     .where(and(eq(skills.id, id), isNull(skills.deletedAt)));
 
-  appendAuditLog({
-    ts: new Date().toISOString(),
-    actorId: auth.userId,
-    action: action === "approve" ? "approve_skill" : "reject_skill",
-    targetType: "skill",
-    targetId: id,
-    metadata: { reason: reason ?? "", slug: skill.slug },
-  });
+  if (action === "approve") {
+    analytics.skill.approve(id, auth.userId);
+  } else {
+    analytics.skill.reject(id, auth.userId, reason ?? "");
+  }
 
   return NextResponse.json({
     skill: { ...skill, moderationStatus: newStatus },

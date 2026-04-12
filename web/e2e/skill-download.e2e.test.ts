@@ -48,7 +48,7 @@ test.describe("GET /api/skills/[slug]/download", () => {
     expect(loginRes.ok()).toBeTruthy();
 
     const submitRes = await request.post("/api/skills/submit", {
-      data: { name: SKILL_NAME, slug: SKILL_SLUG, content: SKILL_CONTENT },
+      data: { name: SKILL_NAME, slug: SKILL_SLUG, skillMdContent: SKILL_CONTENT },
     });
     expect(submitRes.ok(), `submit failed: ${JSON.stringify(await submitRes.json())}`).toBeTruthy();
     const { skill } = await submitRes.json();
@@ -145,7 +145,7 @@ test.describe("GET /api/skills/[slug]/download", () => {
       data: {
         name: `Pending ${ts}`,
         slug: pendingSlug,
-        content: SKILL_CONTENT,
+        skillMdContent: SKILL_CONTENT,
       },
     });
 

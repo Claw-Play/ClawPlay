@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { skills } from "@/lib/db/schema";
 import { eq, and, isNull } from "drizzle-orm";
+import { analytics } from "@/lib/analytics";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -30,7 +31,7 @@ export async function GET(request: NextRequest) {
         )
       );
 
-    let results = await query;
+    let results: { id: string; slug: string; name: string; summary: string; authorName: string; iconEmoji: string; moderationStatus: "pending" | "approved" | "rejected"; latestVersionId: string | null; statsStars: number; createdAt: Date | null }[] = await query;
 
     // Filter by emoji (client-side as it's not indexed for now)
     if (emoji) {
@@ -42,6 +43,11 @@ export async function GET(request: NextRequest) {
       results.sort((a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0));
     } else if (sort === "stars") {
       results.sort((a, b) => (b.statsStars ?? 0) - (a.statsStars ?? 0));
+    }
+
+    // Track skill browse/search when filters are applied
+    if (emoji || sort !== "newest") {
+      analytics.skill.search(emoji ?? "", { sort }, results.length);
     }
 
     return NextResponse.json({ skills: results });

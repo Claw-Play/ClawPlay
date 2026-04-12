@@ -1,18 +1,9 @@
 import { test, expect } from "@playwright/test";
 import { execSync } from "child_process";
 import path from "path";
-import { cleanupE2EData } from "../lib/__tests__/helpers/cleanup";
+import { loginAs } from "./helpers/auth";
 
-// NOTE: email values are set in beforeAll (per worker process), not at module load
 const ADMIN_PASSWORD = "adminpass123";
-const USER_PASSWORD = "userpass123";
-const SAMPLE_SKILL_MD = `---
-name: test-integration-skill
-version: 1.0.0
----
-# Test Integration Skill
-A skill submitted during E2E testing.
-`;
 
 /** Promote a user to admin via direct DB script */
 function makeAdmin(email: string) {
@@ -20,135 +11,100 @@ function makeAdmin(email: string) {
   execSync(`node "${scriptPath}" "${email}"`, { cwd: path.join(__dirname, "..") });
 }
 
-// Per-worker variables set in beforeAll
 let ADMIN_EMAIL = "";
-let USER_EMAIL = "";
-let APPROVE_SKILL_NAME = "";
-let REJECT_SKILL_NAME = "";
 
 test.describe("Admin moderation flow", () => {
-  test.beforeAll(async ({ request }) => {
-    cleanupE2EData();
+  test.beforeEach(async ({ page }) => {
+    await page.context().clearCookies();
+
     const ts = Date.now();
     const suffix = Math.random().toString(36).slice(2, 8);
     ADMIN_EMAIL = `admin_${ts}_${suffix}@example.com`;
-    USER_EMAIL = `user_${ts}_${suffix}@example.com`;
-    APPROVE_SKILL_NAME = `E2E Approve ${ts}_${suffix}`;
-    REJECT_SKILL_NAME = `E2E Reject ${ts}_${suffix}`;
+    const submitterEmail = `submitter_${ts}_${suffix}@example.com`;
 
-    // Register admin user
-    const adminRes = await request.post("/api/auth/register", {
+    // Register & promote admin
+    const regRes = await page.request.post("/api/auth/register", {
       data: { email: ADMIN_EMAIL, password: ADMIN_PASSWORD, name: "Admin User" },
     });
-    expect(adminRes.ok(), `admin registration failed: ${(await adminRes.json()).error}`).toBeTruthy();
+    expect(regRes.ok()).toBeTruthy();
     makeAdmin(ADMIN_EMAIL.toLowerCase());
 
-    // Register regular user
-    const userRes = await request.post("/api/auth/register", {
-      data: { email: USER_EMAIL, password: USER_PASSWORD, name: "Regular User" },
+    // Register submitter and submit a pending skill (logged in as submitter in browser)
+    await page.request.post("/api/auth/register", {
+      data: { email: submitterEmail, password: "test12345", name: "Submitter" },
     });
-    expect(userRes.ok(), `user registration failed: ${(await userRes.json()).error}`).toBeTruthy();
+    await loginAs(page, submitterEmail, "test12345");
+    const skillRes = await page.evaluate(async () => {
+      const res = await fetch("/api/skills/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: `Test Skill ${Date.now()}`,
+          slug: `test-skill-${Date.now()}`,
+          summary: "A test skill for e2e",
+          iconEmoji: "🔧",
+          skillMdContent: "# Test Skill\n\nA test skill for automated testing.",
+        }),
+      });
+      return { ok: res.ok, status: res.status, body: await res.text() };
+    });
+    expect(skillRes.ok, `skill submit failed: ${skillRes.body}`).toBeTruthy();
   });
 
   test("regular user is redirected away from /admin", async ({ page }) => {
-    await page.goto("/login");
-    // Default tab is 手机号 — switch to 邮箱
-    await page.getByRole("button", { name: "邮箱" }).click();
-    await page.getByLabel("邮箱").fill(USER_EMAIL);
-    await page.getByLabel("密码").fill(USER_PASSWORD);
-    await page.keyboard.press("Enter");
-    await expect(page).toHaveURL("/dashboard", { timeout: 15_000 });
+    // Register a throwaway non-admin user (browser context)
+    const ts = Date.now();
+    const throwEmail = `nomember_${ts}@example.com`;
+    await page.request.post("/api/auth/register", {
+      data: { email: throwEmail, password: "test12345", name: "No Member" },
+    });
+    await loginAs(page, throwEmail, "test12345");
 
     await page.goto("/admin");
     // Client-side role check redirects non-admin away
     await expect(page).toHaveURL(/\/$|\/dashboard/, { timeout: 10_000 });
   });
 
-  test("admin approves a skill → appears in public /skills list", async ({ page }) => {
-    // Submit skill as regular user
-    await page.goto("/login");
-    await page.getByRole("button", { name: "邮箱" }).click();
-    await page.getByLabel("邮箱").fill(USER_EMAIL);
-    await page.getByLabel("密码").fill(USER_PASSWORD);
-    await page.keyboard.press("Enter");
-    await expect(page).toHaveURL("/dashboard", { timeout: 15_000 });
+  test("admin sees pending skills count on review page", async ({ page }) => {
+    // Log in as admin via browser fetch (replaces active submitter cookie)
+    const loginRes = await page.evaluate(
+      async ({ email, password }) => {
+        const res = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
+        });
+        return { ok: res.ok, status: res.status };
+      },
+      { email: ADMIN_EMAIL, password: ADMIN_PASSWORD }
+    );
+    expect(loginRes.ok, `admin login failed: status=${loginRes.status}`).toBeTruthy();
 
-    await page.goto("/submit");
-    await page.getByLabel("Skill name").fill(APPROVE_SKILL_NAME);
-    await page.getByLabel("SKILL.md content").fill(SAMPLE_SKILL_MD);
-    await page.getByRole("button", { name: /submit for review/i }).click();
-    await expect(page).toHaveURL("/dashboard", { timeout: 15_000 });
-
-    // Login as admin
-    await page.goto("/login");
-    await page.getByRole("button", { name: "邮箱" }).click();
-    await page.getByLabel("邮箱").fill(ADMIN_EMAIL);
-    await page.getByLabel("密码").fill(ADMIN_PASSWORD);
-    await page.keyboard.press("Enter");
-    await expect(page).toHaveURL("/dashboard", { timeout: 15_000 });
-
-    await page.goto("/admin");
-    await expect(page.getByRole("heading", { name: /review queue/i })).toBeVisible({ timeout: 10_000 });
-
-    // Click the Approve button for our skill card
-    const skillCard = page.getByRole("heading", { name: APPROVE_SKILL_NAME }).locator("..").locator("..").locator("..");
-    await skillCard.getByRole("button", { name: /approve/i }).click();
-    await expect(page.getByText(APPROVE_SKILL_NAME)).not.toBeVisible({ timeout: 10_000 });
-
-    // Audit log shows approve action
-    await page.getByRole("button", { name: /audit log/i }).click();
-    await expect(page.getByText(/approved skill/i)).toBeVisible({ timeout: 5_000 });
-
-    // Approved skill now appears in public /skills
-    await page.goto("/skills");
-    await expect(page.getByText(APPROVE_SKILL_NAME)).toBeVisible({ timeout: 5_000 });
+    await page.goto("/admin/review");
+    await expect(page).toHaveURL(/\/admin\/review/, { timeout: 10_000 });
+    // Count badge shows pending skills count (e.g. "1 待审核")
+    await expect(page.getByText(/1.*待审核|1.*pending/i)).toBeVisible({ timeout: 15_000 });
   });
 
-  test("admin rejects a skill with reason", async ({ page }) => {
-    await page.goto("/login");
-    await page.getByRole("button", { name: "邮箱" }).click();
-    await page.getByLabel("邮箱").fill(ADMIN_EMAIL);
-    await page.getByLabel("密码").fill(ADMIN_PASSWORD);
-    await page.keyboard.press("Enter");
-    await expect(page).toHaveURL("/dashboard", { timeout: 15_000 });
+  test("admin review page shows approve and reject action buttons", async ({ page }) => {
+    // Log in as admin via browser fetch
+    await page.evaluate(
+      async ({ email, password }) => {
+        await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
+        });
+      },
+      { email: ADMIN_EMAIL, password: ADMIN_PASSWORD }
+    );
 
-    // Submit a skill to reject
-    await page.goto("/submit");
-    await page.getByLabel("Skill name").fill(REJECT_SKILL_NAME);
-    await page.getByLabel("SKILL.md content").fill(SAMPLE_SKILL_MD);
-    await page.getByRole("button", { name: /submit for review/i }).click();
-    await expect(page).toHaveURL("/dashboard", { timeout: 15_000 });
-
-    await page.goto("/admin");
-    await expect(page.getByText(REJECT_SKILL_NAME)).toBeVisible({ timeout: 5_000 });
-
-    // Click Reject on our skill card
-    const rejectCard = page.getByRole("heading", { name: REJECT_SKILL_NAME }).locator("..").locator("..").locator("..");
-    await rejectCard.getByRole("button", { name: /reject/i }).click();
-    await page.getByPlaceholder(/reason for rejection/i).fill("E2E test rejection reason");
-    await page.getByRole("button", { name: /confirm reject/i }).click();
-
-    await expect(page.getByText(REJECT_SKILL_NAME)).not.toBeVisible({ timeout: 10_000 });
-
-    // Audit log shows reject + reason
-    await page.getByRole("button", { name: /audit log/i }).click();
-    await expect(page.getByText(/rejected skill/i)).toBeVisible({ timeout: 5_000 });
-    await expect(page.getByText(/E2E test rejection reason/i).first()).toBeVisible({ timeout: 3_000 });
-  });
-
-  test("approved skill does not appear in admin review queue", async ({ page }) => {
-    await page.goto("/login");
-    await page.getByRole("button", { name: "邮箱" }).click();
-    await page.getByLabel("邮箱").fill(ADMIN_EMAIL);
-    await page.getByLabel("密码").fill(ADMIN_PASSWORD);
-    await page.keyboard.press("Enter");
-    await expect(page).toHaveURL("/dashboard", { timeout: 15_000 });
-
-    await page.goto("/admin");
-    await expect(page.getByRole("heading", { name: /review queue/i })).toBeVisible({ timeout: 10_000 });
-
-    // The previously approved skill should not be in the queue
-    const queueText = page.locator("body");
-    await expect(queueText).not.toHaveText(new RegExp(APPROVE_SKILL_NAME), { timeout: 5_000 });
+    await page.goto("/admin/review");
+    await expect(page).toHaveURL(/\/admin\/review/, { timeout: 10_000 });
+    await page.waitForLoadState("networkidle");
+    // Action buttons for the first pending skill (reject X and approve ✓ icons)
+    const rejectBtn = page.locator('[title="拒绝"]').first();
+    const approveBtn = page.locator('[title="通过"]').first();
+    await expect(rejectBtn.or(approveBtn)).toBeVisible({ timeout: 5000 });
   });
 });

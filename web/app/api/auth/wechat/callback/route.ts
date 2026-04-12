@@ -4,6 +4,14 @@ import { users, userIdentities } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { exchangeCode, getWechatUserInfo } from "@/lib/wechat";
 import { signJWT, buildSetCookieHeader } from "@/lib/auth";
+import { DEFAULT_QUOTA_FREE } from "@/lib/redis";
+
+const AVATAR_COLORS = [
+  "#586330", "#a23f00", "#fa7025", "#8a6040",
+  "#5a7a4a", "#4a7a8a", "#7a4a8a", "#8a4a5a",
+];
+const randomAvatarColor = () =>
+  AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)];
 
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
@@ -37,20 +45,20 @@ export async function GET(request: NextRequest) {
     });
 
     let userId: number;
-    let role: "user" | "admin" = "user";
+    let role: "user" | "admin" | "reviewer" = "user";
 
     if (identity) {
       userId = identity.userId;
       const user = await db.query.users.findFirst({ where: eq(users.id, userId) });
-      role = (user?.role as "user" | "admin") ?? "user";
+      role = (user?.role as "user" | "admin" | "reviewer") ?? "user";
     } else {
       const [user] = await db
         .insert(users)
         .values({
           name: userInfo.nickname || "",
           role: "user",
-          quotaFree: 1000,
-          quotaUsed: 0,
+          quotaFree: DEFAULT_QUOTA_FREE,
+          avatarColor: randomAvatarColor(),
         })
         .returning({ id: users.id, role: users.role });
 
@@ -62,7 +70,7 @@ export async function GET(request: NextRequest) {
       });
 
       userId = user.id;
-      role = user.role as "user" | "admin";
+      role = user.role as "user" | "admin" | "reviewer";
     }
 
     const token = await signJWT({ userId, role });

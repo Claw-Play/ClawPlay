@@ -3,6 +3,7 @@ import { getAuthFromCookies } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { userTokens } from "@/lib/db/schema";
 import { eq, and, isNull } from "drizzle-orm";
+import { analytics } from "@/lib/analytics";
 
 export async function POST(request: NextRequest) {
   const auth = await getAuthFromCookies();
@@ -17,8 +18,7 @@ export async function POST(request: NextRequest) {
   let token;
   if (!tokenId) {
     token = await db.query.userTokens.findFirst({
-      where: (t, { and, eq, isNull }) =>
-        and(eq(t.userId, auth.userId), isNull(t.revokedAt)),
+      where: and(eq(userTokens.userId, auth.userId), isNull(userTokens.revokedAt)),
     });
   } else {
     token = await db.query.userTokens.findFirst({
@@ -41,6 +41,8 @@ export async function POST(request: NextRequest) {
     .update(userTokens)
     .set({ revokedAt: new Date() })
     .where(eq(userTokens.id, token.id));
+
+  analytics.token.revoke(auth.userId, token.id);
 
   return NextResponse.json({ message: "Token revoked." });
 }

@@ -1,6 +1,6 @@
 /**
  * Integration tests for admin API routes.
- * Uses a real SQLite temp DB; Redis and audit log are mocked.
+ * Uses a real SQLite temp DB; Redis and analytics are mocked.
  */
 import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
 import { tempDbPath, cleanupDb, seedUser, seedAdmin } from "../helpers/db";
@@ -27,9 +27,18 @@ vi.mock("next/headers", () => ({
   })),
 }));
 
-// ── Audit log mock (avoids real file writes in tests) ────────────────────────
-vi.mock("@/lib/audit", () => ({
-  appendAuditLog: vi.fn(),
+// ── Analytics mock ────────────────────────────────────────────────────────────
+vi.mock("@/lib/analytics", () => ({
+  analytics: {
+    skill: {
+      approve: vi.fn(),
+      reject: vi.fn(),
+      feature: vi.fn(),
+      unfeature: vi.fn(),
+    },
+  },
+  logEvent: vi.fn(),
+  incrementSkillStat: vi.fn(),
 }));
 
 // ── Env vars ──────────────────────────────────────────────────────────────────
@@ -130,7 +139,7 @@ describe("GET /api/admin/skills", () => {
 });
 
 describe("PATCH /api/admin/skills/[id]", () => {
-  it("approve → moderationStatus='approved' in DB, audit log called", async () => {
+  it("approve → moderationStatus='approved' in DB, analytics.skill.approve called", async () => {
     cookieStore.token = adminCookie.replace("clawplay_token=", "");
 
     const req = makeRequest("PATCH", `/api/admin/skills/${pendingSkillId}`, {
@@ -151,11 +160,9 @@ describe("PATCH /api/admin/skills/[id]", () => {
     });
     expect(updated.moderationStatus).toBe("approved");
 
-    // Verify audit log called
-    const { appendAuditLog } = await import("@/lib/audit");
-    expect(appendAuditLog).toHaveBeenCalledWith(
-      expect.objectContaining({ action: "approve_skill", targetId: pendingSkillId })
-    );
+    // Verify analytics.skill.approve was called
+    const { analytics } = await import("@/lib/analytics");
+    expect(analytics.skill.approve).toHaveBeenCalledWith(pendingSkillId, expect.any(Number));
   });
 
   it("reject → moderationStatus='rejected', moderationReason saved", async () => {
@@ -211,5 +218,64 @@ describe("PATCH /api/admin/skills/[id]", () => {
     });
     const res = await PATCH_adminSkill(req, { params: { id: pendingSkillId } });
     expect(res.status).toBe(400);
+  });
+
+  it("non-admin user → 403", async () => {
+    cookieStore.token = userCookie.replace("clawplay_token=", "");
+    const req = makeRequest("PATCH", `/api/admin/skills/${pendingSkillId}`, {
+      body: { action: "approve" },
+      cookie: userCookie,
+    });
+    const res = await PATCH_adminSkill(req, { params: { id: pendingSkillId } });
+    expect(res.status).toBe(403);
+  });
+
+  it("feature → isFeatured=1 in DB", async () => {
+    cookieStore.token = adminCookie.replace("clawplay_token=", "");
+    const req = makeRequest("PATCH", `/api/admin/skills/${pendingSkillId}`, {
+      body: { action: "feature" },
+      cookie: adminCookie,
+    });
+    const res = await PATCH_adminSkill(req, { params: { id: pendingSkillId } });
+    const json = await res.json();
+    expect(res.status).toBe(200);
+    expect(json.message).toMatch(/featured/i);
+
+    const { skills } = await import("@/lib/db/schema");
+    const { eq } = await import("drizzle-orm");
+    const updated = await db.query.skills.findFirst({
+      where: eq(skills.id, pendingSkillId),
+    });
+    expect(updated.isFeatured).toBe(1);
+  });
+
+  it("unfeature → isFeatured=0 in DB", async () => {
+    // First feature it (if not already), then unfeature
+    cookieStore.token = adminCookie.replace("clawplay_token=", "");
+    const req = makeRequest("PATCH", `/api/admin/skills/${pendingSkillId}`, {
+      body: { action: "unfeature" },
+      cookie: adminCookie,
+    });
+    const res = await PATCH_adminSkill(req, { params: { id: pendingSkillId } });
+    const json = await res.json();
+    expect(res.status).toBe(200);
+    expect(json.message).toMatch(/unfeatured/i);
+
+    const { skills } = await import("@/lib/db/schema");
+    const { eq } = await import("drizzle-orm");
+    const updated = await db.query.skills.findFirst({
+      where: eq(skills.id, pendingSkillId),
+    });
+    expect(updated.isFeatured).toBe(0);
+  });
+
+  it("skill not found → 404", async () => {
+    cookieStore.token = adminCookie.replace("clawplay_token=", "");
+    const req = makeRequest("PATCH", "/api/admin/skills/nonexistent-skill-id", {
+      body: { action: "approve" },
+      cookie: adminCookie,
+    });
+    const res = await PATCH_adminSkill(req, { params: { id: "nonexistent-skill-id" } });
+    expect(res.status).toBe(404);
   });
 });

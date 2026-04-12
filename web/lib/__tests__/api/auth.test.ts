@@ -15,6 +15,22 @@ vi.mock("@upstash/redis", () => ({
   })),
 }));
 
+// Stable mock functions shared across vi.mock factory calls
+const checkQuotaMock = vi.hoisted(() => vi.fn());
+const incrementQuotaMock = vi.hoisted(() => vi.fn());
+const getQuotaMock = vi.hoisted(() => vi.fn());
+
+// Re-export constants so auth routes can import DEFAULT_QUOTA_FREE without loading real Redis
+vi.mock("@/lib/redis", () => ({
+  DEFAULT_QUOTA_FREE: 100000,
+  ABILITY_COSTS: {},
+  checkQuota: checkQuotaMock,
+  incrementQuota: incrementQuotaMock,
+  getQuota: getQuotaMock,
+  initQuota: vi.fn(),
+  getRedis: vi.fn().mockReturnValue(null),
+}));
+
 // ── next/headers mock ─────────────────────────────────────────────────────────
 vi.mock("next/headers", () => ({
   cookies: vi.fn().mockReturnValue({ get: vi.fn().mockReturnValue(undefined) }),

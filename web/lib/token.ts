@@ -72,10 +72,7 @@ export function hashToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
 }
 
-/** Token payload shape */
+/** Token payload — 只携带用户身份，配额全走 Redis */
 export interface TokenPayload {
   userId: number;
-  quotaFree: number;
-  quotaUsed: number;
-  exp?: number; // Deprecated: tokens are permanent, kept for backwards compat
 }

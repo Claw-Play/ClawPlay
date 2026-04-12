@@ -46,7 +46,6 @@ export async function seedUser(
       name: opts.name ?? "Test User",
       role: opts.role ?? "user",
       quotaFree: 1000,
-      quotaUsed: 0,
     })
     .returning();
 
@@ -60,7 +59,7 @@ export async function seedUser(
 
   const jwtToken = await signJWT({
     userId: user.id,
-    role: user.role as "user" | "admin",
+    role: user.role as "user" | "admin" | "reviewer",
   });
 
   return {
@@ -89,7 +88,6 @@ export async function seedPhoneUser(
       name: opts.name ?? "Phone User",
       role: "user",
       quotaFree: 1000,
-      quotaUsed: 0,
     })
     .returning();
 
@@ -110,4 +108,11 @@ export async function seedAdmin(
   opts: { email?: string } = {}
 ) {
   return seedUser(db, { ...opts, role: "admin" });
+}
+
+export async function seedReviewer(
+  db: import("drizzle-orm/better-sqlite3").BetterSQLite3Database<Record<string, never>>,
+  opts: { email?: string } = {}
+) {
+  return seedUser(db, { ...opts, role: "reviewer" });
 }

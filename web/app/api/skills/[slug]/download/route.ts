@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { skills, skillVersions } from "@/lib/db/schema";
 import { eq, and, isNull } from "drizzle-orm";
 import JSZip from "jszip";
+import { analytics, incrementSkillStat } from "@/lib/analytics";
 
 export async function GET(
   request: NextRequest,
@@ -53,6 +54,8 @@ export async function GET(
     }
   }
 
+  const version = versionParam ?? skillVersion.version ?? "latest";
+
   // Build deterministic zip: SKILL.md + origin.json
   const zip = new JSZip();
   zip.file("SKILL.md", skillVersion.content);
@@ -76,6 +79,10 @@ export async function GET(
     compression: "DEFLATE",
     compressionOptions: { level: 6 },
   });
+
+  // Fire-and-forget: record download + increment counter
+  analytics.skill.download(skill.id, version);
+  void incrementSkillStat(skill.id, "statsDownloads");
 
   return new NextResponse(new Uint8Array(buffer), {
     status: 200,

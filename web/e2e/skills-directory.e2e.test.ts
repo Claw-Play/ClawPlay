@@ -5,20 +5,20 @@ test.describe("Skills directory", () => {
   test("page heading and count render", async ({ page }) => {
     await page.goto("/skills");
     await expect(
-      page.getByRole("heading", { name: /explore skills/i })
+      page.getByRole("heading", { name: /探索.*Skills|explore skills/i })
     ).toBeVisible();
   });
 
   test("emoji filter 'All' button is active by default", async ({ page }) => {
     await page.goto("/skills");
-    const allBtn = page.getByRole("button", { name: "All", exact: true });
+    const allBtn = page.getByRole("button", { name: /全部|all/i, exact: true });
     await expect(allBtn).toBeVisible();
     await expect(allBtn).toHaveClass(/from-\[#a23f00\]/);
   });
 
   test("clicking emoji filter button activates it", async ({ page }) => {
     await page.goto("/skills");
-    const filterBtns = page.getByRole("button").filter({ hasNotText: "All" });
+    const filterBtns = page.getByRole("button").filter({ hasNotText: /全部|all/i });
     const emojiBtn = filterBtns.first();
     await emojiBtn.click();
     await expect(emojiBtn).toHaveClass(/from-\[#a23f00\]/);
@@ -26,21 +26,21 @@ test.describe("Skills directory", () => {
 
   test("clicking 'All' resets emoji filter", async ({ page }) => {
     await page.goto("/skills");
-    const filterBtns = page.getByRole("button").filter({ hasNotText: "All" });
+    const filterBtns = page.getByRole("button").filter({ hasNotText: /全部|all/i });
     await filterBtns.first().click();
-    const allBtn = page.getByRole("button", { name: "All", exact: true });
+    const allBtn = page.getByRole("button", { name: /全部|all/i, exact: true });
     await allBtn.click();
     await expect(allBtn).toHaveClass(/from-\[#a23f00\]/);
   });
 
   test("search bar filters skills by name", async ({ page }) => {
     await page.goto("/skills");
-    const searchInput = page.getByPlaceholder(/search skills/i);
+    const searchInput = page.getByPlaceholder(/搜索.*Skills|search skills/i);
     await searchInput.fill("xyzabc123nonexistent");
     // Empty state should show "no results"
-    await expect(page.getByText(/no results for/i)).toBeVisible();
+    await expect(page.getByText(/未找到|no results for/i)).toBeVisible();
     // Reset
-    const resetBtn = page.getByRole("button", { name: /show all skills/i });
+    const resetBtn = page.getByRole("button", { name: /显示所有技能|show all skills/i });
     await expect(resetBtn).toBeVisible();
     await resetBtn.click();
     await expect(searchInput).toHaveValue("");
@@ -48,13 +48,13 @@ test.describe("Skills directory", () => {
 
   test("empty state shows with 'Show all skills' button", async ({ page }) => {
     await page.goto("/skills");
-    const searchInput = page.getByPlaceholder(/search skills/i);
+    const searchInput = page.getByPlaceholder(/搜索.*Skills|search skills/i);
     await searchInput.fill("xyzabc123nonexistent");
-    await expect(page.getByText(/no results for/i)).toBeVisible();
-    const resetBtn = page.getByRole("button", { name: /show all skills/i });
+    await expect(page.getByText(/未找到|no results for/i)).toBeVisible();
+    const resetBtn = page.getByRole("button", { name: /显示所有技能|show all skills/i });
     await expect(resetBtn).toBeVisible();
     await resetBtn.click();
-    await expect(page.getByPlaceholder(/search skills/i)).toHaveValue("");
+    await expect(page.getByPlaceholder(/搜索.*Skills|search skills/i)).toHaveValue("");
   });
 
   test("skill cards link to individual skill detail pages", async ({ page }) => {
@@ -69,6 +69,6 @@ test.describe("Skills directory", () => {
     await registerUser(page.request, email, "testpass123", "Skills User");
     await loginAs(page, email, "testpass123");
     await page.goto("/skills");
-    await expect(page.getByRole("link", { name: /submit a skill/i })).toBeVisible();
+    await expect(page.getByRole("link", { name: /提交 Skill|submit a skill/i })).toBeVisible();
   });
 });

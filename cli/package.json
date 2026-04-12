@@ -1,8 +1,15 @@
 {
   "name": "clawplay",
-  "version": "0.1.1",
+  "version": "0.1.4",
   "description": "Unified multimodal CLI for ClawPlay — image generation, vision analysis, and LLM via Ark + Gemini relay",
-  "keywords": ["clawplay", "multimodal", "ai", "cli", "image-generation", "tts"],
+  "keywords": [
+    "clawplay",
+    "multimodal",
+    "ai",
+    "cli",
+    "image-generation",
+    "tts"
+  ],
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -12,7 +19,10 @@
   "bin": {
     "clawplay": "./clawplay"
   },
-  "os": ["darwin", "linux"],
+  "os": [
+    "darwin",
+    "linux"
+  ],
   "engines": {
     "node": ">=18"
   }

@@ -37,7 +37,7 @@ export default function Nav({ auth }: NavProps) {
                 Sign in
               </Link>
               <Link
-                href="/register"
+                href="/login"
                 className="px-5 py-2.5 bg-gradient-to-r from-[#a23f00] to-[#fa7025] hover:opacity-90 text-white text-sm font-semibold btn-pill shadow-[0_6px_24px_rgba(162,63,0,0.2)] transition-all font-heading"
               >
                 Get started

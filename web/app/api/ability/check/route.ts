@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { decryptToken, type TokenPayload } from "@/lib/token";
-import { getQuota } from "@/lib/redis";
-import { db } from "@/lib/db";
-import { users } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { getQuota, DEFAULT_QUOTA_FREE } from "@/lib/redis";
+import { analytics } from "@/lib/analytics";
 
 /** Check quota status for the authenticated user */
 export async function GET(request: NextRequest) {
@@ -22,9 +20,9 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Get current quota (Redis, fall back to DB)
     const quota = await getQuota(payload.userId);
     if (quota) {
+      analytics.quota.check(payload.userId, quota.used, quota.limit);
       return NextResponse.json({
         userId: payload.userId,
         used: quota.used,
@@ -34,20 +32,16 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Fall back to DB
-    const user = await db.query.users.findFirst({
-      where: eq(users.id, payload.userId),
-    });
-    if (!user) {
-      return NextResponse.json({ error: "User not found." }, { status: 404 });
+    // Redis not configured — allow through in dev
+    if (process.env.NODE_ENV === "production") {
+      return NextResponse.json({ error: "Quota service unavailable." }, { status: 503 });
     }
-
     return NextResponse.json({
       userId: payload.userId,
-      used: user.quotaUsed,
-      limit: user.quotaFree,
-      remaining: user.quotaFree - user.quotaUsed,
-      source: "db",
+      used: 0,
+      limit: DEFAULT_QUOTA_FREE,
+      remaining: DEFAULT_QUOTA_FREE,
+      source: "none",
     });
   } catch (err) {
     console.error("[ability/check]", err);

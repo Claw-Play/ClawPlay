@@ -4,6 +4,21 @@ import { users, userIdentities } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { signJWT, buildSetCookieHeader } from "@/lib/auth";
+import { analytics } from "@/lib/analytics";
+import { DEFAULT_QUOTA_FREE } from "@/lib/redis";
+
+const AVATAR_COLORS = [
+  "#586330",
+  "#a23f00",
+  "#fa7025",
+  "#8a6040",
+  "#5a7a4a",
+  "#4a7a8a",
+  "#7a4a8a",
+  "#8a4a5a",
+];
+const randomAvatarColor = () =>
+  AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)];
 
 export async function POST(request: NextRequest) {
   try {
@@ -57,8 +72,8 @@ export async function POST(request: NextRequest) {
     const [user] = await db.insert(users).values({
       name: name?.trim() || "",
       role: "user",
-      quotaFree: 1000,
-      quotaUsed: 0,
+      quotaFree: DEFAULT_QUOTA_FREE,
+      avatarColor: randomAvatarColor(),
     }).returning({ id: users.id, role: users.role });
 
     await db.insert(userIdentities).values({
@@ -69,6 +84,7 @@ export async function POST(request: NextRequest) {
     });
 
     const token = await signJWT({ userId: user.id, role: user.role as "user" | "admin" });
+    analytics.user.register(user.id, "email");
 
     const response = NextResponse.json(
       { user: { id: user.id, email, role: user.role }, message: "Account created successfully." },

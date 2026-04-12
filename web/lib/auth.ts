@@ -10,7 +10,7 @@ const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
 
 export interface JWTPayload {
   userId: number;
-  role: "user" | "admin";
+  role: "user" | "admin" | "reviewer";
 }
 
 /** Sign a new JWT and return the token string */

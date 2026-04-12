@@ -1,6 +1,7 @@
+import { describe, it, expect, vi } from "vitest";
 import { render, screen, act, fireEvent } from "@testing-library/react";
-import { HomeClient } from "../HomeClient";
-import { TestWrapper } from "../../test-utils";
+import { HomeClient } from "../../../app/HomeClient";
+import { TestWrapper } from "../../../test-utils";
 
 describe("HomeClient", () => {
   beforeEach(() => {
