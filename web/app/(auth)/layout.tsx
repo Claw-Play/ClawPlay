@@ -7,9 +7,8 @@ export const metadata: Metadata = {
   description: "AI Skills Ecosystem",
 };
 
-// Background illustration from Figma design
-const bgIllustration =
-  "https://www.figma.com/api/mcp/asset/e95ad92a-bc78-409a-a88b-c0713ff11f60";
+// Background illustration
+const bgIllustration = "/images/auth-bg.png";
 
 export default function AuthLayout({
   children,
