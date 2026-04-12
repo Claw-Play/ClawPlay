@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthFromCookies } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { eventLogs } from "@/lib/db/schema";
-import { desc, sql, eq, and, like, inArray } from "drizzle-orm";
+import { desc, sql, eq, and, inArray } from "drizzle-orm";
 
 // Skill-related events shown in audit log
 const SKILL_EVENTS = [

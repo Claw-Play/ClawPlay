@@ -209,7 +209,7 @@ export const userStats = sqliteTable(
       .notNull()
       .$defaultFn(() => new Date()),
   },
-  (table) => []
+  () => []
 );
 
 // ProviderKeys table — multi-key pool for rate-limit sharding

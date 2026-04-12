@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
-  let auth = await getAuthFromCookies();
+  const auth = await getAuthFromCookies();
 
   if (!auth) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });

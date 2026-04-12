@@ -1,6 +1,5 @@
 "use client";
 import { useState, useEffect } from "react";
-import Link from "next/link";
 import { useT } from "@/lib/i18n/context";
 import { ProfileEditModal } from "@/components/ProfileEditModal";
 
@@ -155,7 +154,6 @@ function UsageStatsCard() {
 
 export function DashboardClient({ user: initialUser, quota, token }: DashboardClientProps) {
   const t = useT("dashboard");
-  const tCommon = useT("common");
   const [user, setUser] = useState(initialUser);
   const [generating, setGenerating] = useState(false);
   const [activeToken, setActiveToken] = useState<{ id: string; createdAt: string; value: string } | null>(token);
@@ -235,7 +233,6 @@ export function DashboardClient({ user: initialUser, quota, token }: DashboardCl
   const progressColor =
     quotaPct > 80 ? "bg-[#DC2626]" : quotaPct > 50 ? "bg-[#fa7025]" : "bg-[#586330]";
 
-  const userId = String(user.id).padStart(4, "0");
   const displayName = user.name || user.phone || user.email?.split("@")[0] || "用户";
   const joinedAt = user.createdAt
     ? new Date(user.createdAt).toLocaleDateString("zh-CN", {

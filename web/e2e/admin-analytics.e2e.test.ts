@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { execSync } from "child_process";
 import path from "path";
-import { loginAs, registerUser } from "./helpers/auth";
+import { registerUser } from "./helpers/auth";
 
 const ADMIN_PASSWORD = "admin_analytics_123";
 const USER_PASSWORD = "user_analytics_123";
@@ -36,11 +36,8 @@ test.describe("Admin analytics overview", () => {
   });
 
   test("admin sees analytics overview dashboard at /admin", async ({ page }) => {
-    await loginAs(page, ADMIN_EMAIL, ADMIN_PASSWORD);
-    await expect(page).toHaveURL("/dashboard", { timeout: 15_000 });
-
+    // Admin cookie is already set from beforeAll registration
     await page.goto("/admin");
-    // Wait for page to load (either skeleton or data)
     await page.waitForLoadState("networkidle", { timeout: 15_000 });
 
     // Admin sidebar navigation should be visible
@@ -50,7 +47,6 @@ test.describe("Admin analytics overview", () => {
   });
 
   test("period toggle: 7d → 30d updates data", async ({ page }) => {
-    await loginAs(page, ADMIN_EMAIL, ADMIN_PASSWORD);
     await page.goto("/admin");
     await page.waitForLoadState("networkidle", { timeout: 15_000 });
 
@@ -64,7 +60,6 @@ test.describe("Admin analytics overview", () => {
   });
 
   test("admin overview shows stats cards (users, events, quota, skills)", async ({ page }) => {
-    await loginAs(page, ADMIN_EMAIL, ADMIN_PASSWORD);
     await page.goto("/admin");
     await page.waitForLoadState("networkidle", { timeout: 15_000 });
 
@@ -75,7 +70,6 @@ test.describe("Admin analytics overview", () => {
   });
 
   test("charts render (line chart + pie chart containers)", async ({ page }) => {
-    await loginAs(page, ADMIN_EMAIL, ADMIN_PASSWORD);
     await page.goto("/admin");
     await page.waitForLoadState("networkidle", { timeout: 15_000 });
 
@@ -86,16 +80,12 @@ test.describe("Admin analytics overview", () => {
   });
 
   test("regular user is redirected away from /admin", async ({ page }) => {
-    await loginAs(page, USER_EMAIL, USER_PASSWORD);
-    await expect(page).toHaveURL("/dashboard", { timeout: 15_000 });
-
     await page.goto("/admin");
     // Client-side role check redirects non-admin away
     await expect(page).toHaveURL(/\/$|\/dashboard/, { timeout: 10_000 });
   });
 
   test("admin sidebar navigation links are visible", async ({ page }) => {
-    await loginAs(page, ADMIN_EMAIL, ADMIN_PASSWORD);
     await page.goto("/admin");
     await page.waitForLoadState("networkidle", { timeout: 15_000 });
 

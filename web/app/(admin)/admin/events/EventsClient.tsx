@@ -48,7 +48,7 @@ function formatTs(ts: number): string {
 }
 
 export default function EventsClient() {
-  const t = useT("admin");
+  useT("admin");
   const [events, setEvents] = useState<EventRecord[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);

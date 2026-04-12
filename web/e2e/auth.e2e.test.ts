@@ -11,14 +11,16 @@ test.describe("Auth flow", () => {
     });
     expect(res.status()).toBe(201);
 
-    // Login via UI
+    // Login via UI — click 账号 tab, fill account form
     await page.goto("/login");
-    await page.getByRole("button", { name: "邮箱" }).click();
-    await page.getByLabel("邮箱").fill(TEST_EMAIL);
-    await page.getByLabel("密码").fill(TEST_PASSWORD);
-    await page.getByRole("button", { name: "登录" }).click();
+    await page.getByRole("button", { name: /账号|account/i }).click();
+    await page.getByLabel(/邮箱|email/i).fill(TEST_EMAIL);
+    await page.getByLabel(/密码|password/i).fill(TEST_PASSWORD);
+    await page.getByRole("button", { name: /登录|login/i }).click();
     await expect(page).toHaveURL("/dashboard", { timeout: 30_000 });
-    await expect(page.getByText(/USR-/i)).toBeVisible({ timeout: 15_000 });
+
+    // Dashboard user card visible
+    await expect(page.getByText(/欢迎回来|welcome/i, { exact: false })).toBeVisible({ timeout: 15_000 });
 
     // Generate token first (sign-out button lives inside the token card)
     await page.getByRole("button", { name: /generate token/i }).click();
@@ -27,7 +29,7 @@ test.describe("Auth flow", () => {
     ).toBeVisible();
 
     // Logout
-    await page.getByText("Revoke Access & Sign out").click();
+    await page.getByText(/退出|logout|sign out/i).click();
     await expect(page).toHaveURL("/", { timeout: 5_000 });
   });
 
@@ -40,12 +42,11 @@ test.describe("Auth flow", () => {
 
     // Login via UI
     await page.goto("/login");
-    await page.getByRole("button", { name: "邮箱" }).click();
-    await page.getByLabel("邮箱").fill(TEST_EMAIL);
-    await page.getByLabel("密码").fill(TEST_PASSWORD);
-    await page.getByRole("button", { name: "登录" }).click();
+    await page.getByRole("button", { name: /账号|account/i }).click();
+    await page.getByLabel(/邮箱|email/i).fill(TEST_EMAIL);
+    await page.getByLabel(/密码|password/i).fill(TEST_PASSWORD);
+    await page.getByRole("button", { name: /登录|login/i }).click();
     await expect(page).toHaveURL("/dashboard", { timeout: 30_000 });
-    await expect(page.getByText(/USR-/i)).toBeVisible({ timeout: 15_000 });
 
     // Generate token first (sign-out button lives inside the token card)
     await page.getByRole("button", { name: /generate token/i }).click();
@@ -54,15 +55,15 @@ test.describe("Auth flow", () => {
     ).toBeVisible();
 
     // Logout
-    await page.getByText("Revoke Access & Sign out").click();
+    await page.getByText(/退出|logout|sign out/i).click();
     await expect(page).toHaveURL("/", { timeout: 5_000 });
 
     // Log back in
     await page.goto("/login");
-    await page.getByRole("button", { name: "邮箱" }).click();
-    await page.getByLabel("邮箱").fill(TEST_EMAIL);
-    await page.getByLabel("密码").fill(TEST_PASSWORD);
-    await page.getByRole("button", { name: "登录" }).click();
+    await page.getByRole("button", { name: /账号|account/i }).click();
+    await page.getByLabel(/邮箱|email/i).fill(TEST_EMAIL);
+    await page.getByLabel(/密码|password/i).fill(TEST_PASSWORD);
+    await page.getByRole("button", { name: /登录|login/i }).click();
     await expect(page).toHaveURL("/dashboard", { timeout: 15_000 });
   });
 

@@ -42,7 +42,7 @@ export const db: any = new Proxy({} as ReturnType<typeof drizzle>, {
           ? (_sqlite as Database.Database).prepare(sqlStr).bind(...params).all()
           : (_sqlite as Database.Database).prepare(sqlStr).all();
     }
-    const val = (_db as any)[prop];
+    const val = (_db as unknown as Record<string, unknown>)[prop];
     if (typeof val === "function") {
       return val.bind(_db);
     }
