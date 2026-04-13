@@ -13,7 +13,7 @@ jobs:
 
     env:
       DEPLOY_REGION: HK
-      CLAWPLAY_API_URL: https://clawplay.cc
+      CLAWPLAY_API_URL: https://clawplay.shop
 
     steps:
       - name: Checkout code

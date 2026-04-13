@@ -50,7 +50,7 @@ _llm_generate() {
 
   if [[ -z "${CLAWPLAY_TOKEN:-}" ]]; then
     echo "[clawplay llm] ERROR: CLAWPLAY_TOKEN is not set." >&2
-    echo "[clawplay llm] Get your token at https://clawplay.cc/dashboard" >&2
+    echo "[clawplay llm] Get your token at https://clawplay.shop/dashboard" >&2
     exit 1
   fi
 

@@ -11,7 +11,7 @@ _auto_detect_api_url() {
   if [[ "$country" == "CN" ]]; then
     echo "https://clawplay.com.cn"
   else
-    echo "https://clawplay.cc"
+    echo "https://clawplay.shop"
   fi
 }
 

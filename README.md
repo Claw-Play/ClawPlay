@@ -15,7 +15,7 @@ ClawPlay lets AI Agents (via X Claw) generate images, analyze vision, and synthe
 ### 1. Get your CLI token
 
 ```bash
-# Sign up at https://clawplay.cc, then copy from Dashboard:
+# Sign up at https://clawplay.shop, then copy from Dashboard:
 export CLAWPLAY_TOKEN=eyJh...
 ```
 

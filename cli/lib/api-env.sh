@@ -31,5 +31,5 @@ fi
 if [[ -d "${__root}/web" && -f "${__root}/web/.env.local" ]]; then
   export CLAWPLAY_API_URL="http://localhost:3000"
 else
-  export CLAWPLAY_API_URL="https://clawplay.cc"
+  export CLAWPLAY_API_URL="https://clawplay.shop"
 fi

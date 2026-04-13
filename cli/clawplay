@@ -75,9 +75,9 @@ EXAMPLES:
 
 ENVIRONMENT:
   CLAWPLAY_TOKEN   - Encrypted token (export CLAWPLAY_TOKEN=... from dashboard)
-  CLAWPLAY_API_URL - ClawPlay API URL (auto-detect: CN→clawplay.com.cn, other→clawplay.cc; override with env var)
+  CLAWPLAY_API_URL - ClawPlay API URL (auto-detect: CN→clawplay.com.cn, other→clawplay.shop; override with env var)
 
-For full docs: https://clawplay.cc
+For full docs: https://clawplay.shop
 EOF
 }
 

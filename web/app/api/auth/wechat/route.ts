@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getWechatAuthUrl } from "@/lib/wechat";
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     const redirect = request.nextUrl.searchParams.get("redirect") ?? "/dashboard";

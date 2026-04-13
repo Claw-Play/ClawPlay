@@ -69,7 +69,7 @@ _vision_analyze() {
 
   if [[ -z "${CLAWPLAY_TOKEN:-}" ]]; then
     echo "[clawplay vision] ERROR: CLAWPLAY_TOKEN is not set." >&2
-    echo "[clawplay vision] Get your token at https://clawplay.cc/dashboard" >&2
+    echo "[clawplay vision] Get your token at https://clawplay.shop/dashboard" >&2
     exit 1
   fi
 
