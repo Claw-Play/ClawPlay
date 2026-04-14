@@ -2,6 +2,10 @@
 # lib/llm.sh — LLM text generation via ClawPlay relay (free)
 # stdout: raw text output from LLM
 
+# Resolve api.sh path from script location (works for both npm global and dev repo)
+__src="${BASH_SOURCE[0]}"
+__src_dir="$(cd "$(dirname "$__src")" && pwd)"
+
 cmd_llm() {
   local subcmd="${1:-}"
   shift || true
@@ -54,7 +58,7 @@ _llm_generate() {
     exit 1
   fi
 
-  source "${CLI_DIR}/lib/api.sh"
+  source "${__src_dir}/api.sh"
 
   # Build JSON body
   local json

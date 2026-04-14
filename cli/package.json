@@ -1,6 +1,6 @@
 {
   "name": "clawplay",
-  "version": "0.1.4",
+  "version": "0.1.8",
   "description": "Unified multimodal CLI for ClawPlay — image generation, vision analysis, and LLM via Ark + Gemini relay",
   "keywords": [
     "clawplay",

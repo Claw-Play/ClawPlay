@@ -1,9 +1,6 @@
 name: Deploy to Hong Kong (Overseas)
 
 on:
-  push:
-    branches: [main]
-
   workflow_dispatch:
 
 jobs:
