@@ -57,11 +57,18 @@ async function getDashboardData(userId: number) {
       avatarColor: user.avatarColor,
       avatarInitials: user.avatarInitials,
       avatarUrl: user.avatarUrl ?? null,
-      createdAt: user.createdAt instanceof Date ? user.createdAt.toISOString() : user.createdAt,
+      createdAt: user.createdAt instanceof Date && !isNaN(user.createdAt.getTime()) ? user.createdAt.toISOString() : null,
     },
     quota,
     token: activeToken
-      ? { id: activeToken.id, createdAt: activeToken.createdAt instanceof Date ? activeToken.createdAt.toISOString() : activeToken.createdAt, value: activeToken.encryptedPayload }
+      ? {
+          id: activeToken.id,
+          createdAt:
+            activeToken.createdAt instanceof Date && !isNaN(activeToken.createdAt.getTime())
+              ? activeToken.createdAt.toISOString()
+              : null,
+          value: activeToken.encryptedPayload,
+        }
       : null,
   };
 }

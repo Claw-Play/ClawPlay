@@ -3,6 +3,10 @@
 # Sends normalized request to ClawPlay relay; relay handles provider routing.
 # stdout: file path only (prevents AI context explosion)
 
+# Resolve api.sh path from script location (works for both npm global and dev repo)
+__src="${BASH_SOURCE[0]}"
+__src_dir="$(cd "$(dirname "$__src")" && pwd)"
+
 cmd_image() {
   local subcmd="${1:-}"
   shift || true
@@ -98,7 +102,7 @@ _image_generate() {
   fi
 
   # Call relay (api_call handles 401 auto-refresh)
-  source "${CLI_DIR}/lib/api.sh"
+  source "${__src_dir}/api.sh"
   local response
   response=$(api_call POST "/api/ability/image/generate" "$json") || {
     echo "[clawplay image] ERROR: Request to ClawPlay relay failed." >&2
