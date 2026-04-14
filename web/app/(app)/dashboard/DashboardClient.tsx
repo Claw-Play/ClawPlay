@@ -19,7 +19,7 @@ interface UserInfo {
   avatarColor: string;
   avatarInitials: string;
   avatarUrl: string | null;
-  createdAt: string;
+  createdAt: string | null;
 }
 
 function formatRelativeTime(date: Date): string {
@@ -36,7 +36,7 @@ function formatRelativeTime(date: Date): string {
 interface DashboardClientProps {
   user: UserInfo;
   quota: QuotaInfo;
-  token: { id: string; createdAt: string; value: string } | null;
+  token: { id: string; createdAt: string | null; value: string } | null;
 }
 
 const ABILITY_COLORS: Record<string, string> = {
@@ -156,7 +156,7 @@ export function DashboardClient({ user: initialUser, quota, token }: DashboardCl
   const t = useT("dashboard");
   const [user, setUser] = useState(initialUser);
   const [generating, setGenerating] = useState(false);
-  const [activeToken, setActiveToken] = useState<{ id: string; createdAt: string; value: string } | null>(token);
+  const [activeToken, setActiveToken] = useState<{ id: string; createdAt: string | null; value: string } | null>(token);
   // Token 值持久化在 localStorage（key = token id），用于路由跳转后恢复
   const [tokenValue, setTokenValue] = useState<string | null>(() =>
     token ? token.value : null
@@ -357,7 +357,7 @@ export function DashboardClient({ user: initialUser, quota, token }: DashboardCl
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-[#564337] font-body opacity-60">
-                        {t("generated_at")} {formatRelativeTime(new Date(activeToken.createdAt))}
+                        {t("generated_at")} {activeToken.createdAt ? formatRelativeTime(new Date(activeToken.createdAt)) : "—"}
                       </span>
                       <button
                         onClick={revokeToken}
