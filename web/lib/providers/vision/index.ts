@@ -6,10 +6,11 @@ export type { VisionProvider, VisionAnalyzeRequest, VisionAnalyzeResponse, Visio
 
 let _arkProvider: VisionProvider | null = null;
 
-export function getVisionProvider(provider = "ark"): VisionProvider {
-  if (provider === "gemini") {
+export function getVisionProvider(provider?: string): VisionProvider {
+  const actual = provider ?? process.env.VISION_PROVIDER ?? "ark";
+  if (actual === "gemini") {
     const key = process.env.GEMINI_API_KEY;
-    if (!key) throw new Error("GEMINI_API_KEY is required when provider=gemini");
+    if (!key) throw new Error("GEMINI_API_KEY is required when VISION_PROVIDER=gemini");
     return new GeminiVisionProvider(key);
   }
 

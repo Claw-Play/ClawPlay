@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { getT } from "@/lib/i18n";
 
-export default function NotFound() {
-  const t = getT("not_found");
+export default async function NotFound() {
+  const t = await getT("not_found");
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#fefae0] via-[#faf3d0] to-[#f5ecb8] flex items-center justify-center px-4">

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 export const metadata: Metadata = {
   title: "ClawPlay",
@@ -37,13 +38,14 @@ export default function AuthLayout({
       </div>
 
       {/* Header */}
-      <header className="relative z-10 p-6">
+      <header className="relative z-10 p-6 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2 group">
           <span className="text-2xl">🦐</span>
           <span className="text-xl font-bold font-heading text-[#564337] group-hover:text-[#a23f00] transition-colors">
             ClawPlay
           </span>
         </Link>
+        <LanguageSwitcher variant="dark" />
       </header>
 
       {/* Main — centered canvas */}

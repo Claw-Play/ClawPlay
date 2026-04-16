@@ -6,11 +6,12 @@ import { eq, and, isNull, desc } from "drizzle-orm";
 import { getT } from "@/lib/i18n";
 
 export async function generateMetadata({ params }: { params: { slug: string } }) {
+  const t = await getT("skill_versions");
   const skill = await db.query.skills.findFirst({
     where: and(eq(skills.slug, params.slug), isNull(skills.deletedAt)),
   });
   return {
-    title: skill ? `${skill.name} — 版本历史` : "Version History",
+    title: skill ? `${skill.name} — ${t("title")}` : "Version History",
   };
 }
 
@@ -71,8 +72,8 @@ export default async function SkillVersionsPage({
 }: {
   params: { slug: string };
 }) {
-  const t = getT("skill_versions");
-  const tCommon = getT("common");
+  const t = await getT("skill_versions");
+  const tCommon = await getT("common");
 
   const skill = await db.query.skills.findFirst({
     where: and(eq(skills.slug, params.slug), isNull(skills.deletedAt)),

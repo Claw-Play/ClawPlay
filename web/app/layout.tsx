@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import localFont from "next/font/local";
 import { Plus_Jakarta_Sans, Be_Vietnam_Pro } from "next/font/google";
 import { I18nProvider } from "@/lib/i18n/context";
@@ -33,12 +34,14 @@ export const metadata: Metadata = {
     "Build, share, and discover social entertainment Skills for X Claw. Unified multimodal CLI, free tier, one-click setup.",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const locale = process.env.NEXT_LOCALE || "zh";
+  const cookieStore = await cookies();
+  const locale = cookieStore.get("clawplay_locale")?.value
+    || (process.env.NEXT_LOCALE as string);
   const messages = getMessages(locale);
 
   return (
@@ -46,7 +49,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${plusJakartaSans.variable} ${beVietnamPro.variable} antialiased`}
       >
-        <I18nProvider messages={messages}>
+        <I18nProvider messages={messages} locale={locale}>
           {children}
         </I18nProvider>
       </body>

@@ -17,8 +17,8 @@ export const users = sqliteTable("users", {
 });
 
 // UserIdentities table — one user can have multiple auth providers
-// provider: 'email' | 'phone' | 'wechat' | 'github' | 'google'
-// providerAccountId: email address / phone number / wechat openid / github id
+// provider: 'email' | 'phone' | 'wechat' | 'github' | 'google' | 'x' | 'discord'
+// providerAccountId: email / phone / wechat openid / github id / Google sub / X id / Discord id
 // credential: bcrypt hash for email provider; null for OAuth/phone providers
 export const userIdentities = sqliteTable(
   "user_identities",
@@ -28,7 +28,7 @@ export const userIdentities = sqliteTable(
       .notNull()
       .references(() => users.id),
     provider: text("provider", {
-      enum: ["email", "phone", "wechat", "github", "google"],
+      enum: ["email", "phone", "wechat", "github", "google", "x", "discord"],
     }).notNull(),
     providerAccountId: text("provider_account_id").notNull(), // email / phone / openid
     credential: text("credential"), // bcrypt hash (email only), null otherwise

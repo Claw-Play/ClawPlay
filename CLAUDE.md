@@ -70,10 +70,9 @@ Keys are loaded from env vars on server start and stored encrypted in `providerK
 
 ```ts
 // Env vars for key pool
-ARK_IMAGE_KEYS=key1,key2     // comma-separated, ARK_API_KEY as fallback
-ARK_VISION_KEYS=key3,key4
-ARK_KEY_QUOTA=500            // per-key RPM limit for image keys
-ARK_VISION_KEY_QUOTA=30000  // per-key RPM limit for vision keys
+ARK_API_KEY=key1               // single key, used for both image and vision
+ARK_KEY_QUOTA=500              // per-key RPM limit for image keys
+ARK_VISION_KEY_QUOTA=30000    // per-key RPM limit for vision keys
 ```
 
 ## Environment Variables
@@ -86,11 +85,9 @@ JWT_SECRET=                # 32-byte hex or base64 for jose
 CLAWPLAY_SECRET_KEY=       # 32-byte hex for AES-256-GCM
 UPSTASH_REDIS_REST_URL=    # Upstash Redis REST URL
 UPSTASH_REDIS_REST_TOKEN=  # Upstash Redis REST Token
-ARK_API_KEY=               # Fallback Ark key for images (if ARK_IMAGE_KEYS not set)
-ARK_IMAGE_KEYS=            # Comma-separated Ark image keys (takes precedence over ARK_API_KEY)
-ARK_VISION_KEYS=           # Comma-separated Ark vision keys
-ARK_KEY_QUOTA=500          # Per-key RPM limit for image keys
-ARK_VISION_KEY_QUOTA=30000 # Per-key RPM limit for vision keys
+ARK_API_KEY=               # Ark API key (used for image, vision, LLM)
+ARK_KEY_QUOTA=500         # Per-key RPM limit for image keys
+ARK_VISION_KEY_QUOTA=30000# Per-key RPM limit for vision keys
 GEMINI_API_KEY=            # Google Gemini API Key (optional, multi-provider fallback)
 ```
 
@@ -216,7 +213,7 @@ All abilities route through a provider abstraction layer in `web/lib/providers/`
 - **Relay is mandatory for quota**: Direct `ARK_API_KEY` in CLI env bypasses relay and quota; this is the intended Pro mode, not a bug
 - **Provider 429 = skip quota deduction**: When Ark/Gemini rate-limits, return error without deducting quota to avoid double-penalty; log the skip
 - **Base64 memory pressure**: Gemini returns inline base64; large concurrent requests strain Node memory. Ark returns URLs → CLI downloads → less memory pressure
-- **Key Pool vs single key**: `ARK_IMAGE_KEYS` takes precedence over `ARK_API_KEY` for image; `ARK_VISION_KEYS` is separate pool; both use same `ARK_KEY_QUOTA` / `ARK_VISION_KEY_QUOTA` for per-key limits
+- **Key Pool**: `ARK_API_KEY` is used for both image and vision pools; each pool has its own per-key quota (`ARK_KEY_QUOTA` / `ARK_VISION_KEY_QUOTA`)
 
 ### Database & Quota
 - **Redis optional**: Without Upstash, quota falls back to DB (slower, no atomic increment); log a warning when falling back
@@ -235,3 +232,28 @@ All abilities route through a provider abstraction layer in `web/lib/providers/`
 - **E2E tests**: Run against live dev server (`localhost:3000`); use `e2e/helpers/auth.ts` for `loginAs` + `registerUser` helpers
 - **CLI unit tests**: Pure bash, zero external dependencies; `curl` is mocked via function override in isolated subprocesses. Run with `bash cli/tests/run-all.sh` or via `make test`
 - **`make test`** runs both web unit tests (`cd web && npm test`) and CLI bash tests in sequence
+
+### Git Workflow & PR Process
+
+**Branch model**: `dev` 是开发分支，`main` 是生产分支。所有功能/修复都从 `dev` 开发，完成后提交 PR 合并到 `main`。
+
+**提交流程（方式 A — 推荐）**：
+```
+1. 在 dev 分支开发完毕，确保所有测试通过
+2. git push origin dev
+3. 在 GitHub 创建 PR: dev → main
+4. 仓库设置中启用 "Allow squash merging"（所有 commits 折叠成 1 个）
+5. 点击 "Squash and merge" 合并到 main
+6. 合并后本地同步 dev：
+   git checkout dev
+   git fetch origin
+   git merge origin/main   # 把 main 的新内容合入 dev
+   git push origin dev     # dev 和 main 保持同步
+```
+
+**为什么用 Squash**：dev 分支累积了大量历史 commits，直接 merge 到 main 会把这些全部带进 PR 记录。Squash 把 dev 上的所有 commits 折叠成 1 个，main 历史干净。
+
+**不要做的事**：
+- 不要直接 push 到 main
+- 不要在 main 上开发新功能
+- merge PR 时不要选 "Create a merge commit"（会产生大量历史噪音）

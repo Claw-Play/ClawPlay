@@ -1,14 +1,29 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import { useT } from "@/lib/i18n/context";
+import { useAdminUser } from "@/lib/context/AdminUserContext";
+
+type RoleValue = "user" | "reviewer" | "admin";
 
 interface UserRecord {
   userId: number;
   name: string;
+  role: RoleValue;
   totalEvents: number;
   totalQuotaUsed: number;
   lastActive: number;
   topAbilities: { ability: string; count: number }[];
+}
+
+// Raw shape returned by the API (fields may be undefined)
+interface ApiUserRecord {
+  userId: number;
+  name: string;
+  role?: string;
+  totalEvents: number;
+  totalQuotaUsed: number;
+  lastActive: number;
+  topAbilities?: { ability: string; count: number }[];
 }
 
 function formatTs(ts: number): string {
@@ -36,6 +51,7 @@ const ABILITY_COLORS: Record<string, string> = {
 
 export default function UsersClient() {
   const t = useT("admin");
+  const { currentUserId } = useAdminUser();
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -44,6 +60,10 @@ export default function UsersClient() {
   const [sort, setSort] = useState<"events" | "quota_used">("quota_used");
   const [offset, setOffset] = useState(0);
   const limit = 20;
+
+  const [pendingRole, setPendingRole] = useState<Record<number, RoleValue>>({});
+  const [roleLoading, setRoleLoading] = useState<Record<number, boolean>>({});
+  const [roleError, setRoleError] = useState<string | null>(null);
 
   const fetchUsers = useCallback(() => {
     setLoading(true);
@@ -58,7 +78,17 @@ export default function UsersClient() {
       .then((r) => r.json())
       .then((d) => {
         if (d.error) { setError(d.error); return; }
-        setUsers(d.users ?? []);
+        // Merge role from API (analytics now returns role via JOIN)
+        const fetchedUsers: UserRecord[] = (d.users ?? []).map((u: ApiUserRecord) => ({
+          userId: u.userId,
+          name: u.name,
+          role: (u.role as RoleValue) ?? "user",
+          totalEvents: u.totalEvents,
+          totalQuotaUsed: u.totalQuotaUsed,
+          lastActive: u.lastActive,
+          topAbilities: u.topAbilities ?? [],
+        }));
+        setUsers(fetchedUsers);
         setTotal(d.pagination?.total ?? 0);
       })
       .catch(() => setError("Failed to load user data."))
@@ -67,8 +97,43 @@ export default function UsersClient() {
 
   useEffect(() => { fetchUsers(); }, [fetchUsers]);
 
+  const handleRoleChange = async (userId: number, newRole: RoleValue) => {
+    setPendingRole((prev) => ({ ...prev, [userId]: newRole }));
+    setRoleLoading((prev) => ({ ...prev, [userId]: true }));
+    setRoleError(null);
+
+    try {
+      const res = await fetch(`/api/admin/users/${userId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role: newRole }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setPendingRole((prev) => { const next = { ...prev }; delete next[userId]; return next; });
+        setRoleError(data.error ?? t("role_update_err"));
+        return;
+      }
+
+      // Update role directly in users state
+      setUsers((prev) =>
+        prev.map((u) => u.userId === userId ? { ...u, role: newRole } : u)
+      );
+      setPendingRole((prev) => { const next = { ...prev }; delete next[userId]; return next; });
+    } catch {
+      setPendingRole((prev) => { const next = { ...prev }; delete next[userId]; return next; });
+      setRoleError(t("role_update_err"));
+    } finally {
+      setRoleLoading((prev) => ({ ...prev, [userId]: false }));
+    }
+  };
+
   const totalPages = Math.ceil(total / limit);
   const currentPage = Math.floor(offset / limit) + 1;
+
+  const getDisplayRole = (u: UserRecord): RoleValue =>
+    pendingRole[u.userId] ?? u.role;
 
   return (
     <div className="space-y-4">
@@ -114,6 +179,13 @@ export default function UsersClient() {
         <span className="text-sm text-[#a89070] font-body ml-auto">{total} users</span>
       </div>
 
+      {/* Role error toast */}
+      {roleError && (
+        <div className="px-4 py-3 rounded-2xl bg-red-50 border border-red-200 text-red-600 text-sm font-body">
+          {roleError}
+        </div>
+      )}
+
       {/* Table */}
       <div className="bg-white rounded-[32px] shadow-[0_8px_24px_rgba(86,67,55,0.06)] overflow-hidden">
         {loading ? (
@@ -129,6 +201,7 @@ export default function UsersClient() {
                 <tr className="border-b border-[#e8dfc8] text-left">
                   <th className="px-4 py-3 text-xs text-[#a89070] font-semibold">#</th>
                   <th className="px-4 py-3 text-xs text-[#a89070] font-semibold">User</th>
+                  <th className="px-4 py-3 text-xs text-[#a89070] font-semibold">{t("role")}</th>
                   <th className="px-4 py-3 text-xs text-[#a89070] font-semibold">Events</th>
                   <th className="px-4 py-3 text-xs text-[#a89070] font-semibold">Token Used</th>
                   <th className="px-4 py-3 text-xs text-[#a89070] font-semibold">Last Active</th>
@@ -136,53 +209,87 @@ export default function UsersClient() {
                 </tr>
               </thead>
               <tbody>
-                {users.map((u, i) => (
-                  <tr key={u.userId} className="border-b border-[#f0e8d0] hover:bg-[#faf5e8] transition-colors">
-                    <td className="px-4 py-3 text-[#a89070] font-mono-custom text-xs">
-                      {(offset + i + 1).toString().padStart(3, "0")}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#a23f00] to-[#fa7025] flex items-center justify-center text-white font-bold text-xs font-body flex-shrink-0">
-                          {(u.name || `U${u.userId}`).charAt(0).toUpperCase()}
+                {users.map((u, i) => {
+                  const displayRole = getDisplayRole(u);
+                  return (
+                    <tr key={u.userId} className="border-b border-[#f0e8d0] hover:bg-[#faf5e8] transition-colors">
+                      <td className="px-4 py-3 text-[#a89070] font-mono-custom text-xs">
+                        {(offset + i + 1).toString().padStart(3, "0")}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#a23f00] to-[#fa7025] flex items-center justify-center text-white font-bold text-xs font-body flex-shrink-0">
+                            {(u.name || `U${u.userId}`).charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold text-[#564337] font-body">{u.name || `User ${u.userId}`}</p>
+                            <p className="text-xs text-[#a89070] font-body">{u.userId}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-sm font-semibold text-[#564337] font-body">{u.name || `User ${u.userId}`}</p>
-                          <p className="text-xs text-[#a89070] font-body">{u.userId}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-[#564337] font-semibold">
-                      {u.totalEvents.toLocaleString()}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-[#564337] font-semibold">
-                      {u.totalQuotaUsed.toLocaleString()}
-                    </td>
-                    <td className="px-4 py-3 text-xs text-[#a89070] font-body whitespace-nowrap">
-                      {formatTs(u.lastActive)}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex flex-wrap gap-1">
-                        {u.topAbilities.length === 0 ? (
-                          <span className="text-xs text-[#a89070]">—</span>
+                      </td>
+                      <td className="px-4 py-3">
+                        {currentUserId === u.userId ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold bg-[#ede9cf] text-[#a89070]">
+                            {t(`role_${displayRole}`)} {t("you_suffix")}
+                          </span>
                         ) : (
-                          u.topAbilities.map((a) => (
-                            <span
-                              key={a.ability}
-                              className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold"
-                              style={{
-                                backgroundColor: (ABILITY_COLORS[a.ability] ?? "#a89070") + "20",
-                                color: ABILITY_COLORS[a.ability] ?? "#a89070",
-                              }}
+                          <div className="relative inline-flex items-center">
+                            <select
+                              value={displayRole}
+                              disabled={!!roleLoading[u.userId]}
+                              onChange={(e) => handleRoleChange(u.userId, e.target.value as RoleValue)}
+                              className={`text-xs rounded-full px-2 pr-5 py-1 font-semibold border-0 cursor-pointer transition-all appearance-none ${
+                                roleLoading[u.userId] ? "opacity-50 cursor-wait" : "hover:opacity-80"
+                              } ${
+                                displayRole === "admin"
+                                  ? "bg-[#a23f0015] text-[#a23f00]"
+                                  : displayRole === "reviewer"
+                                  ? "bg-[#58633015] text-[#586330]"
+                                  : "bg-[#a8907020] text-[#a89070]"
+                              }`}
                             >
-                              {formatAbility(a.ability)} {a.count}
+                              <option value="user">{t("role_user")}</option>
+                              <option value="reviewer">{t("role_reviewer")}</option>
+                              <option value="admin">{t("role_admin")}</option>
+                            </select>
+                            <span className="absolute right-1.5 pointer-events-none text-current opacity-60">
+                              ▾
                             </span>
-                          ))
+                          </div>
                         )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-[#564337] font-semibold">
+                        {u.totalEvents.toLocaleString()}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-[#564337] font-semibold">
+                        {u.totalQuotaUsed.toLocaleString()}
+                      </td>
+                      <td className="px-4 py-3 text-xs text-[#a89070] font-body whitespace-nowrap">
+                        {formatTs(u.lastActive)}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-wrap gap-1">
+                          {u.topAbilities.length === 0 ? (
+                            <span className="text-xs text-[#a89070]">—</span>
+                          ) : (
+                            u.topAbilities.map((a) => (
+                              <span
+                                key={a.ability}
+                                className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold"
+                                style={{
+                                  backgroundColor: (ABILITY_COLORS[a.ability] ?? "#a89070") + "20",
+                                  color: ABILITY_COLORS[a.ability] ?? "#a89070",
+                                }}
+                              >
+                                {formatAbility(a.ability)} {a.count}
+                              </span>
+                            ))
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

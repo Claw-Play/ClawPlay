@@ -61,7 +61,7 @@ export function runLint(content, file) {
   const allIssues = [];
 
   allIssues.push(...checkFrontmatter(content, fm, clawplayDetected));
-  allIssues.push(...checkPhases(content));
+  allIssues.push(...checkPhases(content, file));
   allIssues.push(...checkBash(content));
   allIssues.push(...checkPrompts(content));
 

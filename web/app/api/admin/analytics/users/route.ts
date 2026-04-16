@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
 
     // User behavior data
     const usersResult = raw(
-      `SELECT u.id as user_id, u.name,
+      `SELECT u.id as user_id, u.name, u.role,
               COUNT(el.id) as total_events,
               COALESCE(SUM(CAST(json_extract(el.metadata, '$.totalTokens') AS INTEGER)), 0) as total_quota,
               MAX(el.created_at) as last_active
@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
        LIMIT ? OFFSET ?`,
       [since, limit, offset]
     ) as {
-      user_id: number; name: string;
+      user_id: number; name: string; role: "user" | "admin" | "reviewer";
       total_events: number; total_quota: number;
       last_active: number | null;
     }[];
@@ -66,6 +66,7 @@ export async function GET(request: NextRequest) {
     const usersData = usersResult.map((r) => ({
       userId: r.user_id,
       name: r.name || `User ${r.user_id}`,
+      role: r.role,
       totalEvents: Number(r.total_events ?? 0),
       totalQuotaUsed: Number(r.total_quota ?? 0),
       lastActive: typeof r.last_active === "object" && r.last_active !== null

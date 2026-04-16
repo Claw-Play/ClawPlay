@@ -1,6 +1,20 @@
 import { render, screen, fireEvent, act } from "@testing-library/react";
 import { SkillsClient } from "../../../app/(app)/skills/SkillsClient";
 import { TestWrapper } from "../../../test-utils";
+import zh from "../../../messages/zh.json";
+
+// Import i18n strings directly from the message file to avoid test/i18n drift
+const T = zh.skills;
+
+// Category emoji matches SkillsClient.tsx categories
+const CAT_EMOJI = {
+  art: "💝",     // category_art → iconEmoji must be "💝" to match
+  write: "✨",   // category_write
+  game: "🎭",   // category_game
+  tool: "🔮",   // category_tool
+  health: "🎉", // category_health
+  extra: "🎮",  // category_extra
+};
 
 const FAKE_SKILLS = [
   {
@@ -8,7 +22,7 @@ const FAKE_SKILLS = [
     name: "Avatar Creator",
     summary: "Make beautiful avatars in seconds",
     authorName: "Alice",
-    iconEmoji: "🎨",
+    iconEmoji: CAT_EMOJI.art,  // matches category_art
     statsStars: 300,
     statsRatingsCount: 100,
     createdAt: new Date("2025-01-01"),
@@ -18,7 +32,7 @@ const FAKE_SKILLS = [
     name: "Music Mixer",
     summary: "Mix audio tracks with AI",
     authorName: "Bob",
-    iconEmoji: "🎮",
+    iconEmoji: CAT_EMOJI.extra,  // matches category_extra
     statsStars: 100,
     statsRatingsCount: 100,
     createdAt: new Date("2025-02-01"),
@@ -28,7 +42,7 @@ const FAKE_SKILLS = [
     name: "Photo Filter",
     summary: "Apply artistic filters to photos",
     authorName: null,
-    iconEmoji: "🎨",
+    iconEmoji: CAT_EMOJI.art,  // matches category_art
     statsStars: 0,
     statsRatingsCount: 0,
     createdAt: null,
@@ -46,11 +60,11 @@ describe("SkillsClient — category filter", () => {
     expect(skillHeadings().length).toBe(3);
   });
 
-  it("renders only matching emoji skills when '艺术' filter is active", () => {
+  it("renders only matching emoji skills when 'category_art' filter is active", () => {
     render(<SkillsClient initialSkills={FAKE_SKILLS} />, { wrapper: TestWrapper });
-    const artBtn = screen.getByRole("button", { name: /艺术/ });
+    const artBtn = screen.getByRole("button", { name: new RegExp(T.category_art) });
     act(() => { artBtn.click(); });
-    // 🎨 matches avatar-creator + photo-filter (2 cards)
+    // CAT_EMOJI.art matches avatar-creator + photo-filter (2 cards)
     expect(skillHeadings().length).toBe(2);
     expect(screen.getByRole("heading", { name: "Avatar Creator" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Photo Filter" })).toBeInTheDocument();
@@ -58,25 +72,25 @@ describe("SkillsClient — category filter", () => {
 
   it("clicking '全部' button shows all skills", () => {
     render(<SkillsClient initialSkills={FAKE_SKILLS} />, { wrapper: TestWrapper });
-    const artBtn = screen.getByRole("button", { name: /艺术/ });
+    const artBtn = screen.getByRole("button", { name: new RegExp(T.category_art) });
     act(() => { artBtn.click(); });
     expect(skillHeadings().length).toBe(2);
 
-    const allBtn = screen.getByRole("button", { name: /全部/ });
+    const allBtn = screen.getByRole("button", { name: new RegExp(T.category_all) });
     act(() => { allBtn.click(); });
     expect(skillHeadings().length).toBe(3);
   });
 
   it("active '全部' button has gradient class", () => {
     render(<SkillsClient initialSkills={FAKE_SKILLS} />, { wrapper: TestWrapper });
-    const allBtn = screen.getByRole("button", { name: /全部/ });
+    const allBtn = screen.getByRole("button", { name: new RegExp(T.category_all) });
     expect(allBtn.className).toContain("from-[#a23f00]");
     expect(allBtn.className).toContain("to-[#fa7025]");
   });
 
   it("active category button has gradient class", () => {
     render(<SkillsClient initialSkills={FAKE_SKILLS} />, { wrapper: TestWrapper });
-    const artBtn = screen.getByRole("button", { name: /艺术/ });
+    const artBtn = screen.getByRole("button", { name: new RegExp(T.category_art) });
     act(() => { artBtn.click(); });
     expect(artBtn.className).toContain("from-[#a23f00]");
   });
@@ -85,7 +99,7 @@ describe("SkillsClient — category filter", () => {
 describe("SkillsClient — search", () => {
   it("filters by skill name (case-insensitive)", () => {
     render(<SkillsClient initialSkills={FAKE_SKILLS} />, { wrapper: TestWrapper });
-    const searchInput = screen.getByPlaceholderText(/搜索/);
+    const searchInput = screen.getByPlaceholderText(new RegExp(T.search_placeholder.split("").slice(0, 4).join("")));
     fireEvent.change(searchInput, { target: { value: "avatar" } });
     expect(skillHeadings().length).toBe(1);
     expect(screen.getByRole("heading", { name: "Avatar Creator" })).toBeInTheDocument();
@@ -93,7 +107,7 @@ describe("SkillsClient — search", () => {
 
   it("filters by summary text", () => {
     render(<SkillsClient initialSkills={FAKE_SKILLS} />, { wrapper: TestWrapper });
-    const searchInput = screen.getByPlaceholderText(/搜索/);
+    const searchInput = screen.getByPlaceholderText(new RegExp(T.search_placeholder.split("").slice(0, 4).join("")));
     fireEvent.change(searchInput, { target: { value: "audio" } });
     expect(skillHeadings().length).toBe(1);
     expect(screen.getByRole("heading", { name: "Music Mixer" })).toBeInTheDocument();
@@ -101,7 +115,7 @@ describe("SkillsClient — search", () => {
 
   it("filters by authorName", () => {
     render(<SkillsClient initialSkills={FAKE_SKILLS} />, { wrapper: TestWrapper });
-    const searchInput = screen.getByPlaceholderText(/搜索/);
+    const searchInput = screen.getByPlaceholderText(new RegExp(T.search_placeholder.split("").slice(0, 4).join("")));
     fireEvent.change(searchInput, { target: { value: "Alice" } });
     expect(skillHeadings().length).toBe(1);
     expect(screen.getByRole("heading", { name: "Avatar Creator" })).toBeInTheDocument();
@@ -109,7 +123,7 @@ describe("SkillsClient — search", () => {
 
   it("shows all skills when search is cleared", () => {
     render(<SkillsClient initialSkills={FAKE_SKILLS} />, { wrapper: TestWrapper });
-    const searchInput = screen.getByPlaceholderText(/搜索/);
+    const searchInput = screen.getByPlaceholderText(new RegExp(T.search_placeholder.split("").slice(0, 4).join("")));
     fireEvent.change(searchInput, { target: { value: "avatar" } });
     expect(skillHeadings().length).toBe(1);
     fireEvent.change(searchInput, { target: { value: "" } });
@@ -118,9 +132,9 @@ describe("SkillsClient — search", () => {
 
   it("category filter and search work together", () => {
     render(<SkillsClient initialSkills={FAKE_SKILLS} />, { wrapper: TestWrapper });
-    const artBtn = screen.getByRole("button", { name: /艺术/ });
+    const artBtn = screen.getByRole("button", { name: new RegExp(T.category_art) });
     act(() => { artBtn.click(); });
-    const searchInput = screen.getByPlaceholderText(/搜索/);
+    const searchInput = screen.getByPlaceholderText(new RegExp(T.search_placeholder.split("").slice(0, 4).join("")));
     fireEvent.change(searchInput, { target: { value: "photo" } });
     expect(skillHeadings().length).toBe(1);
     expect(screen.getByRole("heading", { name: "Photo Filter" })).toBeInTheDocument();
@@ -130,23 +144,23 @@ describe("SkillsClient — search", () => {
 describe("SkillsClient — empty state", () => {
   it("shows empty state when no skills match search", () => {
     render(<SkillsClient initialSkills={FAKE_SKILLS} />, { wrapper: TestWrapper });
-    const searchInput = screen.getByPlaceholderText(/搜索/);
+    const searchInput = screen.getByPlaceholderText(new RegExp(T.search_placeholder.split("").slice(0, 4).join("")));
     fireEvent.change(searchInput, { target: { value: "xyzabc123" } });
-    expect(screen.getByText(/未找到「xyzabc123」/)).toBeInTheDocument();
+    expect(screen.getByText(new RegExp(`未找到「xyzabc123」`))).toBeInTheDocument();
   });
 
   it("shows search term in empty state message", () => {
     render(<SkillsClient initialSkills={FAKE_SKILLS} />, { wrapper: TestWrapper });
-    const searchInput = screen.getByPlaceholderText(/搜索/);
+    const searchInput = screen.getByPlaceholderText(new RegExp(T.search_placeholder.split("").slice(0, 4).join("")));
     fireEvent.change(searchInput, { target: { value: "nonexistent" } });
-    expect(screen.getByText(/未找到「nonexistent」/)).toBeInTheDocument();
+    expect(screen.getByText(new RegExp(`未找到「nonexistent」`))).toBeInTheDocument();
   });
 
   it("'清除搜索' button clears search and shows all skills", () => {
     render(<SkillsClient initialSkills={FAKE_SKILLS} />, { wrapper: TestWrapper });
-    const searchInput = screen.getByPlaceholderText(/搜索/);
+    const searchInput = screen.getByPlaceholderText(new RegExp(T.search_placeholder.split("").slice(0, 4).join("")));
     fireEvent.change(searchInput, { target: { value: "xyzabc123" } });
-    const clearBtn = screen.getByRole("button", { name: /清除搜索/ });
+    const clearBtn = screen.getByRole("button", { name: new RegExp(T.clear_search) });
     act(() => { clearBtn.click(); });
     expect(skillHeadings().length).toBe(3);
     expect(searchInput).toHaveValue("");
@@ -178,9 +192,9 @@ describe("SkillsClient — card rendering", () => {
     expect(screen.getByRole("heading", { name: "Null Emoji Skill" })).toBeInTheDocument();
   });
 
-  it("skill card shows '匿名' when authorName is null", () => {
+  it("skill card shows 'anonymous' when authorName is null", () => {
     render(<SkillsClient initialSkills={FAKE_SKILLS} />, { wrapper: TestWrapper });
-    expect(screen.getByText("匿名")).toBeInTheDocument();
+    expect(screen.getByText(new RegExp(zh.common.anonymous))).toBeInTheDocument();
   });
 
   it("skill cards display numeric star ratings", () => {

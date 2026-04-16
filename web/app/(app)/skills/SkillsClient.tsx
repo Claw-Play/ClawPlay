@@ -44,11 +44,12 @@ export function SkillsClient({ initialSkills }: SkillsClientProps) {
 
   const categories = [
     { label: t("category_all"), emoji: "✨", filter: "" },
-    { label: t("category_art"), emoji: "🎨", filter: "🎨" },
-    { label: t("category_write"), emoji: "📝", filter: "✍️" },
-    { label: t("category_game"), emoji: "🎮", filter: "🎮" },
-    { label: t("category_tool"), emoji: "🛠️", filter: "🛠️" },
-    { label: t("category_health"), emoji: "🌿", filter: "🌿" },
+    { label: t("category_art"), emoji: "💝", filter: "💝" },
+    { label: t("category_write"), emoji: "✨", filter: "✨" },
+    { label: t("category_game"), emoji: "🎭", filter: "🎭" },
+    { label: t("category_tool"), emoji: "🔮", filter: "🔮" },
+    { label: t("category_health"), emoji: "🎉", filter: "🎉" },
+    { label: t("category_extra"), emoji: "🎮", filter: "🎮" },
   ];
 
   const filtered = initialSkills

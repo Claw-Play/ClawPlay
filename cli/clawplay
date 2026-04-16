@@ -216,9 +216,9 @@ cmd_setup() {
   local dashboard_url="${web_url}/dashboard"
 
   echo ""
-  echo "  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo " ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   echo "   $(_msg title)"
-  echo "  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo " ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   echo ""
 
   # --open-browser: auto-open and exit
@@ -399,9 +399,10 @@ cmd_setup() {
   local export_line="export CLAWPLAY_TOKEN='${token}'"
 
   if [[ -n "$shell_profile" ]]; then
-    if grep -q "CLAWPLAY_TOKEN" "$shell_profile" 2>/dev/null; then
-      echo " $(_msg already) ${shell_profile}"
-      echo " $(_msg skip_save)"
+    if grep -q "^export CLAWPLAY_TOKEN=" "$shell_profile" 2>/dev/null; then
+      # Update existing token
+      awk -v line="$export_line" '{ if (/^export CLAWPLAY_TOKEN=/) print line; else print }' "$shell_profile" > "${shell_profile}.tmp" && mv "${shell_profile}.tmp" "$shell_profile"
+      echo " $(_msg saved) ${shell_profile}"
     else
       echo "$export_line" >> "$shell_profile"
       echo " $(_msg saved) ${shell_profile}"
@@ -415,15 +416,18 @@ cmd_setup() {
 
   # Show success + quota
   echo ""
-  echo "  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo " ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   echo "   $(_msg success)"
-  echo "  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo " ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   echo ""
   echo "  User:  ${user_name}  (${user_role})"
   echo "  Quota: ${used}/${limit}  |  $( _msg remaining): ${remaining}"
   echo ""
   echo "  Run 'clawplay whoami' to verify"
   echo ""
+
+  # Export for current session (safety net — zshrc needs re-source)
+  export CLAWPLAY_TOKEN="$token"
 }
 
 # Route subcommands

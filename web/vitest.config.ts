@@ -14,7 +14,7 @@ export default defineConfig({
       "**/dist/**",
       "**/coverage/**",
       "**/*.e2e.test.ts",
-      // Component tests run in jsdom environment (vitest.component.config.ts)
+      // Component tests (.tsx) require jsdom environment — run via vitest.component.config.ts only
       "lib/__tests__/components/**",
     ],
     coverage: {
@@ -28,6 +28,17 @@ export default defineConfig({
       },
       include: ["lib/**/*.ts", "app/api/**/*.ts"],
       exclude: [
+        // OAuth init routes are excluded because they call lib/oauth helpers (oauth.ts at 0% anyway)
+        // OAuth callback routes require real OAuth flow — excluded
+        "app/api/auth/discord/**",
+        "app/api/auth/github/**",
+        "app/api/auth/google/**",
+        "app/api/auth/x/**",
+        "app/api/auth/wechat/callback/**",
+        // Cron 任务通过外部 cron 调用，非用户逻辑
+        "app/api/cron/**",
+        // 未使用的占位路由
+        "app/api/auth/wechat/route.ts",
         // Provider adapters (Ark/Gemini) require real API keys — tested via E2E
         "lib/providers/**",
         // Ability relay routes call external provider APIs directly — excluded except /check

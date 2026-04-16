@@ -24,8 +24,8 @@ export default async function SkillDetailPage({
   params: { slug: string };
 }) {
   const auth = await getAuthFromCookies();
-  const t = getT("skill_detail");
-  const tCommon = getT("common");
+  const t = await getT("skill_detail");
+  const tCommon = await getT("common");
 
   const skill = await db.query.skills.findFirst({
     where: and(eq(skills.slug, params.slug), isNull(skills.deletedAt)),
