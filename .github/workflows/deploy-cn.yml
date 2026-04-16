@@ -10,6 +10,7 @@ jobs:
 
     env:
       DEPLOY_REGION: CN
+      DEPLOY_PATH: /var/www/clawplay
       CLAWPLAY_API_URL: https://clawplay.com.cn
 
     steps:
