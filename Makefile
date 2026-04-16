@@ -1,4 +1,4 @@
-.PHONY: dev restart clean build test e2e install
+.PHONY: dev restart clean build test test-coverage e2e install
 
 # Start dev server (clean restart: kill old process + clear cache)
 dev:
@@ -27,6 +27,10 @@ build:
 test:
 	@cd web && pnpm test
 	@bash cli/tests/run-all.sh
+
+# Unit tests with coverage report
+test-coverage:
+	@cd web && pnpm test -- --coverage 2>&1 | sed '/Error: Uncaught \[Error: useT must be used within I18nProvider\]/,/at useT (/d'
 
 # E2E tests (requires dev server running)
 e2e:

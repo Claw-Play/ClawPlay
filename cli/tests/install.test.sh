@@ -165,6 +165,95 @@ assert_eq   "exit 0 on success" "0" "$RI_EXIT"
 
 rm -rf "$MOCK_ZIP_DIR" "$INSTALL_DIR"
 
+# ── Test: install report on success ────────────────────────────────────────────
+
+echo ""
+echo "▶ install report to server"
+echo ""
+
+INSTALL_DIR2=$(mktemp -d)
+MOCK_ZIP_DIR2=$(mktemp -d)
+MOCK_ZIP_FILE2="${MOCK_ZIP_DIR2}/test.zip"
+
+tmp_src2=$(mktemp -d)
+echo "# SKILL" > "${tmp_src2}/SKILL.md"
+echo '{"slug":"rpt-skill","version":"2.0.0","source":"clawplay"}' > "${tmp_src2}/origin.json"
+(cd "$tmp_src2" && zip -q "$MOCK_ZIP_FILE2" SKILL.md origin.json)
+rm -rf "$tmp_src2"
+
+INSTALL_REPORT_FILE=$(mktemp)
+export INSTALL_REPORT_FILE
+
+INSTALL_TOKEN="test-token-abc123"
+export CLAWPLAY_TOKEN="$INSTALL_TOKEN"
+
+tmp_script2=$(mktemp /tmp/clawplay-test-XXXXXX.sh)
+cat > "$tmp_script2" << 'SCRIPT'
+#!/usr/bin/env bash
+set -uo pipefail
+CLI_DIR="${CLI_DIR}"
+MOCK_ZIP="${MOCK_ZIP}"
+INSTALL_DIR="${INSTALL_DIR}"
+INSTALL_TOKEN="${INSTALL_TOKEN}"
+INSTALL_REPORT_FILE="${INSTALL_REPORT_FILE}"
+
+info()  { echo "[info] $*" >&2; }
+warn()  { echo "[warn] $*" >&2; }
+error() { echo "[error] $*" >&2; exit 1; }
+
+# Mock curl: capture download URL for version test, capture install report + auth header
+curl() {
+  local args=("$@")
+  local capturing_auth=false
+  local auth_header=""
+  local found_install=false
+  local install_url=""
+  for ((i=0; i<${#args[@]}; i++)); do
+    if [[ "$capturing_auth" == "true" ]]; then
+      auth_header="${args[$i]}"
+      capturing_auth=false
+    fi
+    [[ "${args[$i]}" == "-H" ]] && capturing_auth=true
+    # Mark install URL but keep processing to find auth header
+    if [[ "${args[$i]}" == *"/api/skills/"*"/install"* ]]; then
+      found_install=true
+      install_url="${args[$i]}"
+    fi
+  done
+  if [[ "$found_install" == "true" ]]; then
+    echo "INSTALL_REPORT:$install_url" >> "$INSTALL_REPORT_FILE"
+    [[ -n "$auth_header" ]] && echo "INSTALL_AUTH:$auth_header" >> "$INSTALL_REPORT_FILE"
+    echo "200"
+    return
+  fi
+  local outfile=""
+  for ((i=0; i<${#args[@]}; i++)); do
+    [[ "${args[$i]}" == "-o" ]] && outfile="${args[$(( i+1 ))]}"
+  done
+  if [[ -n "$outfile" && -f "$MOCK_ZIP" ]]; then
+    cp "$MOCK_ZIP" "$outfile"
+  elif [[ -n "$outfile" ]]; then
+    touch "$outfile"
+  fi
+  echo "200"
+}
+
+source "${CLI_DIR}/lib/api.sh"
+source "${CLI_DIR}/lib/install.sh"
+cmd_install "rpt-skill" >/dev/null 2>&1 || true
+SCRIPT
+
+sed -i '' "s|\${CLI_DIR}|${CLI_DIR}|g; s|\${MOCK_ZIP}|${MOCK_ZIP_FILE2}|g; s|\${INSTALL_DIR}|${INSTALL_DIR2}|g; s|\${INSTALL_TOKEN}|${INSTALL_TOKEN}|g; s|\${INSTALL_REPORT_FILE}|${INSTALL_REPORT_FILE}|g" "$tmp_script2"
+bash "$tmp_script2" 2>/dev/null || true
+rm -f "$tmp_script2"
+
+captured=$(cat "$INSTALL_REPORT_FILE" 2>/dev/null || true)
+assert_contains "install report POST to /api/skills/rpt-skill/install" "/api/skills/rpt-skill/install" "$captured"
+assert_contains "install report includes Bearer token" "Authorization: Bearer ${INSTALL_TOKEN}" "$captured"
+
+rm -f "$INSTALL_REPORT_FILE" "$MOCK_ZIP_FILE2" "$MOCK_ZIP_DIR2"
+unset CLAWPLAY_TOKEN INSTALL_TOKEN
+
 # ── Test: --version flag ──────────────────────────────────────────────────────
 
 echo ""

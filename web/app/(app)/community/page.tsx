@@ -1,7 +1,7 @@
 import { getT } from "@/lib/i18n";
 
-export default function CommunityPage() {
-  const t = getT("community");
+export default async function CommunityPage() {
+  const t = await getT("community");
 
   return (
     <div className="min-h-[calc(100vh-73px)] flex items-center justify-center px-6">

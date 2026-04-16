@@ -4,7 +4,7 @@ import zhMessages from "./messages/zh.json";
 
 export function TestWrapper({ children }: { children: ReactNode }) {
   return (
-    <I18nProvider messages={zhMessages}>
+    <I18nProvider messages={zhMessages} locale="zh">
       {children}
     </I18nProvider>
   );

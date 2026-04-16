@@ -312,37 +312,38 @@ export async function resetKeyWindow(provider?: string): Promise<void> {
   }
 }
 
-/** Initialize keys from environment variables (comma-separated) on server start. */
+/** Initialize keys from environment variables on server start. */
 export async function initKeysFromEnv(): Promise<void> {
   const quota = parseInt(process.env.ARK_KEY_QUOTA ?? "500", 10);
   const visionQuota = parseInt(process.env.ARK_VISION_KEY_QUOTA ?? "30000", 10);
+  const arkKey = process.env.ARK_API_KEY;
+  if (!arkKey) return;
 
-  // ark_image keys
-  const imageKeys = process.env.ARK_IMAGE_KEYS?.split(",").map(k => k.trim()).filter(Boolean)
-    ?? (process.env.ARK_API_KEY ? [process.env.ARK_API_KEY] : []);
-
-  for (const key of imageKeys) {
-    try {
-      await addProviderKey("ark_image", key, quota);
-      console.log(`[key-pool] Initialized ark_image key from env`);
-    } catch (err: unknown) {
+  // ark_image
+  try {
+    await addProviderKey("ark_image", arkKey, quota);
+    console.log(`[key-pool] Initialized ark_image key from ARK_API_KEY`);
+  } catch (err: unknown) {
+    if ((err as NodeJS.ErrnoException)?.code === "DUPLICATE_KEY") {
       // Ignore duplicate hash errors (key already in DB)
-      if ((err as NodeJS.ErrnoException)?.code === "DUPLICATE_KEY") continue;
-      if (String(err).includes("Duplicate key hash")) continue;
-      console.error(`[key-pool] Failed to init ark_image key from env:`, err);
+    } else if (String(err).includes("Duplicate key hash")) {
+      // Already initialized
+    } else {
+      console.error(`[key-pool] Failed to init ark_image key:`, err);
     }
   }
 
-  // ark_vision keys
-  const visionKeys = process.env.ARK_VISION_KEYS?.split(",").map(k => k.trim()).filter(Boolean) ?? [];
-  for (const key of visionKeys) {
-    try {
-      await addProviderKey("ark_vision", key, visionQuota);
-      console.log(`[key-pool] Initialized ark_vision key from env`);
-    } catch (err: unknown) {
-      if ((err as NodeJS.ErrnoException)?.code === "DUPLICATE_KEY") continue;
-      if (String(err).includes("Duplicate key hash")) continue;
-      console.error(`[key-pool] Failed to init ark_vision key from env:`, err);
+  // ark_vision
+  try {
+    await addProviderKey("ark_vision", arkKey, visionQuota);
+    console.log(`[key-pool] Initialized ark_vision key from ARK_API_KEY`);
+  } catch (err: unknown) {
+    if ((err as NodeJS.ErrnoException)?.code === "DUPLICATE_KEY") {
+      // Ignore duplicate hash errors (key already in DB)
+    } else if (String(err).includes("Duplicate key hash")) {
+      // Already initialized
+    } else {
+      console.error(`[key-pool] Failed to init ark_vision key:`, err);
     }
   }
 }

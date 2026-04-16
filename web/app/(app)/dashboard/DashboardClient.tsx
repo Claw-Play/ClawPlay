@@ -22,15 +22,15 @@ interface UserInfo {
   createdAt: string | null;
 }
 
-function formatRelativeTime(date: Date): string {
+function formatRelativeTime(date: Date, t: ReturnType<typeof useT<"dashboard">>): string {
   const diff = Date.now() - date.getTime();
   const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "刚刚";
-  if (mins < 60) return `${mins} 分钟前`;
+  if (mins < 1) return t("just_now");
+  if (mins < 60) return t("minutes_ago", { n: mins });
   const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours} 小时前`;
+  if (hours < 24) return t("hours_ago", { n: hours });
   const days = Math.floor(hours / 24);
-  return `${days} 天前`;
+  return t("days_ago", { n: days });
 }
 
 interface DashboardClientProps {
@@ -233,7 +233,7 @@ export function DashboardClient({ user: initialUser, quota, token }: DashboardCl
   const progressColor =
     quotaPct > 80 ? "bg-[#DC2626]" : quotaPct > 50 ? "bg-[#fa7025]" : "bg-[#586330]";
 
-  const displayName = user.name || user.phone || user.email?.split("@")[0] || "用户";
+  const displayName = user.name || user.phone || user.email?.split("@")[0] || t("display_name_fallback");
   const joinedAt = user.createdAt
     ? new Date(user.createdAt).toLocaleDateString("zh-CN", {
         year: "numeric",
@@ -257,7 +257,8 @@ export function DashboardClient({ user: initialUser, quota, token }: DashboardCl
       {/* Cards Grid */}
       <div className="grid grid-cols-12 gap-8">
         {/* Left column */}
-        <div className="col-span-12 md:col-span-4">
+        <div className="col-span-12 md:col-span-4 flex flex-col gap-6">
+          {/* Profile card */}
           <div className="bg-white rounded-[32px] shadow-[0px_8px_24px_rgba(86,67,55,0.06)] p-8">
             {/* Header: avatar + name + edit */}
             <div className="flex items-center gap-4 mb-6">
@@ -299,6 +300,58 @@ export function DashboardClient({ user: initialUser, quota, token }: DashboardCl
               </div>
             </div>
           </div>
+
+          {/* Token card */}
+          <div className="bg-white rounded-[32px] shadow-[0px_8px_24px_rgba(86,67,55,0.06)] p-8 border border-[rgba(220,193,177,0.1)] relative overflow-hidden">
+            <div className="absolute bg-[rgba(250,112,37,0.1)] blur-[32px] right-[-40px] top-[-40px] w-[160px] h-[160px] rounded-full pointer-events-none" />
+            <h2 className="text-2xl font-extrabold font-heading text-[#1d1c0d] mb-6">{t("token_mgmt")}</h2>
+            {activeToken ? (
+              <div className="flex flex-col gap-4">
+                {/* Token display */}
+                <div className="bg-[#1d1c0d] rounded-[20px] p-4 flex items-center justify-between gap-3">
+                  <code className="text-sm font-mono-custom text-[#ffdbcd] truncate">
+                    {tokenValue
+                      ? `export CLAWPLAY_TOKEN=${tokenValue.length > 20 ? `${tokenValue.slice(0, 8)}...` : tokenValue}`
+                      : t("current_token")}
+                  </code>
+                  <button
+                    onClick={copyToken}
+                    className="flex-shrink-0 px-4 py-2 bg-gradient-to-r from-[#a23f00] to-[#fa7025] text-white text-sm font-semibold rounded-full font-heading hover:opacity-90 transition-opacity"
+                  >
+                    {copied ? t("copied") : t("copy_token")}
+                  </button>
+                </div>
+                {/* Footer */}
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-[#564337] font-body opacity-60">
+                    {t("generated_at")} {activeToken.createdAt ? formatRelativeTime(new Date(activeToken.createdAt), t) : "—"}
+                  </span>
+                  <button
+                    onClick={revokeToken}
+                    disabled={revoking}
+                    className="text-xs text-red-600 font-semibold hover:underline font-body"
+                  >
+                    {revoking ? t("revoking") : t("revoke")}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={generateToken}
+                disabled={generating}
+                className="w-full py-5 rounded-[32px] bg-gradient-to-r from-[#a23f00] to-[#fa7025] text-white text-lg font-semibold font-heading shadow-[0_10px_15px_-3px_rgba(162,63,0,0.2),0_4px_6px_-4px_rgba(162,63,0,0.2)] hover:opacity-90 transition-opacity flex items-center justify-center gap-3"
+              >
+                {generating ? (
+                  <><span className="animate-spin">⏳</span><span>{t("generating")}</span></>
+                ) : (
+                  <><span>✨</span><span>{t("generate_token")}</span></>
+                )}
+              </button>
+            )}
+            {!activeToken && (
+              <p className="text-xs text-[#564337] opacity-60 text-center mt-3 font-body">{t("token_valid_30d")}</p>
+            )}
+          </div>
         </div>
 
         {/* Right column */}
@@ -324,85 +377,13 @@ export function DashboardClient({ user: initialUser, quota, token }: DashboardCl
             <div className="bg-[#fefae0] rounded-[20px] p-4 flex items-center gap-3">
               <span className="text-xl">✨</span>
               <p className="text-sm text-[#564337] font-body">
-                {t("quota_status")} <strong className="text-[#586330]">{t("status_good")}</strong>，剩余 {quota.remaining} 单位，{t("reset_in")}
+                {t("quota_status")} <strong className="text-[#586330]">{t("status_good")}</strong>，{t("quota_remaining", { n: quota.remaining })}，{t("reset_in")}
               </p>
             </div>
           </div>
 
-          {/* Personal Usage Stats */}
+          {/* Usage Stats */}
           <UsageStatsCard />
-
-          {/* Token Card */}
-          <div className="bg-white rounded-[32px] shadow-[0px 8px 24px_rgba(86,67,55,0.06)] p-8 border border-[rgba(220,193,177,0.1)] relative overflow-hidden">
-            <div className="absolute bg-[rgba(250,112,37,0.1)] blur-[32px] right-[-40px] top-[-40px] w-[160px] h-[160px] rounded-full pointer-events-none" />
-            <h2 className="text-2xl font-extrabold font-heading text-[#1d1c0d] mb-6">{t("token_mgmt")}</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Token section */}
-              <div className="flex flex-col gap-4">
-                {activeToken ? (
-                  <div className="bg-[#f8f4db] border border-[rgba(220,193,177,0.2)] rounded-[32px] p-6">
-                    <p className="text-[10px] font-semibold text-[#897365] uppercase tracking-wider mb-3 font-body">{t("current_token")}</p>
-                    <div className="bg-[#1d1c0d] rounded-[20px] p-4 flex items-center justify-between gap-3 mb-4">
-                      <code className="text-sm font-mono-custom text-[#ffdbcd] truncate">
-                        {tokenValue
-                          ? `export CLAWPLAY_TOKEN=${tokenValue.length > 20 ? `${tokenValue.slice(0, 8)}...` : tokenValue}`
-                          : t("current_token")}
-                      </code>
-                      <button
-                        onClick={copyToken}
-                        className="flex-shrink-0 px-4 py-2 bg-gradient-to-r from-[#a23f00] to-[#fa7025] text-white text-sm font-semibold rounded-full font-heading hover:opacity-90 transition-opacity"
-                      >
-                        {copied ? t("copied") : t("copy_token")}
-                      </button>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-[#564337] font-body opacity-60">
-                        {t("generated_at")} {activeToken.createdAt ? formatRelativeTime(new Date(activeToken.createdAt)) : "—"}
-                      </span>
-                      <button
-                        onClick={revokeToken}
-                        disabled={revoking}
-                        className="text-xs text-red-600 font-semibold hover:underline font-body"
-                      >
-                        {revoking ? t("revoking") : t("revoke")}
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <button
-                    onClick={generateToken}
-                    disabled={generating}
-                    className="w-full py-5 rounded-[32px] bg-gradient-to-r from-[#a23f00] to-[#fa7025] text-white text-lg font-semibold font-heading shadow-[0_10px_15px_-3px_rgba(162,63,0,0.2),0_4px_6px_-4px_rgba(162,63,0,0.2)] hover:opacity-90 transition-opacity flex items-center justify-center gap-3"
-                  >
-                    {generating ? (
-                      <><span className="animate-spin">⏳</span><span>{t("generating")}</span></>
-                    ) : (
-                      <><span>✨</span><span>{t("generate_token")}</span></>
-                    )}
-                  </button>
-                )}
-                {!activeToken && (
-                  <p className="text-xs text-[#564337] opacity-60 text-center font-body">{t("token_valid_30d")}</p>
-                )}
-              </div>
-
-              {/* CLI Guide */}
-              <div className="bg-[#f8f4db] rounded-[32px] p-6 border border-[rgba(220,193,177,0.2)]">
-                <p className="text-[10px] font-semibold text-[#897365] uppercase tracking-wider mb-4 font-body">{t("quick_start")}</p>
-                <div className="space-y-2 font-mono-custom text-sm">
-                  <div className="bg-[#faf3d0] rounded-[16px] p-3 text-[#7a6a5a]">
-                    <span className="text-[#fa7025]">$ </span><span>npm install -g clawplay</span>
-                  </div>
-                  <div className="bg-[#faf3d0] rounded-[16px] p-3 text-[#7a6a5a]">
-                    <span className="text-[#fa7025]">$ </span><span>clawplay whoami</span>
-                  </div>
-                  <div className="bg-[#faf3d0] rounded-[16px] p-3 text-[#7a6a5a]">
-                    <span className="text-[#fa7025]">$ </span><span>clawplay image generate ...</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
 

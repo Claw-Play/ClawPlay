@@ -3,6 +3,8 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useT } from "@/lib/i18n/context";
+import { AdminUserContext } from "@/lib/context/AdminUserContext";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 interface UserInfo {
   id: number;
@@ -151,7 +153,10 @@ export default function AdminLayout({
               {getPageTitle()}
             </h1>
           </div>
-          {user && (
+          <div className="flex items-center gap-3">
+            <LanguageSwitcher />
+            <div className="h-6 w-px bg-[#e8dfc8]" />
+            {user && (
             <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => setDropdownOpen((o) => !o)}
@@ -219,11 +224,16 @@ export default function AdminLayout({
                 </div>
               )}
             </div>
-          )}
+            )}
+          </div>
         </header>
 
         {/* Page content */}
-        <main className="flex-1 p-8">{children}</main>
+        <main className="flex-1 p-8">
+          <AdminUserContext.Provider value={{ currentUserId: user?.id ?? null }}>
+            {children}
+          </AdminUserContext.Provider>
+        </main>
       </div>
     </div>
   );

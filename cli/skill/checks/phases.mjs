@@ -8,16 +8,26 @@
 
 import { Severity } from '../types.mjs';
 import { extractPhases, extractPhaseGraph, extractMermaid } from '../utils.mjs';
+import { dirname } from 'node:path';
+import { existsSync } from 'node:fs';
 
 /**
  * @param {string} content
+ * @param {string} [filePath]
  * @returns {Array<import('../types.mjs').LintIssue>}
  */
-export function checkPhases(content) {
+export function checkPhases(content, filePath) {
   const issues = [];
   const phases = extractPhases(content);
   const graph = extractPhaseGraph(content, phases);
   const diagrams = extractMermaid(content);
+
+  // Check if references/workflow.md exists (alternative to inline Mermaid)
+  let hasWorkflowMd = false;
+  if (filePath) {
+    const refPath = dirname(filePath) + '/references/workflow.md';
+    hasWorkflowMd = existsSync(refPath);
+  }
 
   // I-MERMAID: detected mermaid diagram
   if (diagrams.length > 0) {
@@ -26,6 +36,12 @@ export function checkPhases(content) {
       severity: Severity.INFO,
       message: `检测到 ${diagrams.length} 个 Mermaid 流程图`,
     });
+  } else if (hasWorkflowMd) {
+    issues.push({
+      code: 'I-MERMAID',
+      severity: Severity.INFO,
+      message: '检测到 references/workflow.md（Mermaid 流程图位于独立文件）',
+    });
   }
 
   if (phases.length === 0) {
@@ -33,22 +49,26 @@ export function checkPhases(content) {
     return issues;
   }
 
+  const phaseNames = new Set(phases.map((p) => p.name));
+
   // I-PHASE: phase count info
+  const diagramSuggestion = hasWorkflowMd
+    ? '确保 references/workflow.md 包含完整状态流转图'
+    : 'clawplay skill diagram <path>';
   issues.push({
     code: 'I-PHASE',
     severity: Severity.INFO,
     message: `检测到 ${phases.length} 个 phase`,
-    suggestion: phases.length >= 3 ? 'clawplay skill diagram <path>' : undefined,
+    suggestion: phases.length >= 3 ? diagramSuggestion : undefined,
   });
 
   // W-PHASE: check for init entry phase
-  const phaseNames = new Set(phases.map((p) => p.name));
   if (!phaseNames.has('init')) {
     issues.push({
       code: 'W-PHASE',
       severity: Severity.WARN,
       message: '建议包含 init 入口阶段（## Phase init）',
-      suggestion: 'clawplay skill diagram <path>',
+      suggestion: hasWorkflowMd ? '更新 references/workflow.md 添加 init 节点' : 'clawplay skill diagram <path>',
     });
   }
 
@@ -59,17 +79,17 @@ export function checkPhases(content) {
       code: 'W-PHASE',
       severity: Severity.WARN,
       message: '未检测到终态（缺少 "Turn 结束" 或 "→ [*]" 标记）',
-      suggestion: 'clawplay skill diagram <path>',
+      suggestion: hasWorkflowMd ? '更新 references/workflow.md 添加终态' : 'clawplay skill diagram <path>',
     });
   }
 
-  // W-PHASE: suggest mermaid if phase count >= 3 and no diagram
-  if (phases.length >= 3 && diagrams.length === 0) {
+  // W-PHASE: suggest mermaid if phase count >= 3 and no diagram (and no references/workflow.md)
+  if (phases.length >= 3 && diagrams.length === 0 && !hasWorkflowMd) {
     issues.push({
       code: 'W-PHASE',
       severity: Severity.WARN,
       message: `检测到 ${phases.length} 个 phase，建议添加 Mermaid 流程图提升 Agent 理解准确性`,
-      suggestion: `clawplay skill diagram <path>`,
+      suggestion: 'clawplay skill diagram <path>',
     });
   }
 
@@ -81,8 +101,7 @@ export function checkPhases(content) {
   for (const p of graph) {
     if (p.isTerminal) allRefs.add(p.name);
   }
-  // Also mark init as referenced (it's the entry point)
-  allRefs.add('init');
+  allRefs.add('init'); // init is the entry point
 
   for (const p of phases) {
     if (!allRefs.has(p.name) && p.name !== 'init') {
@@ -91,8 +110,8 @@ export function checkPhases(content) {
         severity: Severity.WARN,
         message: `phase "${p.name}" 未被其他 phase 引用，可能是孤立状态`,
         phase: p.name,
-        line: p.line + 1, // convert char index to 1-based line
-        suggestion: 'clawplay skill diagram <path>',
+        line: p.line + 1,
+        suggestion: hasWorkflowMd ? '更新 references/workflow.md 中的节点引用' : 'clawplay skill diagram <path>',
       });
     }
   }

@@ -70,10 +70,9 @@ Keys are loaded from env vars on server start and stored encrypted in `providerK
 
 ```ts
 // Env vars for key pool
-ARK_IMAGE_KEYS=key1,key2     // comma-separated, ARK_API_KEY as fallback
-ARK_VISION_KEYS=key3,key4
-ARK_KEY_QUOTA=500            // per-key RPM limit for image keys
-ARK_VISION_KEY_QUOTA=30000  // per-key RPM limit for vision keys
+ARK_API_KEY=key1               // single key, used for both image and vision
+ARK_KEY_QUOTA=500              // per-key RPM limit for image keys
+ARK_VISION_KEY_QUOTA=30000    // per-key RPM limit for vision keys
 ```
 
 ## Environment Variables
@@ -86,11 +85,9 @@ JWT_SECRET=                # 32-byte hex or base64 for jose
 CLAWPLAY_SECRET_KEY=       # 32-byte hex for AES-256-GCM
 UPSTASH_REDIS_REST_URL=    # Upstash Redis REST URL
 UPSTASH_REDIS_REST_TOKEN=  # Upstash Redis REST Token
-ARK_API_KEY=               # Fallback Ark key for images (if ARK_IMAGE_KEYS not set)
-ARK_IMAGE_KEYS=            # Comma-separated Ark image keys (takes precedence over ARK_API_KEY)
-ARK_VISION_KEYS=           # Comma-separated Ark vision keys
-ARK_KEY_QUOTA=500          # Per-key RPM limit for image keys
-ARK_VISION_KEY_QUOTA=30000 # Per-key RPM limit for vision keys
+ARK_API_KEY=               # Ark API key (used for image, vision, LLM)
+ARK_KEY_QUOTA=500         # Per-key RPM limit for image keys
+ARK_VISION_KEY_QUOTA=30000# Per-key RPM limit for vision keys
 GEMINI_API_KEY=            # Google Gemini API Key (optional, multi-provider fallback)
 ```
 
@@ -216,7 +213,7 @@ All abilities route through a provider abstraction layer in `web/lib/providers/`
 - **Relay is mandatory for quota**: Direct `ARK_API_KEY` in CLI env bypasses relay and quota; this is the intended Pro mode, not a bug
 - **Provider 429 = skip quota deduction**: When Ark/Gemini rate-limits, return error without deducting quota to avoid double-penalty; log the skip
 - **Base64 memory pressure**: Gemini returns inline base64; large concurrent requests strain Node memory. Ark returns URLs → CLI downloads → less memory pressure
-- **Key Pool vs single key**: `ARK_IMAGE_KEYS` takes precedence over `ARK_API_KEY` for image; `ARK_VISION_KEYS` is separate pool; both use same `ARK_KEY_QUOTA` / `ARK_VISION_KEY_QUOTA` for per-key limits
+- **Key Pool**: `ARK_API_KEY` is used for both image and vision pools; each pool has its own per-key quota (`ARK_KEY_QUOTA` / `ARK_VISION_KEY_QUOTA`)
 
 ### Database & Quota
 - **Redis optional**: Without Upstash, quota falls back to DB (slower, no atomic increment); log a warning when falling back

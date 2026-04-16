@@ -2,6 +2,7 @@
 # lib/install.sh — clawplay install <slug> [--version x.y.z] [--dir <path>]
 INSTALL_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${INSTALL_LIB_DIR}/api-env.sh"
+source "${INSTALL_LIB_DIR}/api.sh"
 CLAWPLAY_SKILLS_DIR="${CLAWPLAY_SKILLS_DIR:-${HOME}/.clawplay/skills}"
 
 cmd_install() {
@@ -85,6 +86,20 @@ cmd_install() {
     installed_version=$(python3 -c "import json,sys; d=json.load(open('${dest_dir}/origin.json')); print(d.get('version',''))" 2>/dev/null || true)
   fi
 
+  # Fire-and-forget: report install to server (non-blocking, no-quota)
+  # Even if this fails (no token, network error), the install itself succeeded.
+  _report_install "$slug"
+
   info "✅ Installed ${slug}${installed_version:+ v${installed_version}} → ${dest_dir}"
   echo "${dest_dir}"
+}
+
+# Report install to server so statsInstalls is incremented.
+# Non-blocking — failures are silently ignored.
+_report_install() {
+  local slug="$1"
+  [[ -z "${CLAWPLAY_TOKEN:-}" ]] && return 0
+
+  # Use api_call; ignore errors (install already succeeded)
+  api_call POST "/api/skills/${slug}/install" "{}" >/dev/null 2>&1 || true
 }

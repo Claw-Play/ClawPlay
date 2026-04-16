@@ -1,5 +1,11 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { getT, getLocale, getMessages } from "@/lib/i18n";
+import { getT, getMessages } from "@/lib/i18n";
+
+vi.mock("next/headers", () => ({
+  cookies: vi.fn(() => ({
+    get: vi.fn(() => undefined),
+  })),
+}));
 
 // Save original env
 const ORIG = process.env.NEXT_LOCALE;
@@ -18,29 +24,6 @@ function resetLocale() {
 
 afterEach(() => {
   resetLocale();
-});
-
-// ─── getLocale ────────────────────────────────────────────────────────────────
-describe("getLocale", () => {
-  it("defaults to 'zh' when env var is absent", () => {
-    delete process.env.NEXT_LOCALE;
-    expect(getLocale()).toBe("zh");
-  });
-
-  it("returns NEXT_LOCALE value as-is", () => {
-    process.env.NEXT_LOCALE = "en";
-    expect(getLocale()).toBe("en");
-  });
-
-  it("passes through non-standard locale strings", () => {
-    process.env.NEXT_LOCALE = "fr";
-    expect(getLocale()).toBe("fr");
-  });
-
-  it("handles empty string as unset", () => {
-    process.env.NEXT_LOCALE = "";
-    expect(getLocale()).toBe("zh");
-  });
 });
 
 // ─── getMessages ──────────────────────────────────────────────────────────────
@@ -90,32 +73,32 @@ describe("getMessages", () => {
 describe("getT — basic translation", () => {
   beforeEach(() => setLocale("zh"));
 
-  it("returns a function", () => {
-    expect(typeof getT("common")).toBe("function");
+  it("returns a function", async () => {
+    expect(typeof await getT("common")).toBe("function");
   });
 
-  it("translates known zh keys", () => {
-    const t = getT("common");
+  it("translates known zh keys", async () => {
+    const t = await getT("common");
     expect(t("home")).toBe("首页");
     expect(t("skills")).toBe("技能库");
     expect(t("dashboard")).toBe("控制台");
   });
 
-  it("translates known en keys when locale is en", () => {
+  it("translates known en keys when locale is en", async () => {
     process.env.NEXT_LOCALE = "en";
-    const t = getT("common");
+    const t = await getT("common");
     expect(t("home")).toBe("Home");
     expect(t("skills")).toBe("Skills");
   });
 
-  it("returns key itself for unknown keys", () => {
-    const t = getT("common");
+  it("returns key itself for unknown keys", async () => {
+    const t = await getT("common");
     expect(t("this_does_not_exist")).toBe("this_does_not_exist");
     expect(t("")).toBe("");
   });
 
-  it("returns key itself for empty namespace string", () => {
-    const t = getT("common");
+  it("returns key itself for empty namespace string", async () => {
+    const t = await getT("common");
     expect(t("")).toBe("");
   });
 });
@@ -124,8 +107,8 @@ describe("getT — basic translation", () => {
 describe("getT — interpolation", () => {
   beforeEach(() => setLocale("zh"));
 
-  it("interpolates a single placeholder", () => {
-    const t = getT("skills");
+  it("interpolates a single placeholder", async () => {
+    const t = await getT("skills");
     expect(t("no_results", { query: "头像生成" })).toBe("未找到「头像生成」相关结果");
   });
 
@@ -140,46 +123,46 @@ describe("getT — interpolation", () => {
     expect(result).toContain("foo");
   });
 
-  it("leaves {placeholder} unchanged when not provided in values", () => {
-    const t = getT("skills");
+  it("leaves {placeholder} unchanged when not provided in values", async () => {
+    const t = await getT("skills");
     // no_results has {query} — call without values object
     expect(t("no_results")).toBe("未找到「{query}」相关结果");
   });
 
-  it("leaves specific placeholder unchanged when only some are provided", () => {
-    const t = getT("skills");
+  it("leaves specific placeholder unchanged when only some are provided", async () => {
+    const t = await getT("skills");
     // if no_results = "未找到「{query}」相关结果"
     // calling with empty values object should leave it unchanged
     expect(t("no_results", {})).toBe("未找到「{query}」相关结果");
   });
 
-  it("handles numeric values in interpolation", () => {
-    const t = getT("skills");
+  it("handles numeric values in interpolation", async () => {
+    const t = await getT("skills");
     // should not throw even if no placeholder exists
     expect(() => t("no_results", { query: 42 })).not.toThrow();
   });
 
-  it("handles unicode values in interpolation", () => {
-    const t = getT("skills");
+  it("handles unicode values in interpolation", async () => {
+    const t = await getT("skills");
     expect(t("no_results", { query: "你好世界 🦐" })).toBe(
       "未找到「你好世界 🦐」相关结果"
     );
   });
 
-  it("handles empty string value in interpolation", () => {
-    const t = getT("skills");
+  it("handles empty string value in interpolation", async () => {
+    const t = await getT("skills");
     expect(t("no_results", { query: "" })).toBe("未找到「」相关结果");
   });
 
-  it("interpolated value takes precedence over surrounding text", () => {
-    const t = getT("skills");
+  it("interpolated value takes precedence over surrounding text", async () => {
+    const t = await getT("skills");
     const result = t("no_results", { query: "X" });
     expect(result).toBe("未找到「X」相关结果");
     expect(result).not.toContain("{query}");
   });
 
-  it("special regex chars in value do not break replacement", () => {
-    const t = getT("skills");
+  it("special regex chars in value do not break replacement", async () => {
+    const t = await getT("skills");
     // $1 etc. are not special in our simple replace
     expect(t("no_results", { query: "$1[foo]" })).toBe(
       "未找到「$1[foo]」相关结果"
@@ -191,28 +174,28 @@ describe("getT — interpolation", () => {
 describe("getT — namespace isolation", () => {
   beforeEach(() => setLocale("zh"));
 
-  it("auth namespace does not leak into common", () => {
-    const tAuth = getT("auth");
-    const tCommon = getT("common");
+  it("auth namespace does not leak into common", async () => {
+    const tAuth = await getT("auth");
+    const tCommon = await getT("common");
     // 'login' exists in both auth and common (common has "登录")
     // auth namespace has its own login key
     expect(tAuth("login")).toBeTruthy();
   });
 
-  it("dashboard namespace is independent", () => {
-    const t = getT("dashboard");
+  it("dashboard namespace is independent", async () => {
+    const t = await getT("dashboard");
     expect(t("welcome")).toBe("欢迎回来，");
     expect(t("user_info")).toBe("用户信息");
   });
 
-  it("home namespace is independent", () => {
-    const t = getT("home");
+  it("home namespace is independent", async () => {
+    const t = await getT("home");
     expect(t("hero_badge")).toBe("开源 AI Skills 生态系统");
   });
 
-  it("calling getT twice gives independent functions", () => {
-    const t1 = getT("common");
-    const t2 = getT("common");
+  it("calling getT twice gives independent functions", async () => {
+    const t1 = await getT("common");
+    const t2 = await getT("common");
     expect(t1).not.toBe(t2); // new function each time
     expect(t1("home")).toBe(t2("home")); // but same result
   });
@@ -220,12 +203,12 @@ describe("getT — namespace isolation", () => {
 
 // ─── getT — locale switching ─────────────────────────────────────────────────
 describe("getT — locale switching", () => {
-  it("reflects locale change between calls", () => {
+  it("reflects locale change between calls", async () => {
     process.env.NEXT_LOCALE = "zh";
-    const zh = getT("common")("home");
+    const zh = (await getT("common"))("home");
 
     process.env.NEXT_LOCALE = "en";
-    const en = getT("common")("home");
+    const en = (await getT("common"))("home");
 
     expect(zh).toBe("首页");
     expect(en).toBe("Home");
@@ -242,30 +225,30 @@ describe("getT — locale switching", () => {
 describe("edge cases", () => {
   beforeEach(() => setLocale("zh"));
 
-  it("empty string key returns empty string", () => {
-    const t = getT("common");
+  it("empty string key returns empty string", async () => {
+    const t = await getT("common");
     expect(t("")).toBe("");
   });
 
-  it("whitespace-only key returns whitespace-only value if exists", () => {
-    const t = getT("common");
+  it("whitespace-only key returns whitespace-only value if exists", async () => {
+    const t = await getT("common");
     // If key doesn't exist, returns key itself — whitespace key has no translation
     expect(t("   ")).toBe("   ");
   });
 
-  it("calling getT on non-existent namespace does not throw", () => {
+  it("calling getT on non-existent namespace does not throw", async () => {
     // TypeScript would catch this, but at runtime it still returns a function
-    expect(() => getT("nonexistent" as keyof ReturnType<typeof getMessages>)).not.toThrow();
+    expect(await getT("nonexistent" as keyof ReturnType<typeof getMessages>)).toBeDefined();
   });
 
-  it("translation function is stable across multiple calls", () => {
-    const t = getT("common");
+  it("translation function is stable across multiple calls", async () => {
+    const t = await getT("common");
     const results = Array.from({ length: 5 }, () => t("home"));
     expect(results).toEqual(["首页", "首页", "首页", "首页", "首页"]);
   });
 
-  it("interpolation with many extra values does not throw", () => {
-    const t = getT("skills");
+  it("interpolation with many extra values does not throw", async () => {
+    const t = await getT("skills");
     expect(() =>
       t("no_results", { query: "a", extra: "b", unused: "c" })
     ).not.toThrow();

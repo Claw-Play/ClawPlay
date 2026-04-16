@@ -3,6 +3,7 @@ import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useT } from "@/lib/i18n/context";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 function NavIcon({ name }: { name: string }) {
   if (name === "grid") return <span className="inline-block w-4 text-center text-base">⊞</span>;
@@ -95,7 +96,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         : false,
   }));
 
-  const avatarUrl = user
+  const avatarUrl = user?.avatarUrl
+    ? user.avatarUrl
+    : user
     ? `https://api.dicebear.com/7.x/pixel-art/svg?seed=${user.id}&backgroundColor=ff6b35,fa7025,a23f00`
     : null;
 
@@ -132,7 +135,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             })}
           </nav>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            {/* Language switcher */}
+            <LanguageSwitcher />
+            <div className="h-6 w-px bg-[#e8dfc8]" />
+
             {/* Loading skeleton */}
             {loading && (
               <div className="w-10 h-10 rounded-full bg-[#e8dfc8] animate-pulse" />

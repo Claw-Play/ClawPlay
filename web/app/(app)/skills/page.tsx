@@ -2,11 +2,15 @@ import { db } from "@/lib/db";
 import { skills } from "@/lib/db/schema";
 import { eq, and, isNull, desc } from "drizzle-orm";
 import { SkillsClient } from "./SkillsClient";
+import { getT } from "@/lib/i18n";
 
-export const metadata = {
-  title: "技能库 — ClawPlay",
-  description: "浏览和发现 X Claw 社交与娱乐技能。",
-};
+export async function generateMetadata() {
+  const t = await getT("skills");
+  return {
+    title: t("page_title"),
+    description: t("page_description"),
+  };
+}
 
 export default async function SkillsPage() {
   let allSkills: {

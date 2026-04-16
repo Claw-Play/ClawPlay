@@ -31,6 +31,7 @@ export type AnalyticsEvent =
   | "skill.download"
   | "skill.review"
   | "skill.search"
+  | "skill.install"
   // Quota & ability events
   | "quota.check"
   | "quota.use"
@@ -40,7 +41,9 @@ export type AnalyticsEvent =
   | "token.generate"
   | "token.revoke"
   | "token.use"
-  | "token.invalid";
+  | "token.invalid"
+  // Admin user management
+  | "user.role_change";
 
 // Events that are also written to the append-only JSONL audit log
 // AUDIT_EVENTS: 已废弃，audit.jsonl 已停用
@@ -181,6 +184,8 @@ export const analytics = {
       logEvent({ event: "user.sms_send", metadata: { phone: maskPhone(phone) } }),
     smsVerifyFail: (phone: string, reason: string) =>
       logEvent({ event: "user.sms_verify_fail", metadata: { phone: maskPhone(phone), reason } }),
+    roleChange: (targetUserId: number, adminId: number, fromRole: string, toRole: string) =>
+      logEvent({ event: "user.role_change", userId: adminId, targetType: "user", targetId: String(targetUserId), metadata: { fromRole, toRole } }),
   },
   skill: {
     view: (skillId: string, slug: string) =>
@@ -201,6 +206,8 @@ export const analytics = {
       logEvent({ event: "skill.review", userId, targetType: "skill", targetId: skillId, metadata: { rating } }),
     search: (query: string, filters: Record<string, unknown>, count: number) =>
       logEvent({ event: "skill.search", metadata: { query, filters, resultsCount: count } }),
+    install: (skillId: string, userId: number | null) =>
+      logEvent({ event: "skill.install", userId, targetType: "skill", targetId: skillId }),
   },
   quota: {
     check: (userId: number, current: number, limit: number) =>
