@@ -1,9 +1,8 @@
 import type { ImageProvider, ImageGenerateRequest, ImageGenerateResponse } from "./types";
 import { pickKeyWithRetry, recordKeyUsage } from "../key-pool";
 
-const ARK_ENDPOINT = "https://ark.cn-beijing.volces.com/api/v3/images/generations";
-const DEFAULT_MODEL = process.env.IMAGE_MODEL_ARK ?? "ep-20260307174559-w6lfl";
-const PROVIDER = "ark_image";
+const ARK_ENDPOINT_DEFAULT = "https://ark.cn-beijing.volces.com/api/v3/images/generations";
+const DEFAULT_MODEL = process.env.IMAGE_MODEL_ARK ?? "doubao-seedream-5-0-260128";
 const MAX_RETRIES = 3;
 
 /**
@@ -45,11 +44,15 @@ export class ArkProvider implements ImageProvider {
     let lastError: Error | null = null;
 
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-      const { id: keyId, key: apiKey } = await pickKeyWithRetry(PROVIDER);
+      const { id: keyId, key: apiKey, endpoint, modelName } =
+        await pickKeyWithRetry("ark", "image");
+
+      const resolvedEndpoint = endpoint || ARK_ENDPOINT_DEFAULT;
+      const resolvedModel = modelName || DEFAULT_MODEL;
 
       try {
-        const result = await this.callArk(apiKey, req);
-        await recordKeyUsage(PROVIDER, keyId);
+        const result = await this.callArk(apiKey, resolvedEndpoint, resolvedModel, req);
+        await recordKeyUsage("ark", "image", keyId);
         return result;
       } catch (err: unknown) {
         const code = (err as NodeJS.ErrnoException)?.code;
@@ -69,11 +72,16 @@ export class ArkProvider implements ImageProvider {
     throw err;
   }
 
-  private async callArk(apiKey: string, req: ImageGenerateRequest): Promise<ImageGenerateResponse> {
+  private async callArk(
+    apiKey: string,
+    endpoint: string,
+    model: string,
+    req: ImageGenerateRequest
+  ): Promise<ImageGenerateResponse> {
     const size = toArkSize(req.size ?? "1:1", req.quality ?? "2K");
 
     const body: Record<string, unknown> = {
-      model: DEFAULT_MODEL,
+      model,
       prompt: req.prompt,
       size,
       output_format: "png",
@@ -90,7 +98,7 @@ export class ArkProvider implements ImageProvider {
       body.tools = [{ type: "web_search" }];
     }
 
-    const res = await fetch(ARK_ENDPOINT, {
+    const res = await fetch(endpoint, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,

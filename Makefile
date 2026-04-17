@@ -30,7 +30,7 @@ test:
 
 # Unit tests with coverage report
 test-coverage:
-	@cd web && pnpm test -- --coverage 2>&1 | sed '/Error: Uncaught \[Error: useT must be used within I18nProvider\]/,/at useT (/d'
+	@cd web && pnpm vitest run -c vitest.config.ts --coverage && pnpm vitest run -c vitest.component.config.ts
 
 # E2E tests (requires dev server running)
 e2e:

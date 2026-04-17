@@ -36,9 +36,13 @@ interface GeminiResponse {
 
 export class GeminiProvider implements ImageProvider {
   private apiKey: string;
+  private endpoint: string;
+  private modelName: string;
 
-  constructor(apiKey: string) {
+  constructor(apiKey: string, endpoint?: string, modelName?: string) {
     this.apiKey = apiKey;
+    this.endpoint = endpoint ?? GEMINI_BASE;
+    this.modelName = modelName ?? DEFAULT_MODEL;
   }
 
   async generate(req: ImageGenerateRequest): Promise<ImageGenerateResponse> {
@@ -74,7 +78,7 @@ export class GeminiProvider implements ImageProvider {
       ...(tools ? { tools } : {}),
     };
 
-    const res = await fetch(`${GEMINI_BASE}/${DEFAULT_MODEL}:generateContent?key=${this.apiKey}`, {
+    const res = await fetch(`${this.endpoint}/${this.modelName}:generateContent?key=${this.apiKey}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),

@@ -11,6 +11,12 @@ function T({ ns, k, values }: { ns: keyof typeof zhMessages; k: string; values?:
   return <span data-testid="t">{values ? t(k, values) : t(k)}</span>;
 }
 
+// ─── helper: apply same interpolation as lib/i18n/index.ts ───────────────────
+function interpolate(str: string, values?: Record<string, string | number>): string {
+  if (!values) return str;
+  return str.replace(/\{(\w+)\}/g, (_, k) => String(values[k] ?? `{${k}}`));
+}
+
 function renderZh(ui: React.ReactElement) {
   return render(<I18nProvider messages={zhMessages}>{ui}</I18nProvider>);
 }
@@ -72,7 +78,7 @@ describe("I18nProvider", () => {
       );
     }
     const { getByTestId } = renderZh(<Deep depth={5} />);
-    expect(getByTestId("t").textContent).toBe("首页");
+    expect(getByTestId("t").textContent).toBe(zhMessages.common.home);
   });
 
   it("works with React.memo wrapped components", () => {
@@ -80,7 +86,7 @@ describe("I18nProvider", () => {
       return <T ns="common" k="home" />;
     });
     const { getByTestId } = renderZh(<MemoT />);
-    expect(getByTestId("t").textContent).toBe("首页");
+    expect(getByTestId("t").textContent).toBe(zhMessages.common.home);
   });
 
   it("nested I18nProvider: inner overrides outer messages", () => {
@@ -95,7 +101,7 @@ describe("I18nProvider", () => {
       </I18nProvider>
     );
     // innermost provider wins
-    expect(getByTestId("t").textContent).toBe("Home");
+    expect(getByTestId("t").textContent).toBe(enMessages.common.home);
   });
 });
 
@@ -103,32 +109,32 @@ describe("I18nProvider", () => {
 describe("useT — zh translations", () => {
   it("translates common.home", () => {
     renderZh(<T ns="common" k="home" />);
-    expect(screen.getByTestId("t").textContent).toBe("首页");
+    expect(screen.getByTestId("t").textContent).toBe(zhMessages.common.home);
   });
 
   it("translates dashboard.welcome", () => {
     renderZh(<T ns="dashboard" k="welcome" />);
-    expect(screen.getByTestId("t").textContent).toBe("欢迎回来，");
+    expect(screen.getByTestId("t").textContent).toBe(zhMessages.dashboard.welcome);
   });
 
   it("translates dashboard.token_mgmt", () => {
     renderZh(<T ns="dashboard" k="token_mgmt" />);
-    expect(screen.getByTestId("t").textContent).toBe("密钥管理");
+    expect(screen.getByTestId("t").textContent).toBe(zhMessages.dashboard.token_mgmt);
   });
 
   it("translates auth.login", () => {
     renderZh(<T ns="auth" k="login" />);
-    expect(screen.getByTestId("t").textContent).toBe("登录");
+    expect(screen.getByTestId("t").textContent).toBe(zhMessages.auth.login);
   });
 
   it("translates skills.title", () => {
     renderZh(<T ns="skills" k="title" />);
-    expect(screen.getByTestId("t").textContent).toBe("技能库");
+    expect(screen.getByTestId("t").textContent).toBe(zhMessages.skills.title);
   });
 
   it("translates home.hero_badge", () => {
     renderZh(<T ns="home" k="hero_badge" />);
-    expect(screen.getByTestId("t").textContent).toBe("开源 AI Skills 生态系统");
+    expect(screen.getByTestId("t").textContent).toBe(zhMessages.home.hero_badge);
   });
 });
 
@@ -152,29 +158,36 @@ describe("useT — fallback for missing keys", () => {
 
 // ─── useT — interpolation ────────────────────────────────────────────────────
 describe("useT — interpolation", () => {
+  // Source of truth for the template — from message file, not hardcoded
+  const noResultsTemplate = zhMessages.skills.no_results as string;
+
+  function expectedNoResults(query: string | number) {
+    return interpolate(noResultsTemplate, { query });
+  }
+
   it("interpolates a single placeholder", () => {
     renderZh(<T ns="skills" k="no_results" values={{ query: "头像生成" }} />);
-    expect(screen.getByTestId("t").textContent).toBe("未找到「头像生成」相关结果");
+    expect(screen.getByTestId("t").textContent).toBe(expectedNoResults("头像生成"));
   });
 
   it("leaves placeholder unchanged when no values provided", () => {
     renderZh(<T ns="skills" k="no_results" />);
-    expect(screen.getByTestId("t").textContent).toBe("未找到「{query}」相关结果");
+    expect(screen.getByTestId("t").textContent).toBe(noResultsTemplate);
   });
 
   it("interpolates unicode values correctly", () => {
     renderZh(<T ns="skills" k="no_results" values={{ query: "你好 🦐" }} />);
-    expect(screen.getByTestId("t").textContent).toBe("未找到「你好 🦐」相关结果");
+    expect(screen.getByTestId("t").textContent).toBe(expectedNoResults("你好 🦐"));
   });
 
   it("interpolates with numbers", () => {
     renderZh(<T ns="skills" k="no_results" values={{ query: 42 }} />);
-    expect(screen.getByTestId("t").textContent).toBe("未找到「42」相关结果");
+    expect(screen.getByTestId("t").textContent).toBe(expectedNoResults(42));
   });
 
   it("empty value renders as empty string in placeholder", () => {
     renderZh(<T ns="skills" k="no_results" values={{ query: "" }} />);
-    expect(screen.getByTestId("t").textContent).toBe("未找到「」相关结果");
+    expect(screen.getByTestId("t").textContent).toBe(expectedNoResults(""));
   });
 
   it("partial values: provided replaced, others left as {key}", () => {
@@ -204,24 +217,24 @@ describe("useT — interpolation", () => {
 describe("useT — en translations", () => {
   it("translates common.home in en", () => {
     renderEn(<T ns="common" k="home" />);
-    expect(screen.getByTestId("t").textContent).toBe("Home");
+    expect(screen.getByTestId("t").textContent).toBe(enMessages.common.home);
   });
 
   it("translates auth.login in en", () => {
     renderEn(<T ns="auth" k="login" />);
-    expect(screen.getByTestId("t").textContent).toBe("Sign In");
+    expect(screen.getByTestId("t").textContent).toBe(enMessages.auth.login);
   });
 
   it("en and zh differ for the same key", () => {
     // Verify zh
     const { unmount: unmountZh } = renderZh(<T ns="common" k="home" />);
-    expect(screen.getByTestId("t").textContent).toBe("首页");
+    expect(screen.getByTestId("t").textContent).toBe(zhMessages.common.home);
     unmountZh();
 
     // Verify en (clean DOM)
     renderEn(<T ns="common" k="home" />);
-    expect(screen.getByTestId("t").textContent).toBe("Home");
-    expect("首页").not.toBe("Home");
+    expect(screen.getByTestId("t").textContent).toBe(enMessages.common.home);
+    expect(zhMessages.common.home).not.toBe(enMessages.common.home);
   });
 });
 
@@ -269,9 +282,9 @@ describe("useT — multiple namespaces in one component", () => {
     }
 
     const { getByTestId } = renderZh(<TwoNs />);
-    // common.home = "首页", nav.home = "首页"
-    expect(getByTestId("common").textContent).toBe("首页");
-    expect(getByTestId("nav").textContent).toBe("首页");
+    // common.home = zhMessages.common.home, nav.home = zhMessages.nav.home
+    expect(getByTestId("common").textContent).toBe(zhMessages.common.home);
+    expect(getByTestId("nav").textContent).toBe(zhMessages.nav.home);
   });
 });
 
@@ -288,6 +301,7 @@ describe("I18nProvider — edge props", () => {
         <EmptyNs />
       </I18nProvider>
     );
+    // Empty messages: useT falls back to returning the key itself
     expect(getByTestId("t").textContent).toBe("home");
   });
 });

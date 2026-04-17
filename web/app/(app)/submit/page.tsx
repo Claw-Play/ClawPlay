@@ -5,10 +5,16 @@ import Link from "next/link";
 import { useT } from "@/lib/i18n/context";
 import { Button } from "@/components/Button";
 import { Input, Textarea } from "@/components/Input";
+import SkillDiagramPreview from "@/components/SkillDiagramPreview";
 
 export default function SubmitPage() {
   const router = useRouter();
   const t = useT("submit");
+  const STORAGE_KEY = "clawplay_draft_form";
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const restoredRef = useRef(false);
+
+  const [mounted, setMounted] = useState(false);
   const [form, setForm] = useState({
     name: "",
     summary: "",
@@ -16,12 +22,34 @@ export default function SubmitPage() {
     iconEmoji: "🦐",
     skillMdContent: "",
   });
+  const [workflowMd, setWorkflowMd] = useState("");
+  const [diagramLoading, setDiagramLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const [fileError, setFileError] = useState("");
-  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Mark as mounted (client-side only)
+  useEffect(() => setMounted(true), []);
+
+  // Restore form draft from localStorage after mount (only once)
+  useEffect(() => {
+    if (!mounted || restoredRef.current) return;
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        restoredRef.current = true;
+        setForm(JSON.parse(saved));
+      }
+    } catch {}
+  }, [mounted, STORAGE_KEY]);
+
+  // Save form to localStorage on every change
+  useEffect(() => {
+    if (!mounted) return;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(form));
+  }, [form, mounted, STORAGE_KEY]);
 
   useEffect(() => {
     fetch("/api/user/me")
@@ -84,7 +112,7 @@ export default function SubmitPage() {
       const res = await fetch("/api/skills/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, workflowMd }),
       });
 
       const data = await res.json();
@@ -96,6 +124,10 @@ export default function SubmitPage() {
       }
 
       setSuccess(true);
+      if (mounted) {
+        localStorage.removeItem(STORAGE_KEY);
+        localStorage.removeItem('clawplay_draft_mermaid');
+      }
       setLoading(false);
       setTimeout(() => router.push("/dashboard"), 1800);
     } catch {
@@ -197,25 +229,27 @@ export default function SubmitPage() {
                     <label className="block text-sm font-semibold text-[#564337] font-body">
                       {t("skill_md_content")}
                     </label>
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="flex items-center gap-1.5 text-xs font-semibold text-[#a23f00] hover:text-[#fa7025] transition-colors font-body"
-                    >
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                        <polyline points="17 8 12 3 7 8"/>
-                        <line x1="12" y1="3" x2="12" y2="15"/>
-                      </svg>
-                      {t("select_file")}
-                    </button>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept=".md,.txt"
-                      className="hidden"
-                      onChange={handleFileInput}
-                    />
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="flex items-center gap-1.5 text-xs font-semibold text-[#a23f00] hover:text-[#fa7025] transition-colors font-body"
+                      >
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                          <polyline points="17 8 12 3 7 8"/>
+                          <line x1="12" y1="3" x2="12" y2="15"/>
+                        </svg>
+                        {t("select_file")}
+                      </button>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".md,.txt"
+                        className="hidden"
+                        onChange={handleFileInput}
+                      />
+                    </div>
                   </div>
 
                   {fileError && (
@@ -242,18 +276,60 @@ export default function SubmitPage() {
                     <Textarea
                       placeholder={`${t("skill_md_placeholder")}，${t("drop_to_import")}`}
                       rows={18}
-                      className="font-mono-custom text-sm"
+                      className="text-sm"
                       bg={isDragOver ? "bg-[#fdf5e6]" : "bg-[#e7e3ca]"}
                       value={form.skillMdContent}
                       onChange={(e) => update("skillMdContent", e.target.value)}
                       required
                     />
                   </div>
-                </div>
 
-                {/* Submit */}
-                <div className="bg-[#faf3d0] border border-[#e8dfc8] rounded-[24px] px-5 py-3.5 text-sm text-[#7a6a5a] font-body">
-                  {t("review_notice")}
+                  {/* Diagram preview — always visible after textarea */}
+                  <div className="flex items-center justify-between">
+                    <label className="block text-sm font-semibold text-[#564337] font-body">
+                      {t("diagram_preview_label")}
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!form.skillMdContent.trim()) return;
+                        window.dispatchEvent(new CustomEvent('generate-diagram'));
+                      }}
+                      className="flex items-center gap-1.5 text-xs font-semibold text-[#a23f00] hover:text-[#fa7025] transition-colors font-body disabled:opacity-40 disabled:cursor-not-allowed"
+                      disabled={!form.skillMdContent.trim() || diagramLoading}
+                      title={t("diagram_generate")}
+                    >
+                      {diagramLoading ? (
+                        <>
+                          <svg className="animate-spin" width="13" height="13" viewBox="0 0 24 24" fill="none">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/>
+                          </svg>
+                          <span>{t("diagram_loading")}</span>
+                        </>
+                      ) : (
+                        <>
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="12" cy="5" r="2"/>
+                            <circle cx="6" cy="19" r="2"/>
+                            <circle cx="18" cy="19" r="2"/>
+                            <path d="M12 7v4"/>
+                            <path d="M12 11 C12 11 6 11 6 17"/>
+                            <path d="M12 11 C12 11 18 11 18 17"/>
+                          </svg>
+                          <span>{t("diagram_generate")}</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  <div className="bg-[#f8f4db] rounded-[20px] p-5 border border-[#e8dfc8]">
+                    <SkillDiagramPreview
+                      skillMdContent={form.skillMdContent}
+                      onGenerated={setWorkflowMd}
+                      onLoadingChange={setDiagramLoading}
+                      compact
+                    />
+                  </div>
                 </div>
 
                 <Button type="submit" loading={loading} className="w-full">

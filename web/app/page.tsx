@@ -24,6 +24,7 @@ export default async function HomePage() {
     authorName: string;
     statsStars: number;
     statsRatingsCount: number;
+    statsInstalls: number;
   }[] = [];
   try {
     const base = await db
@@ -35,10 +36,11 @@ export default async function HomePage() {
         authorName: skills.authorName,
         statsStars: skills.statsStars,
         statsRatingsCount: skills.statsRatingsCount,
+        statsInstalls: skills.statsInstalls,
       })
       .from(skills)
       .where(and(eq(skills.moderationStatus, "approved"), isNull(skills.deletedAt)))
-      .orderBy(desc(skills.isFeatured), desc(skills.createdAt))
+      .orderBy(desc(skills.statsInstalls), desc(skills.statsStars))
       .limit(12);
     featuredSkills = base;
   } catch {
@@ -121,6 +123,9 @@ export default async function HomePage() {
       {/* Features */}
       <section className="py-16 md:py-20 px-6" style={{ background: "#fefae0" }}>
         <div className="max-w-6xl mx-auto">
+          <h2 className="text-2xl md:text-3xl font-bold font-heading text-[#564337] mb-8 text-center">
+            {t("features_title")}
+          </h2>
           <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-5">
             {[
               { icon: "🖼️", title: t("feature_1_title"), desc: t("feature_1_desc") },
@@ -145,7 +150,7 @@ export default async function HomePage() {
 
       {/* CTA */}
       <section className="py-12 px-6" style={{ background: "#fefae0" }}>
-        <div className="max-w-2xl mx-auto text-center space-y-4">
+        <div className="max-w-3xl mx-auto text-center space-y-4">
           <h2 className="text-2xl md:text-3xl font-bold font-heading text-[#564337]">
             {t("cta_ready")}
           </h2>
@@ -154,7 +159,7 @@ export default async function HomePage() {
           </p>
           <Link
             href="/login"
-            className="inline-block px-8 py-4 bg-gradient-to-r from-[#a23f00] to-[#fa7025] hover:opacity-90 text-white font-semibold btn-pill shadow-[0_6px_24px_rgba(162,63,0,0.2)] transition-all font-heading"
+            className="inline-block px-6 py-3 bg-gradient-to-r from-[#a23f00] to-[#fa7025] hover:opacity-90 text-white font-semibold btn-pill shadow-[0_6px_24px_rgba(162,63,0,0.2)] transition-all font-heading"
           >
             {t("cta_create")}
           </Link>

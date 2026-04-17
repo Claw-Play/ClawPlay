@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import { useT } from "@/lib/i18n/context";
+import { formatTs } from "@/lib/timestamp";
 
 const EVENT_OPTIONS = [
   { value: "", label: "All events" },
@@ -37,14 +38,6 @@ interface EventRecord {
   metadata: Record<string, unknown>;
   ip_address: string | null;
   created_at: number;
-}
-
-function formatTs(ts: number): string {
-  const d = new Date(ts);
-  return d.toLocaleString("en-GB", {
-    year: "numeric", month: "2-digit", day: "2-digit",
-    hour: "2-digit", minute: "2-digit", second: "2-digit",
-  });
 }
 
 export default function EventsClient() {

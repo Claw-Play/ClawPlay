@@ -48,13 +48,17 @@ vi.mock("@/lib/redis", () => ({
 const visionAnalyzeMock = vi.hoisted(() => vi.fn());
 const imageGenerateMock = vi.hoisted(() => vi.fn());
 const llmGenerateMock = vi.hoisted(() => vi.fn());
+const recordVisionKeyUsageMock = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
+const recordImageKeyUsageMock = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 
 vi.mock("@/lib/providers/vision", () => ({
-  getVisionProvider: vi.fn(() => ({ analyze: visionAnalyzeMock })),
+  getVisionProvider: vi.fn(() => Promise.resolve({ analyze: visionAnalyzeMock })),
+  recordVisionKeyUsage: recordVisionKeyUsageMock,
 }));
 
 vi.mock("@/lib/providers/image", () => ({
-  getImageProvider: vi.fn(() => ({ generate: imageGenerateMock })),
+  getImageProvider: vi.fn(() => Promise.resolve({ generate: imageGenerateMock })),
+  recordImageKeyUsage: recordImageKeyUsageMock,
 }));
 
 vi.mock("@/lib/providers/llm", () => ({
@@ -126,6 +130,8 @@ beforeEach(() => {
   checkQuotaMock.mockResolvedValue({ allowed: true, remaining: 999 });
   incrementQuotaMock.mockResolvedValue({ ok: true, remaining: 999 });
   getQuotaMock.mockResolvedValue({ used: 0, limit: 100000, remaining: 100000 });
+  recordVisionKeyUsageMock.mockResolvedValue(undefined);
+  recordImageKeyUsageMock.mockResolvedValue(undefined);
 });
 
 function authHeader() {
@@ -186,7 +192,7 @@ describe("Pre-check quota exceeded (before provider call)", () => {
     const res = await POST_vision(req);
     expect(res.status).toBe(429);
     const json = await res.json();
-    expect(json.error).toBe("Quota exceeded.");
+    expect(json.error).toMatch(/Quota exceeded|配额已用完/);
     expect(json.remaining).toBe(0);
   });
 
@@ -203,7 +209,7 @@ describe("Pre-check quota exceeded (before provider call)", () => {
     });
     const res = await POST_image(req);
     expect(res.status).toBe(429);
-    expect((await res.json()).error).toBe("Quota exceeded.");
+    expect((await res.json()).error).toMatch(/Quota exceeded|配额已用完/);
   });
 
   it("llm → 429 when checkQuota returns allowed=false", async () => {
@@ -219,7 +225,7 @@ describe("Pre-check quota exceeded (before provider call)", () => {
     });
     const res = await POST_llm(req);
     expect(res.status).toBe(429);
-    expect((await res.json()).error).toBe("Quota exceeded.");
+    expect((await res.json()).error).toMatch(/Quota exceeded|配额已用完/);
   });
 });
 
@@ -243,7 +249,7 @@ describe("Quota exceeded AFTER provider success (incrementQuota returns ok=false
     const res = await POST_vision(req);
     expect(res.status).toBe(429);
     const json = await res.json();
-    expect(json.error).toBe("Quota exceeded.");
+    expect(json.error).toMatch(/Quota exceeded|配额已用完/);
     expect(json.remaining).toBe(0);
   });
 
@@ -261,7 +267,7 @@ describe("Quota exceeded AFTER provider success (incrementQuota returns ok=false
     const res = await POST_image(req);
     expect(res.status).toBe(429);
     const json = await res.json();
-    expect(json.error).toBe("Quota exceeded.");
+    expect(json.error).toMatch(/Quota exceeded|配额已用完/);
     expect(json.remaining).toBe(0);
   });
 
@@ -279,7 +285,7 @@ describe("Quota exceeded AFTER provider success (incrementQuota returns ok=false
     const res = await POST_llm(req);
     expect(res.status).toBe(429);
     const json = await res.json();
-    expect(json.error).toBe("Quota exceeded.");
+    expect(json.error).toMatch(/Quota exceeded|配额已用完/);
     expect(json.remaining).toBe(0);
   });
 });
@@ -364,7 +370,7 @@ describe("Provider rate-limited → 503", () => {
     });
     const res = await POST_vision(req);
     expect(res.status).toBe(503);
-    expect((await res.json()).error).toBe("Service busy. Please retry in a moment.");
+    expect((await res.json()).error).toMatch(/Service busy|服务繁忙/);
   });
 
   it("image → 503 on PROVIDER_RATE_LIMITED error", async () => {

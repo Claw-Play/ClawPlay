@@ -5,15 +5,17 @@ import { eq, and } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { signJWT, buildSetCookieHeader } from "@/lib/auth";
 import { analytics } from "@/lib/analytics";
+import { getT } from "@/lib/i18n";
 
 export async function POST(request: NextRequest) {
   try {
+    const t = await getT("errors");
     const body = await request.json();
     const { email, password } = body as { email?: string; password?: string };
 
     if (!email || !password) {
       return NextResponse.json(
-        { error: "Email and password are required." },
+        { error: t("email_required") },
         { status: 400 }
       );
     }
@@ -28,14 +30,14 @@ export async function POST(request: NextRequest) {
     if (!identity || !identity.credential) {
       analytics.user.loginFailed(email, "identity_not_found");
       console.warn("[auth/login] failed — identity not found", { email });
-      return NextResponse.json({ error: "Invalid email or password." }, { status: 401 });
+      return NextResponse.json({ error: t("invalid_email_or_password") }, { status: 401 });
     }
 
     const valid = await bcrypt.compare(password, identity.credential);
     if (!valid) {
       analytics.user.loginFailed(email, "wrong_password");
       console.warn("[auth/login] failed — wrong password", { email });
-      return NextResponse.json({ error: "Invalid email or password." }, { status: 401 });
+      return NextResponse.json({ error: t("invalid_email_or_password") }, { status: 401 });
     }
 
     const user = await db.query.users.findFirst({
@@ -43,7 +45,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!user) {
-      return NextResponse.json({ error: "User not found." }, { status: 404 });
+      return NextResponse.json({ error: t("not_found", { resource: "User" }) }, { status: 404 });
     }
 
     const token = await signJWT({ userId: user.id, role: user.role as "user" | "admin" | "reviewer" });
@@ -56,6 +58,7 @@ export async function POST(request: NextRequest) {
     return response;
   } catch (err) {
     console.error("[auth/login]", err);
-    return NextResponse.json({ error: "Internal server error." }, { status: 500 });
+    const t = await getT("errors");
+    return NextResponse.json({ error: t("internal_error") }, { status: 500 });
   }
 }

@@ -1,30 +1,38 @@
+/**
+ * Cron endpoint: resets all key windows.
+ *
+ * Used by:
+ * 1. Local/server cron: first request triggers startCronTimer() which schedules
+ *    resetKeyWindow() every 60s via setInterval
+ * 2. Upstash QStash (serverless): calls this endpoint every minute
+ *
+ * GET is for manual/debug use; QStash sends POST.
+ */
 import { NextResponse } from "next/server";
+import { startCronTimer } from "@/lib/cron";
 import { resetKeyWindow } from "@/lib/providers/key-pool";
 
-/**
- * Cron endpoint to reset all key window counters every minute.
- *
- * Called by Upstash QStash, Cloudflare Cron, or any cron scheduler.
- * Set up a recurring job: every 1 minute → GET /api/cron/reset-keys
- *
- * Optionally pass ?provider=ark_image to reset only a specific provider.
- */
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const provider = searchParams.get("provider") ?? undefined;
-
-  // Basic secret check to prevent unauthorized resets
-  const cronSecret = process.env.CRON_SECRET;
-  const authHeader = request.headers.get("authorization");
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+export async function GET() {
+  // Start timer on first call (singleton, no-op if already running)
+  startCronTimer();
 
   try {
-    await resetKeyWindow(provider);
-    return NextResponse.json({ ok: true, provider: provider ?? "all" });
+    await resetKeyWindow();
+    return NextResponse.json({ ok: true, reset: Date.now() });
   } catch (err) {
     console.error("[cron/reset-keys] error:", err);
-    return NextResponse.json({ error: "Reset failed" }, { status: 500 });
+    return NextResponse.json({ ok: false, error: String(err) }, { status: 500 });
+  }
+}
+
+export async function POST() {
+  startCronTimer();
+
+  try {
+    await resetKeyWindow();
+    return NextResponse.json({ ok: true, reset: Date.now() });
+  } catch (err) {
+    console.error("[cron/reset-keys] POST error:", err);
+    return NextResponse.json({ ok: false, error: String(err) }, { status: 500 });
   }
 }

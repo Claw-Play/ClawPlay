@@ -5,8 +5,10 @@ import { db } from "@/lib/db";
 import { users, userIdentities, userTokens } from "@/lib/db/schema";
 import { eq, and, isNull } from "drizzle-orm";
 import { getQuota, DEFAULT_QUOTA_FREE } from "@/lib/redis";
+import { getT } from "@/lib/i18n";
 
 export async function GET(request: NextRequest) {
+  const t = await getT("errors");
   // Accept either JWT cookie or Bearer CLAWPLAY_TOKEN
   let auth = await getAuthFromCookies();
 
@@ -24,7 +26,7 @@ export async function GET(request: NextRequest) {
   }
 
   if (!auth) {
-    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+    return NextResponse.json({ error: t("unauthorized") }, { status: 401 });
   }
 
   const user = await db.query.users.findFirst({
@@ -32,7 +34,7 @@ export async function GET(request: NextRequest) {
   });
 
   if (!user) {
-    return NextResponse.json({ error: "User not found." }, { status: 404 });
+    return NextResponse.json({ error: t("user_not_found") }, { status: 404 });
   }
 
   // Collect all linked identities for display (email, phone)
@@ -74,10 +76,11 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
+  const t = await getT("errors");
   const auth = await getAuthFromCookies();
 
   if (!auth) {
-    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+    return NextResponse.json({ error: t("unauthorized") }, { status: 401 });
   }
 
   const body = await request.json().catch(() => ({}));
@@ -93,14 +96,14 @@ export async function PATCH(request: NextRequest) {
   if (name !== undefined) {
     const trimmed = name.trim();
     if (trimmed.length < 2 || trimmed.length > 32) {
-      return NextResponse.json({ error: "Name must be 2–32 characters." }, { status: 400 });
+      return NextResponse.json({ error: t("name_2_32_chars") }, { status: 400 });
     }
     updates.name = trimmed;
   }
 
   if (avatarColor !== undefined) {
     if (!/^#[0-9A-Fa-f]{3}([0-9A-Fa-f]{3})?$/.test(avatarColor)) {
-      return NextResponse.json({ error: "Invalid color format." }, { status: 400 });
+      return NextResponse.json({ error: t("invalid_color_format") }, { status: 400 });
     }
     updates.avatarColor = avatarColor;
   }
@@ -118,10 +121,10 @@ export async function PATCH(request: NextRequest) {
       if (trimmed.length > 0) {
         // Basic validation: must be data URL or plausible HTTP URL
         if (!/^(data:image\/\w+;base64,|https?:\/\/)/.test(trimmed)) {
-          return NextResponse.json({ error: "Invalid avatar URL format." }, { status: 400 });
+          return NextResponse.json({ error: t("invalid_avatar_url") }, { status: 400 });
         }
         if (trimmed.length > 5 * 1024 * 1024) {
-          return NextResponse.json({ error: "Avatar image too large (max 5MB)." }, { status: 400 });
+          return NextResponse.json({ error: t("avatar_too_large") }, { status: 400 });
         }
         updates.avatarUrl = trimmed;
       }

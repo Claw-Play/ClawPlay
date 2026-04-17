@@ -100,6 +100,8 @@ beforeAll(async () => {
     changelog: "",
     content: "",
     parsedMetadata: "{}",
+    moderationStatus: "pending",
+    moderationFlags: "[]",
   });
 });
 
@@ -150,7 +152,7 @@ describe("PATCH /api/admin/skills/[id]", () => {
     const json = await res.json();
 
     expect(res.status).toBe(200);
-    expect(json.message).toMatch(/approved/i);
+    expect(json.message).toMatch(/approved|已通过/i);
 
     // Verify DB
     const { skills } = await import("@/lib/db/schema");
@@ -191,6 +193,8 @@ describe("PATCH /api/admin/skills/[id]", () => {
       changelog: "",
       content: "",
       parsedMetadata: "{}",
+      moderationStatus: "pending",
+      moderationFlags: "[]",
     });
 
     cookieStore.token = adminCookie.replace("clawplay_token=", "");
@@ -239,7 +243,7 @@ describe("PATCH /api/admin/skills/[id]", () => {
     const res = await PATCH_adminSkill(req, { params: { id: pendingSkillId } });
     const json = await res.json();
     expect(res.status).toBe(200);
-    expect(json.message).toMatch(/featured/i);
+    expect(json.message).toMatch(/featured|已精选/i);
 
     const { skills } = await import("@/lib/db/schema");
     const { eq } = await import("drizzle-orm");
@@ -259,7 +263,7 @@ describe("PATCH /api/admin/skills/[id]", () => {
     const res = await PATCH_adminSkill(req, { params: { id: pendingSkillId } });
     const json = await res.json();
     expect(res.status).toBe(200);
-    expect(json.message).toMatch(/unfeatured/i);
+    expect(json.message).toMatch(/unfeatured|已取消.*精选/i);
 
     const { skills } = await import("@/lib/db/schema");
     const { eq } = await import("drizzle-orm");

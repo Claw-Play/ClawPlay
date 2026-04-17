@@ -50,9 +50,7 @@ export async function GET(request: NextRequest) {
       metadata: (() => { try { return JSON.parse(r.metadata as string); } catch { return {}; } })(),
       ip_address: r.ip_address,
       user_agent: r.user_agent,
-      created_at: typeof r.created_at === "object" && r.created_at !== null
-        ? (r.created_at as Date).getTime()
-        : r.created_at,
+      created_at: r.created_at as number,
     }));
 
     return NextResponse.json({ events, pagination: { total, limit, offset } });

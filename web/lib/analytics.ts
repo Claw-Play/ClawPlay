@@ -32,6 +32,11 @@ export type AnalyticsEvent =
   | "skill.review"
   | "skill.search"
   | "skill.install"
+  | "skill.version_submit"
+  | "skill.version_approve"
+  | "skill.version_reject"
+  | "skill.version_deprecate"
+  | "skill.revert"
   // Quota & ability events
   | "quota.check"
   | "quota.use"
@@ -208,6 +213,16 @@ export const analytics = {
       logEvent({ event: "skill.search", metadata: { query, filters, resultsCount: count } }),
     install: (skillId: string, userId: number | null) =>
       logEvent({ event: "skill.install", userId, targetType: "skill", targetId: skillId }),
+    version_submit: (skillId: string, slug: string, version: string) =>
+      logEvent({ event: "skill.version_submit", targetType: "skill", targetId: skillId, metadata: { slug, version } }),
+    version_approve: (skillId: string, versionId: string, adminId: number) =>
+      logEvent({ event: "skill.version_approve", userId: adminId, targetType: "skill", targetId: skillId, metadata: { versionId } }),
+    version_reject: (skillId: string, versionId: string, adminId: number, reason: string) =>
+      logEvent({ event: "skill.version_reject", userId: adminId, targetType: "skill", targetId: skillId, metadata: { versionId, reason } }),
+    version_deprecate: (skillId: string, versionId: string) =>
+      logEvent({ event: "skill.version_deprecate", targetType: "skill", targetId: skillId, metadata: { versionId } }),
+    revert: (skillId: string, toVersion: string, adminId: number) =>
+      logEvent({ event: "skill.revert", userId: adminId, targetType: "skill", targetId: skillId, metadata: { toVersion } }),
   },
   quota: {
     check: (userId: number, current: number, limit: number) =>

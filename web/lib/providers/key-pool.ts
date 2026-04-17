@@ -1,9 +1,12 @@
 /**
  * Key Pool Management — multi-key sharding with 429 auto-failover
  *
+ * Schema: provider_keys stores one row per (provider, ability, key).
+ * e.g. Ark + Image = one key, Ark + LLM = another key.
+ *
  * Key concepts:
- * - Keys are stored encrypted in DB (AES-256-GCM, same as user_tokens)
- * - Active key list is cached in Redis (30s TTL) for fast reads
+ * - Keys are AES-256-GCM encrypted; server never stores plaintext
+ * - Active key list is cached in Redis (30s TTL) per (provider, ability)
  * - Round-robin + rate-limit awareness for key selection
  * - Window-based quota tracking per key (reset by cron)
  */
@@ -22,10 +25,17 @@ const AUTH_TAG_LENGTH = 16;
 const CACHE_TTL = 30; // seconds
 const MAX_RETRIES = 3; // max key attempts before giving up
 
-// In-memory counter for round-robin (per-process, good enough for single instance)
+// In-memory counter for round-robin (per-process, per provider+ability)
 const roundRobinCounters: Record<string, number> = {};
 
-/** Encrypt an API key for DB storage */
+function rrKey(provider: string, ability: string): string {
+  return `${provider}_${ability}`;
+}
+
+// ---------------------------------------------------------------------------
+// Encryption
+// ---------------------------------------------------------------------------
+
 export function encryptApiKey(plaintextKey: string): { encrypted: string; hash: string } {
   const secret = process.env.CLAWPLAY_SECRET_KEY ?? "clawplay-dev-secret-do-not-use-in-prod";
   const key = deriveKey(secret);
@@ -38,7 +48,6 @@ export function encryptApiKey(plaintextKey: string): { encrypted: string; hash: 
   return { encrypted: encryptedB64, hash };
 }
 
-/** Decrypt an API key from DB */
 export function decryptApiKey(encryptedKey: string): string {
   const secret = process.env.CLAWPLAY_SECRET_KEY ?? "clawplay-dev-secret-do-not-use-in-prod";
   const key = deriveKey(secret);
@@ -59,14 +68,43 @@ function deriveKey(secret: string): Buffer {
 // Core pool operations
 // ---------------------------------------------------------------------------
 
-/** Get all active (enabled, within quota) keys for a provider, cached in Redis */
-export async function getActiveKeys(
-  provider: string
-): Promise<Array<{ id: number; hash: string; decryptedKey: string; quota: number }>> {
-  const r = getRedis();
-  const cacheKey = `clawplay:keys:${provider}`;
+type ActiveKey = { id: number; hash: string; decryptedKey: string; quota: number };
 
-  // Try Redis cache first
+/** Auto-reset windowUsed if the current minute window has expired */
+async function checkAndResetWindow(id: number, windowStart: number): Promise<boolean> {
+  const nowMinute = Math.floor(Date.now() / 60000);
+  const windowMinute = Math.floor(windowStart / 60);
+  if (windowMinute < nowMinute) {
+    await db
+      .update(providerKeys)
+      .set({ windowUsed: 0, windowStart: nowMinute * 60 })
+      .where(eq(providerKeys.id, id));
+
+    const r = getRedis();
+    if (r) {
+      // Re-fetch the key's provider+ability to build the cache key
+      const [keyRow] = await db
+        .select({ provider: providerKeys.provider, ability: providerKeys.ability })
+        .from(providerKeys)
+        .where(eq(providerKeys.id, id))
+        .limit(1);
+      if (keyRow) {
+        r.del(`clawplay:keys:${keyRow.provider}_${keyRow.ability}`).catch(() => {});
+      }
+    }
+    return true; // was reset
+  }
+  return false;
+}
+
+/** Get all active (enabled, within quota) keys for a provider+ability, cached in Redis */
+async function getActiveKeys(
+  provider: string,
+  ability: string
+): Promise<ActiveKey[]> {
+  const r = getRedis();
+  const cacheKey = `clawplay:keys:${provider}_${ability}`;
+
   if (r) {
     try {
       const cached = await Promise.race([
@@ -74,12 +112,7 @@ export async function getActiveKeys(
         new Promise<null>((res) => setTimeout(() => res(null), 500)),
       ]);
       if (cached) {
-        const keys = JSON.parse(cached) as Array<{
-          id: number;
-          hash: string;
-          decryptedKey: string;
-          quota: number;
-        }>;
+        const keys = JSON.parse(cached) as ActiveKey[];
         if (keys.length > 0) return keys;
       }
     } catch {
@@ -87,7 +120,6 @@ export async function getActiveKeys(
     }
   }
 
-  // DB query using Drizzle query builder
   const rows = await db
     .select({
       id: providerKeys.id,
@@ -95,25 +127,32 @@ export async function getActiveKeys(
       encryptedKey: providerKeys.encryptedKey,
       quota: providerKeys.quota,
       windowUsed: providerKeys.windowUsed,
+      windowStart: providerKeys.windowStart,
     })
     .from(providerKeys)
-    .where(and(eq(providerKeys.provider, provider), eq(providerKeys.enabled, true)));
+    .where(
+      and(
+        eq(providerKeys.provider, provider),
+        eq(providerKeys.ability, ability),
+        eq(providerKeys.enabled, true)
+      )
+    );
 
-  const result: Array<{ id: number; hash: string; decryptedKey: string; quota: number }> = [];
-
+  const result: ActiveKey[] = [];
   for (const row of rows) {
-    // Skip keys that are rate-limited in current window
-    if (row.windowUsed >= row.quota) continue;
+    // Auto-reset if window expired (no cron needed)
+    const wasReset = await checkAndResetWindow(row.id, row.windowStart);
+    const effectiveUsed = wasReset ? 0 : row.windowUsed;
+    if (effectiveUsed >= row.quota) continue;
 
     try {
       const decryptedKey = decryptApiKey(row.encryptedKey);
       result.push({ id: row.id, hash: row.keyHash, decryptedKey, quota: row.quota });
     } catch {
-      console.error(`[key-pool] Failed to decrypt key id=${row.id} for provider=${provider}`);
+      console.error(`[key-pool] Failed to decrypt key id=${row.id}`);
     }
   }
 
-  // Cache in Redis (fire-and-forget)
   if (r) {
     r.setex(cacheKey, CACHE_TTL, JSON.stringify(result)).catch(() => {});
   }
@@ -122,69 +161,86 @@ export async function getActiveKeys(
 }
 
 /**
- * Pick a key for a provider using round-robin.
- * Returns decrypted key string, or throws if no keys available.
+ * Pick a key for a provider+ability using round-robin.
+ * Falls back to env var if no DB keys exist.
  */
 export async function pickKey(
-  provider: string
-): Promise<{ id: number; key: string; hash: string; quota: number }> {
-  const keys = await getActiveKeys(provider);
+  provider: string,
+  ability: string
+): Promise<{ id: number; key: string; hash: string; quota: number; endpoint: string; apiFormat: string; modelName: string }> {
+  const keys = await getActiveKeys(provider, ability);
   if (keys.length > 0) {
-    // Round-robin
-    const idx = (roundRobinCounters[provider] ?? 0) % keys.length;
-    roundRobinCounters[provider] = idx + 1;
+    const idx = (roundRobinCounters[rrKey(provider, ability)] ?? 0) % keys.length;
+    roundRobinCounters[rrKey(provider, ability)] = idx + 1;
     const selected = keys[idx];
-    return { id: selected.id, key: selected.decryptedKey, hash: selected.hash, quota: selected.quota };
+
+    // Fetch endpoint/apiFormat/modelName from DB
+    const [row] = await db
+      .select({
+        endpoint: providerKeys.endpoint,
+        apiFormat: providerKeys.apiFormat,
+        modelName: providerKeys.modelName,
+      })
+      .from(providerKeys)
+      .where(eq(providerKeys.id, selected.id))
+      .limit(1);
+
+    return {
+      id: selected.id,
+      key: selected.decryptedKey,
+      hash: selected.hash,
+      quota: selected.quota,
+      endpoint: row?.endpoint ?? "",
+      apiFormat: row?.apiFormat ?? "",
+      modelName: row?.modelName ?? "",
+    };
   }
 
-  // Fallback: use ARK_API_KEY env var directly (shared key for dev/self-hosted)
-  if (provider === "ark_vision" || provider === "ark_image" || provider === "ark_llm") {
+  // Fallback: use ARK_API_KEY env var directly
+  if (provider === "ark") {
     const envKey = process.env.ARK_API_KEY;
     if (envKey) {
-      return { id: 0, key: envKey, hash: "", quota: 999999 };
+      return { id: 0, key: envKey, hash: "", quota: 999999, endpoint: "", apiFormat: "ark", modelName: "" };
     }
   }
 
-  throw new Error(`No active keys for provider: ${provider}`);
+  throw new Error(`No active keys for provider=${provider}, ability=${ability}`);
 }
 
 /**
  * Pick a key with 429 auto-failover.
- * Retries up to MAX_RETRIES times, skipping keys that are rate-limited.
  */
 export async function pickKeyWithRetry(
-  provider: string
-): Promise<{ id: number; key: string; hash: string; quota: number }> {
+  provider: string,
+  ability: string
+): Promise<{ id: number; key: string; hash: string; quota: number; endpoint: string; apiFormat: string; modelName: string }> {
   const attemptedIds = new Set<number>();
-
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-    const picked = await pickKey(provider);
-
-    // Avoid picking the same exhausted key again in the retry loop
+    const picked = await pickKey(provider, ability);
     if (attemptedIds.has(picked.id)) continue;
     attemptedIds.add(picked.id);
-
     return picked;
   }
-
-  throw new Error(`All keys for provider ${provider} are rate-limited. Please retry shortly.`);
+  throw new Error(`All keys for ${provider}/${ability} are rate-limited. Please retry shortly.`);
 }
 
 /**
  * Record usage for a key after a successful API call.
- * Updates windowUsed in DB and invalidates Redis cache.
  */
-export async function recordKeyUsage(provider: string, keyId: number): Promise<void> {
+export async function recordKeyUsage(
+  provider: string,
+  ability: string,
+  keyId: number
+): Promise<void> {
   try {
     await db
       .update(providerKeys)
-      .set({ windowUsed: sql`${providerKeys.windowUsed} + 1` })
-      .where(and(eq(providerKeys.id, keyId), eq(providerKeys.provider, provider)));
+      .set({ windowUsed: sql`${providerKeys.windowUsed} + 1`, totalCalls: sql`${providerKeys.totalCalls} + 1` })
+      .where(eq(providerKeys.id, keyId));
 
-    // Invalidate cache so next pickKey() sees updated windowUsed
     const r = getRedis();
     if (r) {
-      r.del(`clawplay:keys:${provider}`).catch(() => {});
+      r.del(`clawplay:keys:${provider}_${ability}`).catch(() => {});
     }
   } catch (err) {
     console.error(`[key-pool] Failed to record usage for key id=${keyId}`, err);
@@ -192,26 +248,39 @@ export async function recordKeyUsage(provider: string, keyId: number): Promise<v
 }
 
 // ---------------------------------------------------------------------------
-// Admin CRUD (no decryption — for listing only)
+// Admin CRUD
 // ---------------------------------------------------------------------------
 
-/** Add a new key (plaintext input, stored encrypted). Throws if key hash already exists. */
+export interface AddKeyOptions {
+  endpoint?: string;
+  apiFormat?: string;
+  modelName?: string;
+  quota?: number;
+}
+
+/** Add a new key (plaintext input, stored encrypted). */
 export async function addProviderKey(
   provider: string,
+  ability: string,
   plaintextKey: string,
-  quota: number
+  opts: AddKeyOptions = {}
 ): Promise<number> {
   const { encrypted, hash } = encryptApiKey(plaintextKey);
 
-  // Pre-check: reject duplicates explicitly rather than relying on DB constraint
+  // Allow same key for different abilities (e.g. same Ark key for LLM + Image)
+  // but not duplicated within the same (provider, ability) combo
   const existing = await db
     .select({ id: providerKeys.id })
     .from(providerKeys)
-    .where(eq(providerKeys.keyHash, hash))
+    .where(and(
+      eq(providerKeys.provider, provider),
+      eq(providerKeys.ability, ability),
+      eq(providerKeys.keyHash, hash)
+    ))
     .limit(1);
 
   if (existing.length > 0) {
-    const err = new Error("Duplicate key hash");
+    const err = new Error("Duplicate key for this provider and ability");
     (err as NodeJS.ErrnoException).code = "DUPLICATE_KEY";
     throw err;
   }
@@ -220,140 +289,141 @@ export async function addProviderKey(
 
   const result = await db.insert(providerKeys).values({
     provider,
+    ability,
     encryptedKey: encrypted,
     keyHash: hash,
-    quota,
+    endpoint: opts.endpoint ?? "",
+    apiFormat: opts.apiFormat ?? "",
+    modelName: opts.modelName ?? "",
+    quota: opts.quota ?? 500,
     windowUsed: 0,
     windowStart: now,
     enabled: true,
   });
 
-  // Invalidate cache
   const r = getRedis();
   if (r) {
-    r.del(`clawplay:keys:${provider}`).catch(() => {});
+    r.del(`clawplay:keys:${provider}_${ability}`).catch(() => {});
   }
 
   return result.lastInsertRowid as number;
 }
 
-/** Revoke a key by hash */
-export async function removeProviderKey(provider: string, keyHash: string): Promise<void> {
+/** Toggle a key's enabled state */
+export async function toggleProviderKey(id: number, enabled: boolean): Promise<void> {
+  const [row] = await db
+    .select({ provider: providerKeys.provider, ability: providerKeys.ability })
+    .from(providerKeys)
+    .where(eq(providerKeys.id, id))
+    .limit(1);
+
   await db
     .update(providerKeys)
-    .set({ enabled: false })
-    .where(and(eq(providerKeys.provider, provider), eq(providerKeys.keyHash, keyHash)));
+    .set({ enabled })
+    .where(eq(providerKeys.id, id));
 
-  const r = getRedis();
-  if (r) {
-    r.del(`clawplay:keys:${provider}`).catch(() => {});
+  if (row?.provider && row?.ability) {
+    const r = getRedis();
+    if (r) {
+      r.del(`clawplay:keys:${row.provider}_${row.ability}`).catch(() => {});
+    }
   }
 }
 
-/** List all keys for a provider (no plaintext, no auth tag) */
-export async function listProviderKeys(
-  provider: string
-): Promise<
-  Array<{
-    id: number;
-    keyHash: string;
-    quota: number;
-    windowUsed: number;
-    windowStart: number;
-    enabled: boolean;
-    createdAt: Date;
-  }>
-> {
-  const rows = await db
-    .select({
-      id: providerKeys.id,
-      keyHash: providerKeys.keyHash,
-      quota: providerKeys.quota,
-      windowUsed: providerKeys.windowUsed,
-      windowStart: providerKeys.windowStart,
-      enabled: providerKeys.enabled,
-      createdAt: providerKeys.createdAt,
-    })
+/** Remove a key by id (hard delete) */
+export async function removeProviderKey(id: number): Promise<void> {
+  const [row] = await db
+    .select({ provider: providerKeys.provider, ability: providerKeys.ability })
     .from(providerKeys)
-    .where(eq(providerKeys.provider, provider))
-    .orderBy(providerKeys.createdAt);
+    .where(eq(providerKeys.id, id))
+    .limit(1);
+
+  await db.delete(providerKeys).where(eq(providerKeys.id, id));
+
+  if (row?.provider && row?.ability) {
+    const r = getRedis();
+    if (r) {
+      r.del(`clawplay:keys:${row.provider}_${row.ability}`).catch(() => {});
+    }
+  }
+}
+
+export interface KeyRecord {
+  id: number;
+  provider: string;
+  ability: string;
+  keyHash: string;
+  endpoint: string;
+  apiFormat: string;
+  modelName: string;
+  quota: number;
+  windowUsed: number;
+  windowStart: number;
+  totalCalls: number;
+  enabled: boolean;
+  createdAt: Date;
+}
+
+/** List keys, optionally filtered by ability */
+export async function listProviderKeys(
+  ability?: string
+): Promise<KeyRecord[]> {
+  const rows = ability
+    ? await db
+        .select()
+        .from(providerKeys)
+        .where(eq(providerKeys.ability, ability))
+        .orderBy(providerKeys.createdAt)
+    : await db
+        .select()
+        .from(providerKeys)
+        .orderBy(providerKeys.createdAt);
 
   return rows.map((row) => ({
     id: row.id,
+    provider: row.provider,
+    ability: row.ability,
     keyHash: row.keyHash,
+    endpoint: row.endpoint,
+    apiFormat: row.apiFormat,
+    modelName: row.modelName,
     quota: row.quota,
     windowUsed: row.windowUsed,
     windowStart: row.windowStart,
+    totalCalls: row.totalCalls,
     enabled: Boolean(row.enabled),
     createdAt: row.createdAt,
   }));
 }
 
-/** Reset all window counters for a provider (called by cron every minute) */
-export async function resetKeyWindow(provider?: string): Promise<void> {
+/** Reset all window counters for an ability (or all abilities) */
+export async function resetKeyWindow(ability?: string): Promise<void> {
   const now = Math.floor(Date.now() / 60000) * 60;
 
-  if (provider) {
+  if (ability) {
     await db
       .update(providerKeys)
       .set({ windowUsed: 0, windowStart: now })
-      .where(eq(providerKeys.provider, provider));
+      .where(eq(providerKeys.ability, ability));
   } else {
     await db.update(providerKeys).set({ windowUsed: 0, windowStart: now });
   }
 
-  // Flush all key caches
   const r = getRedis();
   if (r) {
-    const keys = await r.keys("clawplay:keys:*");
+    const pattern = ability ? `clawplay:keys:*_${ability}` : "clawplay:keys:*";
+    const keys = await r.keys(pattern);
     if (keys.length > 0) {
       r.del(...keys).catch(() => {});
     }
   }
 }
 
-/** Initialize keys from environment variables on server start. */
-export async function initKeysFromEnv(): Promise<void> {
-  const quota = parseInt(process.env.ARK_KEY_QUOTA ?? "500", 10);
-  const visionQuota = parseInt(process.env.ARK_VISION_KEY_QUOTA ?? "30000", 10);
-  const arkKey = process.env.ARK_API_KEY;
-  if (!arkKey) return;
-
-  // ark_image
-  try {
-    await addProviderKey("ark_image", arkKey, quota);
-    console.log(`[key-pool] Initialized ark_image key from ARK_API_KEY`);
-  } catch (err: unknown) {
-    if ((err as NodeJS.ErrnoException)?.code === "DUPLICATE_KEY") {
-      // Ignore duplicate hash errors (key already in DB)
-    } else if (String(err).includes("Duplicate key hash")) {
-      // Already initialized
-    } else {
-      console.error(`[key-pool] Failed to init ark_image key:`, err);
-    }
-  }
-
-  // ark_vision
-  try {
-    await addProviderKey("ark_vision", arkKey, visionQuota);
-    console.log(`[key-pool] Initialized ark_vision key from ARK_API_KEY`);
-  } catch (err: unknown) {
-    if ((err as NodeJS.ErrnoException)?.code === "DUPLICATE_KEY") {
-      // Ignore duplicate hash errors (key already in DB)
-    } else if (String(err).includes("Duplicate key hash")) {
-      // Already initialized
-    } else {
-      console.error(`[key-pool] Failed to init ark_vision key:`, err);
-    }
-  }
-}
-
-// Auto-init on first call (idempotent — uses globalThis so it only runs once per process)
-const _alreadyInit = (globalThis as Record<string, unknown>).__clawplay_keypool_init as Promise<void> | undefined;
-if (!_alreadyInit) {
-  const p = initKeysFromEnv();
-  (globalThis as Record<string, unknown>).__clawplay_keypool_init = p;
-  p.catch((err: unknown) =>
-    console.error("[key-pool] Auto-init from env failed:", err)
-  );
+/**
+ * Check and auto-reset expired windows for all keys.
+ * Not exported — called internally by cron timer.
+ */
+async function _checkAllKeyWindows(): Promise<void> {
+  const rows = await db.select({ id: providerKeys.id, windowStart: providerKeys.windowStart }).from(providerKeys);
+  await Promise.all(rows.map((row) => checkAndResetWindow(row.id, row.windowStart)));
 }

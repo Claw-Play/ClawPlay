@@ -1,13 +1,13 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useT } from "@/lib/i18n/context";
+import { unixSecToDate, formatDate, formatTime } from "@/lib/timestamp";
 
 interface AuditEntry {
   id?: number;
   event: string;
   action: string;
-  timestamp?: string | null;
-  ts?: string | null;
+  timestamp?: number | null;
   actorId?: number | string | null;
   userId?: number | string | null;
   targetId?: string | null;
@@ -115,7 +115,7 @@ export default function AdminAuditPage() {
           <>
             {entries.map((entry, i) => {
               const style = ACTION_STYLES[entry.event] ?? { bg: "#ede9cf", text: "#586330", label: entry.event };
-              const ts = entry.timestamp ? new Date(entry.timestamp) : entry.ts ? new Date(entry.ts as string) : null;
+              const ts = unixSecToDate(entry.timestamp ?? null);
               const actorId = entry.actorId ?? entry.userId ?? "";
               const actorStr = actorId !== "" && actorId !== null && actorId !== undefined ? String(actorId) : "";
               const initials = actorStr.length >= 2 ? actorStr.slice(0, 2).toUpperCase() : actorStr.toUpperCase();
@@ -132,10 +132,10 @@ export default function AdminAuditPage() {
                     {/* Timestamp */}
                     <div className="px-6 py-5">
                       <p className="text-sm font-medium text-[#1d1c0d] font-body">
-                        {ts ? ts.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}
+                        {formatDate(ts, "en-US")}
                       </p>
                       <p className="text-xs text-[#564337] font-body">
-                        {ts ? ts.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit" }) : ""}
+                        {formatTime(ts)}
                       </p>
                     </div>
 

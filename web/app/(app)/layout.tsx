@@ -203,6 +203,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     <button
                       onClick={async () => {
                         setDropdownOpen(false);
+                        localStorage.removeItem('clawplay_draft_form');
+                        localStorage.removeItem('clawplay_draft_mermaid');
                         await fetch("/api/auth/logout", { method: "POST" });
                         router.push("/");
                         router.refresh();

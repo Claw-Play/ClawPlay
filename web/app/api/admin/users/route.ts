@@ -4,8 +4,10 @@ import { withAdmin } from "@/lib/auth/admin";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { asc } from "drizzle-orm";
+import { getT } from "@/lib/i18n";
 
 export async function GET(request: NextRequest) {
+  const t = await getT("errors");
   const auth = await getAuthFromCookies();
 
   return withAdmin(auth, async () => {
@@ -24,7 +26,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ users: rows });
     } catch (err) {
       console.error("[api/admin/users]", err);
-      return NextResponse.json({ error: "Could not read users." }, { status: 500 });
+      return NextResponse.json({ error: t("could_not_read_users") }, { status: 500 });
     }
   });
 }

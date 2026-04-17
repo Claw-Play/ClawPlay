@@ -5,11 +5,13 @@ import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { analytics } from "@/lib/analytics";
+import { getT } from "@/lib/i18n";
 
 export async function GET(
   _request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const t = await getT("errors");
   const auth = await getAuthFromCookies();
 
   return withAdmin(auth, async () => {
@@ -17,7 +19,7 @@ export async function GET(
     const user = await db.query.users.findFirst({ where: eq(users.id, targetId) });
 
     if (!user) {
-      return NextResponse.json({ error: "User not found." }, { status: 404 });
+      return NextResponse.json({ error: t("user_not_found") }, { status: 404 });
     }
 
     return NextResponse.json({ id: user.id, name: user.name, role: user.role });
@@ -28,6 +30,7 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const t = await getT("errors");
   const auth = await getAuthFromCookies();
 
   return withAdmin(auth, async (admin) => {
@@ -36,7 +39,7 @@ export async function PATCH(
     // Prevent self-demotion
     if (targetId === admin.userId) {
       return NextResponse.json(
-        { error: "You cannot change your own role." },
+        { error: t("cannot_change_own_role") },
         { status: 403 }
       );
     }
@@ -52,14 +55,14 @@ export async function PATCH(
 
     if (!role || !["user", "reviewer", "admin"].includes(role)) {
       return NextResponse.json(
-        { error: "role must be one of: user, reviewer, admin." },
+        { error: t("role_invalid") },
         { status: 400 }
       );
     }
 
     const existing = await db.query.users.findFirst({ where: eq(users.id, targetId) });
     if (!existing) {
-      return NextResponse.json({ error: "User not found." }, { status: 404 });
+      return NextResponse.json({ error: t("user_not_found") }, { status: 404 });
     }
 
     if (existing.role === role) {

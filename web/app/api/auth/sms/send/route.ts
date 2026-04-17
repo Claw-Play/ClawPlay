@@ -1,17 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sendSmsCode } from "@/lib/sms";
 import { analytics } from "@/lib/analytics";
+import { getT } from "@/lib/i18n";
 
 const PHONE_RE = /^1[3-9]\d{9}$/;
 
 export async function POST(request: NextRequest) {
   try {
+    const t = await getT("errors");
     const body = await request.json();
     const { phone } = body as { phone?: string };
 
     if (!phone || !PHONE_RE.test(phone)) {
       return NextResponse.json(
-        { error: "请输入有效的中国大陆手机号。" },
+        { error: t("phone_required") },
         { status: 400 }
       );
     }
@@ -19,9 +21,10 @@ export async function POST(request: NextRequest) {
     await sendSmsCode(phone);
     analytics.user.smsSend(phone);
 
-    return NextResponse.json({ message: "验证码已发送，请在10分钟内使用。" });
+    return NextResponse.json({ message: t("sms_sent") });
   } catch (err) {
     console.error("[auth/sms/send]", err);
-    return NextResponse.json({ error: "短信发送失败，请稍后重试。" }, { status: 500 });
+    const t = await getT("errors");
+    return NextResponse.json({ error: t("sms_send_failed") }, { status: 500 });
   }
 }

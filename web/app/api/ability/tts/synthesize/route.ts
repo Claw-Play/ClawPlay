@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { decryptToken, type TokenPayload } from "@/lib/token";
 import { checkAndIncrementQuota, ABILITY_COSTS } from "@/lib/redis";
 import { analytics } from "@/lib/analytics";
+import { getT } from "@/lib/i18n";
 
 const TTS_API_URL = "https://openspeech.bytedance.com/api/v3/tts";
 const TTS_API_KEY = process.env.ARK_TTS_API_KEY ?? "";
@@ -10,31 +11,33 @@ const COST = ABILITY_COSTS[ABILITY] ?? 5;
 
 /** Proxy TTS synthesis through ClawPlay (quota-protected) */
 export async function POST(request: NextRequest) {
+  const t = await getT("errors");
+
   const token = request.headers.get("Authorization")?.replace("Bearer ", "") ??
                 request.cookies.get("clawplay_token")?.value;
 
   if (!token) {
-    return NextResponse.json({ error: "Authorization required." }, { status: 401 });
+    return NextResponse.json({ error: t("authorization_required") }, { status: 401 });
   }
 
   let payload: TokenPayload;
   try {
     payload = decryptToken(token);
   } catch {
-    return NextResponse.json({ error: "Invalid token." }, { status: 401 });
+    return NextResponse.json({ error: t("invalid_auth_token") }, { status: 401 });
   }
 
   const quotaResult = await checkAndIncrementQuota(payload.userId, ABILITY);
   if (!quotaResult.allowed) {
     analytics.quota.exceeded(payload.userId, ABILITY, quotaResult.remaining ?? 0, (quotaResult.remaining ?? 0) + COST);
     return NextResponse.json(
-      { error: "Quota exceeded.", reason: quotaResult.reason, remaining: quotaResult.remaining },
+      { error: t("quota_exceeded"), reason: quotaResult.reason, remaining: quotaResult.remaining },
       { status: 429 }
     );
   }
 
   if (!TTS_API_KEY) {
-    return NextResponse.json({ error: "TTS not configured on server." }, { status: 503 });
+    return NextResponse.json({ error: t("tts_not_configured") }, { status: 503 });
   }
 
   const body = await request.json();
@@ -45,7 +48,7 @@ export async function POST(request: NextRequest) {
   };
 
   if (!text) {
-    return NextResponse.json({ error: "text is required." }, { status: 400 });
+    return NextResponse.json({ error: t("text_required") }, { status: 400 });
   }
 
   try {
@@ -68,7 +71,7 @@ export async function POST(request: NextRequest) {
 
     if (!providerRes.ok) {
       const err = await providerRes.text();
-      return NextResponse.json({ error: "Provider error.", detail: err }, { status: 502 });
+      return NextResponse.json({ error: t("provider_error"), detail: err }, { status: 502 });
     }
 
     const data = await providerRes.json();
@@ -80,6 +83,6 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     analytics.quota.error(payload.userId, ABILITY, "tts", (err as NodeJS.ErrnoException).code ?? "UNKNOWN");
     console.error("[ability/tts/synthesize]", err);
-    return NextResponse.json({ error: "Failed to synthesize speech." }, { status: 500 });
+    return NextResponse.json({ error: t("tts_failed") }, { status: 500 });
   }
 }

@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-// @ts-check
 
 /**
  * Mermaid stateDiagram-v2 generator from SKILL.md.
@@ -280,7 +279,7 @@ export async function generateDiagram(content, skillFilePath) {
 
   // Build phase description table for LLM context
   const descTable =
-    [...phaseDescriptions.entries()]
+    Array.from(phaseDescriptions.entries())
       .map(([name, desc]) => `  - ${name}: ${desc}`)
       .join('\n') || '  (无描述，请从 phase 内容中推断)';
 

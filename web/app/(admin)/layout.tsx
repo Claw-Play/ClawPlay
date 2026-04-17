@@ -22,7 +22,7 @@ const NAV_ITEMS_ADMIN = [
   { href: "/admin/events", icon: "📡", labelKey: "events" as const },
   { href: "/admin/users", icon: "👥", labelKey: "users" as const },
   { href: "/admin/audit", icon: "📋", labelKey: "audit_logs" as const },
-  { href: "/admin/settings", icon: "⚙️", labelKey: "settings" as const },
+  { href: "/admin/providers", icon: "🔑", labelKey: "providers" as const },
 ];
 
 const NAV_ITEMS_REVIEWER = [
@@ -79,7 +79,7 @@ export default function AdminLayout({
     if (href === "/admin/users") return pathname.startsWith("/admin/users");
     if (href === "/admin/review") return pathname.startsWith("/admin/review");
     if (href === "/admin/audit") return pathname.startsWith("/admin/audit");
-    if (href === "/admin/settings") return pathname === "/admin/settings";
+    if (href === "/admin/providers") return pathname === "/admin/providers";
     return false;
   }
 

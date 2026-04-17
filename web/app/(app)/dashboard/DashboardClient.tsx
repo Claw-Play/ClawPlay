@@ -2,6 +2,22 @@
 import { useState, useEffect } from "react";
 import { useT } from "@/lib/i18n/context";
 import { ProfileEditModal } from "@/components/ProfileEditModal";
+import dynamic from "next/dynamic";
+
+const MySkillsClient = dynamic(() => import("./MySkillsClient").then((m) => m.MySkillsClient), {
+  ssr: false,
+  loading: () => (
+    <div className="space-y-4">
+      {[1, 2].map((i) => (
+        <div key={i} className="bg-[#fffdf7] rounded-[24px] p-6 border border-[#e8dfc8] animate-pulse">
+          <div className="h-5 bg-[#e8dfc8] rounded w-1/3 mb-3" />
+          <div className="h-4 bg-[#e8dfc8] rounded w-2/3 mb-4" />
+          <div className="h-4 bg-[#e8dfc8] rounded w-1/4" />
+        </div>
+      ))}
+    </div>
+  ),
+});
 
 interface QuotaInfo {
   used: number;
@@ -384,6 +400,14 @@ export function DashboardClient({ user: initialUser, quota, token }: DashboardCl
 
           {/* Usage Stats */}
           <UsageStatsCard />
+
+          {/* My Skills */}
+          <div className="bg-white rounded-[32px] shadow-[0px_8px_24px_rgba(86,67,55,0.06)] p-8 border border-[rgba(220,193,177,0.1)]">
+            <h2 className="text-2xl font-extrabold font-heading text-[#1d1c0d] mb-6">
+              {t("my_skills")}
+            </h2>
+            <MySkillsClient />
+          </div>
         </div>
       </div>
 

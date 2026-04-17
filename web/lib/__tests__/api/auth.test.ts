@@ -118,7 +118,7 @@ describe("POST /api/auth/register", () => {
     const json = await res2.json();
 
     expect(res2.status).toBe(409);
-    expect(json.error).toMatch(/already exists/i);
+    expect(json.error).toMatch(/邮箱已被注册|already exists/i);
   });
 
   it("password < 8 chars → 400", async () => {
@@ -181,7 +181,7 @@ describe("POST /api/auth/login", () => {
     const json = await res.json();
 
     expect(res.status).toBe(401);
-    expect(json.error).toMatch(/invalid/i);
+    expect(json.error).toMatch(/邮箱或密码错误|invalid/i);
   });
 
   it("unknown email → 401", async () => {

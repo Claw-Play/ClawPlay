@@ -22,6 +22,7 @@ process.env.JWT_SECRET = "test-jwt-secret-32-bytes-long!!!";
 process.env.CLAWPLAY_SECRET_KEY = "a".repeat(64);
 process.env.UPSTASH_REDIS_REST_URL = "https://mock.upstash.io";
 process.env.UPSTASH_REDIS_REST_TOKEN = "mock-token";
+process.env.NEXT_LOCALE = "en";
 
 let dbPath: string;
 let db: any;
@@ -68,6 +69,8 @@ beforeAll(async () => {
     changelog: "Initial release",
     content: "# Avatar Creator\nMake avatars.",
     parsedMetadata: JSON.stringify({ name: "avatar-creator" }),
+    moderationStatus: "approved",
+    moderationFlags: "[]",
   });
 
   // Seed a second version for the same skill
@@ -78,6 +81,8 @@ beforeAll(async () => {
     changelog: "First version",
     content: "# Avatar Creator v1",
     parsedMetadata: "{}",
+    moderationStatus: "approved",
+    moderationFlags: "[]",
   });
 });
 
@@ -106,7 +111,7 @@ describe("GET /api/skills/[slug]", () => {
     const json = await res.json();
 
     expect(res.status).toBe(404);
-    expect(json.error).toMatch(/not found/i);
+    expect(json.error).toMatch(/not found|Skill/);
   });
 });
 
@@ -132,6 +137,6 @@ describe("GET /api/skills/[slug]/versions", () => {
     const json = await res.json();
 
     expect(res.status).toBe(404);
-    expect(json.error).toMatch(/not found/i);
+    expect(json.error).toMatch(/not found|Skill/);
   });
 });

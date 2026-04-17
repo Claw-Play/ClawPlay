@@ -135,11 +135,11 @@ describe("GET /api/admin/users", () => {
     expect(res.status).toBe(403);
   });
 
-  it("unauthenticated → 403", async () => {
+  it("unauthenticated → 401", async () => {
     cookieStore.token = undefined;
     const req = makeRequest("GET", "/api/admin/users");
     const res = await GET_list(req);
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(401);
   });
 });
 
@@ -253,7 +253,7 @@ describe("PATCH /api/admin/users/[id]", () => {
     const json = await res.json();
 
     expect(res.status).toBe(403);
-    expect(json.error).toBe("You cannot change your own role.");
+    expect(json.error).toMatch(/You cannot change your own role|无法修改自己的角色/);
 
     // DB must not have changed
     const { users } = await import("@/lib/db/schema");
@@ -288,7 +288,7 @@ describe("PATCH /api/admin/users/[id]", () => {
     const json = await res.json();
 
     expect(res.status).toBe(400);
-    expect(json.error).toBe("role must be one of: user, reviewer, admin.");
+    expect(json.error).toMatch(/role must be one of: user, reviewer, admin|role 必须为以下之一/);
   });
 
   it("missing role field → 400", async () => {
@@ -327,12 +327,12 @@ describe("PATCH /api/admin/users/[id]", () => {
     expect(res.status).toBe(403);
   });
 
-  it("unauthenticated → 403", async () => {
+  it("unauthenticated → 401", async () => {
     cookieStore.token = undefined;
     const req = makeRequest("PATCH", `/api/admin/users/${targetUserId}`, {
       body: { role: "admin" },
     });
     const res = await PATCH(req, { params: { id: String(targetUserId) } });
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(401);
   });
 });

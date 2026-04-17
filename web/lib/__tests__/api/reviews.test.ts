@@ -85,6 +85,8 @@ beforeAll(async () => {
     changelog: "Initial",
     content: "# Review Test Skill",
     parsedMetadata: "{}",
+    moderationStatus: "approved",
+    moderationFlags: "[]",
   });
 
   // Create two persistent test users

@@ -1,19 +1,49 @@
 import type { LLMProvider, LLMGenerateRequest, LLMGenerateResult } from "./types";
+import { pickKeyWithRetry, recordKeyUsage } from "../key-pool";
 
-// Gemini API base — model is appended to the URL path
 const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 const DEFAULT_MODEL = process.env.LLM_MODEL_GEMINI ?? "gemini-3-flash-preview";
+const MAX_RETRIES = 3;
 
 export class GeminiProvider implements LLMProvider {
-  private apiKey: string;
+  async generate(req: LLMGenerateRequest): Promise<LLMGenerateResult> {
+    let lastError: Error | null = null;
 
-  constructor(apiKey: string) {
-    this.apiKey = apiKey;
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      const { id: keyId, key: apiKey, endpoint, modelName } =
+        await pickKeyWithRetry("gemini", "llm");
+
+      const resolvedEndpoint = endpoint || GEMINI_BASE;
+      const resolvedModel = modelName || DEFAULT_MODEL;
+
+      try {
+        const result = await this.callGemini(apiKey, resolvedEndpoint, resolvedModel, req);
+        await recordKeyUsage("gemini", "llm", keyId);
+        return result;
+      } catch (err: unknown) {
+        const code = (err as NodeJS.ErrnoException)?.code;
+        if (code === "PROVIDER_RATE_LIMITED") {
+          lastError = err as Error;
+          console.warn(`[gemini/llm] 429 on key ${keyId}, retrying with next key...`);
+          continue;
+        }
+        throw err;
+      }
+    }
+
+    const msg = lastError?.message ?? "All Gemini LLM keys are rate-limited.";
+    const err = new Error(msg);
+    (err as NodeJS.ErrnoException).code = "PROVIDER_RATE_LIMITED";
+    throw err;
   }
 
-  async generate(req: LLMGenerateRequest): Promise<LLMGenerateResult> {
-    const model = req.model ?? DEFAULT_MODEL;
-    const url = `${GEMINI_BASE}/${model}:generateContent?key=${this.apiKey}`;
+  private async callGemini(
+    apiKey: string,
+    endpoint: string,
+    model: string,
+    req: LLMGenerateRequest
+  ): Promise<LLMGenerateResult> {
+    const url = `${endpoint}/${model}:generateContent?key=${apiKey}`;
 
     const generationConfig: Record<string, unknown> = {};
     if (req.maxTokens != null) generationConfig.maxOutputTokens = req.maxTokens;

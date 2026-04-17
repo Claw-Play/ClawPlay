@@ -1,23 +1,25 @@
 import { ArkProvider } from "./ark";
 import { GeminiProvider } from "./gemini";
 import type { ImageProvider } from "./types";
+import { pickKeyWithRetry, recordKeyUsage } from "../key-pool";
 
 export type { ImageProvider, ImageGenerateRequest, ImageGenerateResponse } from "./types";
 
 let _arkProvider: ImageProvider | null = null;
+let _geminiKeyId: number | null = null;
 
 /**
- * Returns the configured image provider (singleton for Ark since it uses Key Pool).
+ * Returns the configured image provider.
  * Set IMAGE_PROVIDER=gemini in .env.local to use Gemini.
- * Defaults to Ark.
+ * Defaults to Ark (uses Key Pool for both Ark and Gemini).
  */
-export function getImageProvider(): ImageProvider {
+export async function getImageProvider(): Promise<ImageProvider> {
   const provider = process.env.IMAGE_PROVIDER ?? "ark";
 
   if (provider === "gemini") {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) throw new Error("GEMINI_API_KEY is required when IMAGE_PROVIDER=gemini");
-    return new GeminiProvider(apiKey);
+    const { id: keyId, key, endpoint, modelName } = await pickKeyWithRetry("gemini", "image");
+    _geminiKeyId = keyId;
+    return new GeminiProvider(key, endpoint || undefined, modelName || undefined);
   }
 
   // Ark uses Key Pool — single shared instance
@@ -25,4 +27,14 @@ export function getImageProvider(): ImageProvider {
     _arkProvider = new ArkProvider();
   }
   return _arkProvider;
+}
+
+/**
+ * Record key usage after a successful image generation call.
+ */
+export async function recordImageKeyUsage(): Promise<void> {
+  if (_geminiKeyId !== null) {
+    await recordKeyUsage("gemini", "image", _geminiKeyId);
+    _geminiKeyId = null;
+  }
 }

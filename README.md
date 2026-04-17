@@ -61,6 +61,9 @@ clawplay skill lint ./SKILL.md          # Validate frontmatter + bash instructio
 clawplay skill diagram ./SKILL.md       # Generate Mermaid flow diagram
 clawplay skill types ./SKILL.md         # TypeScript type check
 
+# Install a skill
+clawplay install my-skill
+
 # Other
 clawplay whoami
 clawplay setup
@@ -86,9 +89,26 @@ CLI writes file → stdout: /tmp/avatar.png
 
 **Constraint**: CLI stdout only emits file paths — never base64 or binary data. This prevents AI Agent context explosion.
 
-**Multi-provider**: Image generation, vision analysis, and LLM text generation all support both Ark and Google Gemini, switchable on demand.
+**Multi-provider**: Image generation, vision analysis, and LLM text generation all support both Ark and Google Gemini, switchable on demand. Admin-configurable via the Providers management page.
 
-**Key Pool**: Ark API keys are sharded across multiple keys with per-minute RPM limits. Vision and image keys use separate pools.
+**Key Pool**: Ark API keys are sharded across multiple keys with per-minute RPM limits. Vision and image keys use separate pools. Keys are auto-rotated via scheduled cron jobs.
+
+### Authentication & i18n
+
+Web UI supports three login methods:
+- **Email + password**: classic account registration and login
+- **OAuth**: GitHub, Google, Discord, X (Twitter), WeChat — one-click social login
+- **SMS**: phone number + verification code (China-friendly)
+
+**Multi-language**: Full i18n support with Chinese and English, switchable via the UI language toggle. Translations are served from `/messages/en.json` and `/messages/zh.json`.
+
+**Admin user management**: Administrators can view all users, update roles, and manage permissions from the Admin Panel.
+
+### Homepage & Analytics
+
+The homepage displays global platform statistics (total users, total skills, total events) with real-time updates. An event tracking system (`eventLogs` + `userStats` tables) records every API call including input/output tokens, provider, and latency for analytics and billing.
+
+CLI authentication: encrypted token exported from the dashboard (`CLAWPLAY_TOKEN`). Tokens are AES-256-GCM encrypted; the CLI decrypts locally and never sends the plaintext token to the server.
 
 ### Token Security
 
@@ -138,7 +158,7 @@ Open [http://localhost:3000](http://localhost:3000).
 | `CLAWPLAY_SECRET_KEY` | 32-byte AES-256-GCM key (`openssl rand -hex 32`) |
 | `UPSTASH_REDIS_REST_URL` | Upstash Redis REST URL |
 | `UPSTASH_REDIS_REST_TOKEN` | Upstash Redis REST Token |
-| `ARK_API_KEY` | Fallback Ark key (used if `ARK_IMAGE_KEYS` is not set) |
+| `ARK_API_KEY` | Fallback Ark key (used if `ARK_IMAGE_KEYS`/`ARK_VISION_KEYS` not set) |
 | `ARK_IMAGE_KEYS` | Comma-separated Ark image keys (takes precedence over `ARK_API_KEY`) |
 | `ARK_VISION_KEYS` | Comma-separated Ark vision keys |
 | `ARK_KEY_QUOTA` | Per-key RPM limit for image keys (default: 500) |
@@ -160,19 +180,36 @@ Open [http://localhost:3000](http://localhost:3000).
 ClawPlay/
 ├── web/                          # Next.js 14 app
 │   ├── app/
-│   │   ├── (auth)/               # Login / register pages
+│   │   ├── (auth)/               # Login / register pages + OAuth callbacks
 │   │   ├── (app)/                # Authenticated pages (Dashboard, Skills, Submit, Community)
-│   │   ├── (admin)/              # Admin review panel
-│   │   ├── api/                  # API routes (~26 total)
-│   │   └── page.tsx              # Homepage
+│   │   ├── (admin)/              # Admin panel (audit, events, overview, providers, review, users)
+│   │   ├── api/                  # API routes (~45 total)
+│   │   │   ├── ability/          # Relay: image, vision, llm, tts, check
+│   │   │   ├── admin/            # Admin: analytics, audit-logs, keys, skills, users
+│   │   │   ├── auth/            # Auth: login, logout, register, sms, oauth callbacks
+│   │   │   ├── cron/            # Cron: reset-keys
+│   │   │   ├── skills/          # Skills: list, submit, {slug}, versions, install, download, reviews
+│   │   │   └── user/            # User: me, analytics, token
+│   │   └── page.tsx             # Homepage
 │   ├── components/
-│   │   └── charts/               # LineChart, PieChart
+│   │   ├── charts/               # LineChart, PieChart
+│   │   ├── FeaturedCarousel.tsx  # Featured skills carousel
+│   │   └── SkillDiagramPreview.tsx # Mermaid diagram renderer
 │   └── lib/
 │       ├── db/                   # Drizzle ORM + SQLite schema
 │       ├── auth.ts               # JWT helpers
+│       ├── auth/admin.ts         # Admin auth middleware
 │       ├── token.ts              # AES-256-GCM token crypto
 │       ├── redis.ts              # Upstash Redis quota helpers
 │       ├── analytics.ts          # Event tracking system
+│       ├── oauth.ts              # OAuth provider configs + callbacks
+│       ├── wechat.ts             # WeChat OAuth helpers
+│       ├── sms.ts                # SMS send/verify helpers
+│       ├── i18n/                 # Custom i18n (server + client contexts)
+│       ├── context/              # React contexts (AdminUserContext)
+│       ├── skill-security-scan.ts # Skill XSS/SSRF/injection pre-scan
+│       ├── skill-llm-safety.ts   # LLM output safety pre-check
+│       ├── model-config.ts       # Per-ability model selection
 │       └── providers/            # Multi-provider integrations (Ark, Gemini)
 │           ├── key-pool.ts       # Multi-key sharding with RPM limits
 │           ├── image/            # Image generation
@@ -184,16 +221,16 @@ ClawPlay/
 │   │   ├── token.sh              # Token read + local decrypt
 │   │   ├── image.sh              # Image generation relay client
 │   │   ├── vision.sh             # Vision analysis relay client
-│   │   ├── llm.sh                # LLM generation relay client
-│   │   └── api.sh                # HTTP call helpers
+│   │   ├── llm.sh               # LLM generation relay client
+│   │   ├── install.sh           # Skill install client
+│   │   └── api.sh               # HTTP call helpers
 │   └── skill/                    # Skill authoring toolkit
 │       ├── lint.mjs              # SKILL.md syntax validator
 │       ├── diagram.mjs           # Mermaid flow diagram generator
 │       └── types.mjs             # TypeScript type checker
 ├── docs/                         # Documentation
 │   ├── clawplay-commands.md      # CLI command reference + bash toolkit
-│   ├── skill-authoring-guide.md  # Advanced skill development guide
-│   └── providers/                # Provider API reference docs
+│   └── skill-authoring-guide.md  # Advanced skill development guide
 └── data/                         # SQLite DB (gitignored)
 ```
 
@@ -228,11 +265,12 @@ pnpm test:all
 
 | Phase | Goal | Status |
 |-------|------|--------|
-| Phase 1 | Core infrastructure (CLI, Web, Relay, Token system) | ✅ Done |
-| Phase 2 | Web launch + Skill ecosystem (M0: production deploy → M6: international expansion) | 🔲 In Progress |
-| Phase 3 | Social & UX (reviews ✅, Featured carousel ✅, sharing, notification center) | 🔲 In Progress |
+| Phase 1 | Core infrastructure (CLI, Web, Relay, Token system, i18n, OAuth, Analytics) | ✅ Done |
+| Phase 2 | CN launch + initial user accumulation (providers ✅, user roles ✅, skill versioning ✅, auth, onboarding) | 🔲 In Progress |
+| Phase 3 | Social & UX (reviews ✅, Featured carousel ✅, Analytics ✅, sharing, notifications) | 🔲 In Progress |
 | Phase 4 | Monetization & scale (Token Plans, multi-provider failover; LLM safety pre-scan ✅) | 🔲 Planned |
 | Phase 5 | Advanced AI — dual-track: Skill recovery + IP memory knowledge base | 🔲 Planned |
+| Phase 6 | International expansion + Mobile app | 🔲 Planned |
 
 See [ROADMAP.md](./ROADMAP.md) for full details.
 

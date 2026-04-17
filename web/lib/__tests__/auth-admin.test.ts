@@ -2,7 +2,14 @@
  * Unit tests for auth/admin.ts guards: requireAdmin, requireReviewer, withAdmin, withReviewer
  */
 import { describe, it, expect, vi } from "vitest";
-import { requireAdmin, requireReviewer, withAdmin, withReviewer, forbiddenResponse } from "@/lib/auth/admin";
+import { requireAdmin, requireReviewer, withAdmin, withReviewer, forbiddenResponse, unauthorizedResponse } from "@/lib/auth/admin";
+
+describe("unauthorizedResponse", () => {
+  it("returns 401 JSON", () => {
+    const res = unauthorizedResponse();
+    expect(res.status).toBe(401);
+  });
+});
 
 describe("forbiddenResponse", () => {
   it("returns 403 JSON", () => {
@@ -51,9 +58,9 @@ describe("requireReviewer", () => {
 });
 
 describe("withAdmin", () => {
-  it("returns 403 when auth is null", async () => {
+  it("returns 401 when auth is null", async () => {
     const res = await withAdmin(null, vi.fn());
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(401);
   });
 
   it("returns 403 when role is 'user'", async () => {
@@ -78,9 +85,9 @@ describe("withAdmin", () => {
 });
 
 describe("withReviewer", () => {
-  it("returns 403 when auth is null", async () => {
+  it("returns 401 when auth is null", async () => {
     const res = await withReviewer(null, vi.fn());
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(401);
   });
 
   it("returns 403 when role is 'user'", async () => {

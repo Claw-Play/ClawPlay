@@ -15,7 +15,7 @@ describe("HomeClient", () => {
 
   it("renders the setup section with heading", () => {
     render(<HomeClient />, { wrapper: TestWrapper });
-    expect(screen.getByText("🦐 一键安装 CLI")).toBeInTheDocument();
+    expect(screen.getByText("把这一行塞给 X Claw，好玩的全部解锁")).toBeInTheDocument();
   });
 
   it("renders the CLI command code block", () => {

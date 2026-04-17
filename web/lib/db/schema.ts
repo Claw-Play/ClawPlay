@@ -67,6 +67,7 @@ export const skills = sqliteTable(
     summary: text("summary").notNull().default(""),
     authorName: text("author_name").notNull().default(""),
     authorEmail: text("author_email").notNull().default(""),
+    authorId: integer("author_id").references(() => users.id), // nullable — informational FK
     repoUrl: text("repo_url").notNull().default(""),
     iconEmoji: text("icon_emoji").notNull().default("🦐"),
     moderationStatus: text("moderation_status", {
@@ -113,6 +114,15 @@ export const skillVersions = sqliteTable(
     changelog: text("changelog").notNull().default(""),
     content: text("content").notNull(), // full SKILL.md content
     parsedMetadata: text("parsed_metadata").notNull().default("{}"), // JSON
+    workflowMd: text("workflow_md").notNull().default(""), // Mermaid diagram content
+    authorId: integer("author_id").references(() => users.id), // nullable — informational FK
+    moderationStatus: text("moderation_status", {
+      enum: ["pending", "approved", "rejected"],
+    })
+      .notNull()
+      .default("pending"),
+    moderationFlags: text("moderation_flags").notNull().default("[]"), // JSON array
+    deprecatedAt: integer("deprecated_at", { mode: "timestamp" }),
     createdAt: integer("created_at", { mode: "timestamp" })
       .notNull()
       .$defaultFn(() => new Date()),
@@ -122,6 +132,7 @@ export const skillVersions = sqliteTable(
       table.skillId,
       table.version
     ),
+    index("skill_versions_by_skill").on(table.skillId),
   ]
 );
 
@@ -175,7 +186,7 @@ export const eventLogs = sqliteTable(
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
     event: text("event").notNull(), // e.g. "skill.view", "user.login", "quota.use"
-    userId: integer("user_id").references(() => users.id), // NULL = anonymous
+    userId: integer("user_id"), // NULL = anonymous (no FK — users can be deleted but quota events should still be recorded)
     targetType: text("target_type"), // "skill" | "user" | "token" | "quota" | "ability"
     targetId: text("target_id"), // skill slug, user id, token id, etc.
     metadata: text("metadata").notNull().default("{}"), // JSON string
@@ -218,26 +229,60 @@ export const providerKeys = sqliteTable(
   "provider_keys",
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
-    // provider: 'ark_image' | 'ark_vision' | 'gemini_image' | 'gemini_vision'
+    // "ark" | "gemini"
     provider: text("provider").notNull(),
-    // AES-256-GCM encrypted key (same format as user_tokens.encryptedPayload)
+    // "llm" | "image" | "vision"
+    ability: text("ability").notNull(),
+    // AES-256-GCM encrypted key
     encryptedKey: text("encrypted_key").notNull(),
     // SHA-256 hash for key identification and revocation
     keyHash: text("key_hash").notNull(),
-    // RPM/IPM limit for this specific key
+    // Base URL for API requests (auto-filled defaults per provider)
+    endpoint: text("endpoint").notNull().default(""),
+    // API format: "ark" | "gemini" (determines request structure)
+    apiFormat: text("api_format").notNull().default(""),
+    // Model name for this provider+ability
+    modelName: text("model_name").notNull().default(""),
+    // RPM limit for this specific key
     quota: integer("quota").notNull(),
     // Current window usage (reset by cron every minute)
     windowUsed: integer("window_used").notNull().default(0),
     // Window start timestamp in seconds (minute-aligned)
     windowStart: integer("window_start").notNull(),
+    // Lifetime total calls — never reset
+    totalCalls: integer("total_calls").notNull().default(0),
     enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
     createdAt: integer("created_at", { mode: "timestamp" })
       .notNull()
       .$defaultFn(() => new Date()),
   },
   (table) => [
+    index("provider_keys_by_ability").on(table.ability),
     index("provider_keys_by_provider").on(table.provider),
     index("provider_keys_enabled").on(table.enabled),
+  ]
+);
+
+// ProviderModels table — per-provider, per-ability model name overrides
+// DB values take precedence over env vars (e.g. IMAGE_MODEL_ARK)
+export const providerModels = sqliteTable(
+  "provider_models",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    // e.g. "ark_image", "gemini_llm", "ark_vision"
+    provider: text("provider").notNull(),
+    // e.g. "doubao-seedream-5-0-260128" or "gemini-2.0-flash"
+    modelName: text("model_name").notNull(),
+    // "image" | "llm" | "vision"
+    ability: text("ability").notNull(),
+    // Whether this is the active model for this provider+ability
+    isDefault: integer("is_default", { mode: "boolean" }).notNull().default(false),
+    updatedAt: integer("updated_at", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => [
+    uniqueIndex("provider_models_unique").on(table.provider, table.ability),
   ]
 );
 
@@ -262,3 +307,5 @@ export type UserStats = typeof userStats.$inferSelect;
 export type NewUserStats = typeof userStats.$inferInsert;
 export type ProviderKey = typeof providerKeys.$inferSelect;
 export type NewProviderKey = typeof providerKeys.$inferInsert;
+export type ProviderModel = typeof providerModels.$inferSelect;
+export type NewProviderModel = typeof providerModels.$inferInsert;

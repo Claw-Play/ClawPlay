@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useT } from "@/lib/i18n/context";
+import SkillDiagramPreview from "@/components/SkillDiagramPreview";
 
 interface SkillDetail {
   id: string;
@@ -14,6 +15,7 @@ interface SkillDetail {
   repoUrl: string;
   iconEmoji: string;
   skillMdContent?: string;
+  workflowMd?: string;
   createdAt: string;
 }
 
@@ -239,6 +241,18 @@ export default function AdminReviewDetailPage() {
                 <pre className="whitespace-pre-wrap text-sm font-mono-custom text-[#1d1c0d] leading-relaxed">
                   {skill.skillMdContent}
                 </pre>
+              </div>
+            </div>
+          )}
+
+          {/* Workflow Diagram Preview */}
+          {skill.skillMdContent && (
+            <div>
+              <p className="text-xs font-bold text-[#564337] mb-3 font-body">
+                {t("diagram_preview_label")}
+              </p>
+              <div className="bg-[#f8f4db] rounded-[32px] p-6 border border-[rgba(220,193,177,0.3)]">
+                <SkillDiagramPreview skillMdContent={skill.skillMdContent} />
               </div>
             </div>
           )}

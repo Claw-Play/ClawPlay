@@ -4,6 +4,7 @@ import { skills } from "@/lib/db/schema";
 import { and, eq, isNull } from "drizzle-orm";
 import { verifyJWT } from "@/lib/auth";
 import { analytics, incrementSkillStat } from "@/lib/analytics";
+import { getT } from "@/lib/i18n";
 
 // POST /api/skills/[slug]/install
 // CLI calls this after successfully installing a skill locally.
@@ -12,11 +13,12 @@ export async function POST(
   request: NextRequest,
   { params }: { params: { slug: string } }
 ) {
+  const t = await getT("errors");
   const { slug } = params;
 
   // Validate slug
   if (!/^[a-z0-9-]+$/.test(slug)) {
-    return NextResponse.json({ error: "Invalid slug." }, { status: 400 });
+    return NextResponse.json({ error: t("invalid_slug") }, { status: 400 });
   }
 
   // Authenticate via Bearer token (CLI passes CLAWPLAY_TOKEN)
@@ -41,7 +43,7 @@ export async function POST(
   });
 
   if (!skill) {
-    return NextResponse.json({ error: "Skill not found." }, { status: 404 });
+    return NextResponse.json({ error: t("skill_not_found") }, { status: 404 });
   }
 
   // Fire-and-forget: record install (non-blocking)

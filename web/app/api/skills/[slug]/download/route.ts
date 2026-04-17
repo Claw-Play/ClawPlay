@@ -74,6 +74,11 @@ export async function GET(
     )
   );
 
+  // Include workflow diagram if available
+  if (skillVersion.workflowMd) {
+    zip.file("references/workflow.md", skillVersion.workflowMd);
+  }
+
   const buffer = await zip.generateAsync({
     type: "nodebuffer",
     compression: "DEFLATE",

@@ -25,16 +25,13 @@ export function HomeClient() {
         <h2 className="text-lg font-semibold font-heading text-[#564337]">
           {t("title")}
         </h2>
-        <p className="text-sm text-[#7a6a5a] font-body">
-          {t("desc")}
-        </p>
         <div className="flex items-center justify-center gap-3">
           <code className="bg-[#fffdf7] border border-[#e8dfc8] rounded-[16px] px-4 py-2 text-sm font-mono-custom text-[#564337]">
             npm install -g clawplay && clawplay setup
           </code>
           <button
             onClick={copySetup}
-            className="px-4 py-2 bg-gradient-to-r from-[#a23f00] to-[#fa7025] hover:opacity-90 text-white text-sm font-semibold rounded-full transition-all shadow-[0_4px_12px_rgba(162,63,0,0.2)] font-body"
+            className="px-4 py-2 min-w-[80px] bg-gradient-to-r from-[#a23f00] to-[#fa7025] hover:opacity-90 text-white text-sm font-semibold rounded-full transition-all shadow-[0_4px_12px_rgba(162,63,0,0.2)] font-body"
           >
             {copied ? t("copied") : t("copy")}
           </button>

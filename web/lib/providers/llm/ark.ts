@@ -1,18 +1,48 @@
 import type { LLMProvider, LLMGenerateRequest, LLMGenerateResult } from "./types";
+import { pickKeyWithRetry, recordKeyUsage } from "../key-pool";
 
-const ARK_ENDPOINT = "https://ark.cn-beijing.volces.com/api/v3/chat/completions";
+const ARK_ENDPOINT_DEFAULT = "https://ark.cn-beijing.volces.com/api/v3/chat/completions";
 const DEFAULT_MODEL = process.env.LLM_MODEL_ARK ?? "ep-20260408230057-cgq9s";
+const MAX_RETRIES = 3;
 
 export class ArkProvider implements LLMProvider {
-  private apiKey: string;
+  async generate(req: LLMGenerateRequest): Promise<LLMGenerateResult> {
+    let lastError: Error | null = null;
 
-  constructor(apiKey: string) {
-    this.apiKey = apiKey;
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      const { id: keyId, key: apiKey, endpoint, modelName } =
+        await pickKeyWithRetry("ark", "llm");
+
+      const resolvedEndpoint = endpoint || ARK_ENDPOINT_DEFAULT;
+      const resolvedModel = modelName || DEFAULT_MODEL;
+
+      try {
+        const result = await this.callArk(apiKey, resolvedEndpoint, resolvedModel, req);
+        await recordKeyUsage("ark", "llm", keyId);
+        return result;
+      } catch (err: unknown) {
+        const code = (err as NodeJS.ErrnoException)?.code;
+        if (code === "PROVIDER_RATE_LIMITED") {
+          lastError = err as Error;
+          console.warn(`[ark/llm] 429 on key ${keyId}, retrying with next key...`);
+          continue;
+        }
+        throw err;
+      }
+    }
+
+    const msg = lastError?.message ?? "All Ark LLM keys are rate-limited.";
+    const err = new Error(msg);
+    (err as NodeJS.ErrnoException).code = "PROVIDER_RATE_LIMITED";
+    throw err;
   }
 
-  async generate(req: LLMGenerateRequest): Promise<LLMGenerateResult> {
-    const model = req.model ?? DEFAULT_MODEL;
-
+  private async callArk(
+    apiKey: string,
+    endpoint: string,
+    model: string,
+    req: LLMGenerateRequest
+  ): Promise<LLMGenerateResult> {
     const body: Record<string, unknown> = {
       model,
       messages: [{ role: "user", content: req.prompt }],
@@ -25,10 +55,10 @@ export class ArkProvider implements LLMProvider {
       body.temperature = req.temperature;
     }
 
-    const res = await fetch(ARK_ENDPOINT, {
+    const res = await fetch(endpoint, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${this.apiKey}`,
+        Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify(body),

@@ -54,11 +54,22 @@ export const db = new Proxy({} as BetterSQLite3Database<DBSchema>, {
  * Execute a raw SQL string with optional parameters.
  * Prefer using the drizzle query builder, but this is needed for
  * complex aggregations (date formatting, JSON extraction, etc.)
+ * For non-SELECT statements, use exec() instead.
  */
 export function raw(sqlStr: string, params?: unknown[]): unknown[] {
   ensureDb();
   const stmt = (_sqlite as Database.Database).prepare(sqlStr);
   return params?.length ? stmt.bind(...params).all() : stmt.all();
+}
+
+/**
+ * Execute a raw SQL statement that doesn't return rows (INSERT, UPDATE, DELETE, ALTER, etc.).
+ * Returns the sqlite run result.
+ */
+export function exec(sqlStr: string, params?: unknown[]): Database.RunResult {
+  ensureDb();
+  const stmt = (_sqlite as Database.Database).prepare(sqlStr);
+  return params?.length ? stmt.bind(...params).run() : stmt.run();
 }
 
 // Run migrations lazily on first ensureDb() call
@@ -101,6 +112,7 @@ CREATE TABLE IF NOT EXISTS skills (
   summary TEXT NOT NULL DEFAULT '',
   author_name TEXT NOT NULL DEFAULT '',
   author_email TEXT NOT NULL DEFAULT '',
+  author_id INTEGER REFERENCES users(id),
   repo_url TEXT NOT NULL DEFAULT '',
   icon_emoji TEXT NOT NULL DEFAULT '🦐',
   moderation_status TEXT NOT NULL DEFAULT 'pending' CHECK(moderation_status IN ('pending', 'approved', 'rejected')),
@@ -128,10 +140,16 @@ CREATE TABLE IF NOT EXISTS skill_versions (
   changelog TEXT NOT NULL DEFAULT '',
   content TEXT NOT NULL,
   parsed_metadata TEXT NOT NULL DEFAULT '{}',
+  workflow_md TEXT NOT NULL DEFAULT '',
+  author_id INTEGER REFERENCES users(id),
+  moderation_status TEXT NOT NULL DEFAULT 'pending' CHECK(moderation_status IN ('pending', 'approved', 'rejected')),
+  moderation_flags TEXT NOT NULL DEFAULT '[]',
+  deprecated_at INTEGER,
   created_at INTEGER NOT NULL DEFAULT (unixepoch())
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS skill_versions_by_skill_version ON skill_versions(skill_id, version);
+CREATE INDEX IF NOT EXISTS skill_versions_by_skill ON skill_versions(skill_id);
 
 CREATE TABLE IF NOT EXISTS user_tokens (
   id TEXT PRIMARY KEY,
@@ -196,21 +214,52 @@ CREATE INDEX IF NOT EXISTS user_tokens_by_user ON user_tokens(user_id);
     `ALTER TABLE users ADD COLUMN avatar_initials TEXT NOT NULL DEFAULT ''`,
     `ALTER TABLE users ADD COLUMN avatar_url TEXT`,
 
-    // provider_keys table — multi-key pool for rate-limit sharding
+    // provider_keys — new schema with provider + ability + endpoint + apiFormat + modelName
+    // (Phase 2 redesign: keys are managed via admin UI, not env vars)
     `CREATE TABLE IF NOT EXISTS provider_keys (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   provider TEXT NOT NULL,
+  ability TEXT NOT NULL,
   encrypted_key TEXT NOT NULL,
   key_hash TEXT NOT NULL,
+  endpoint TEXT NOT NULL DEFAULT '',
+  api_format TEXT NOT NULL DEFAULT '',
+  model_name TEXT NOT NULL DEFAULT '',
   quota INTEGER NOT NULL,
   window_used INTEGER NOT NULL DEFAULT 0,
   window_start INTEGER NOT NULL,
+  total_calls INTEGER NOT NULL DEFAULT 0,
   enabled INTEGER NOT NULL DEFAULT 1,
   created_at INTEGER NOT NULL DEFAULT (unixepoch())
 )`,
+    `CREATE INDEX IF NOT EXISTS provider_keys_by_ability ON provider_keys(ability)`,
     `CREATE INDEX IF NOT EXISTS provider_keys_by_provider ON provider_keys(provider)`,
     `CREATE INDEX IF NOT EXISTS provider_keys_enabled ON provider_keys(enabled)`,
-    `CREATE UNIQUE INDEX IF NOT EXISTS provider_keys_hash_unique ON provider_keys(key_hash)`,
+
+    // provider_keys: add total_calls column (for existing tables that predate this field)
+    `ALTER TABLE provider_keys ADD COLUMN total_calls INTEGER NOT NULL DEFAULT 0`,
+
+    // Sync total_calls = window_used for pre-existing rows that had usage before the column existed
+    // (window_used was incremented before total_calls was added to the schema)
+    `UPDATE provider_keys SET total_calls = window_used WHERE total_calls = 0 AND window_used > 0`,
+
+    // skill version management (new columns already in migrationSQL CREATE TABLE)
+    `ALTER TABLE skills ADD COLUMN author_id INTEGER REFERENCES users(id)`,
+    `ALTER TABLE skill_versions ADD COLUMN moderation_status TEXT NOT NULL DEFAULT 'pending' CHECK(moderation_status IN ('pending', 'approved', 'rejected'))`,
+    `ALTER TABLE skill_versions ADD COLUMN moderation_flags TEXT NOT NULL DEFAULT '[]'`,
+    `ALTER TABLE skill_versions ADD COLUMN deprecated_at INTEGER`,
+    `CREATE INDEX IF NOT EXISTS skill_versions_by_skill ON skill_versions(skill_id)`,
+
+    // provider_models table — per-provider per-ability model name overrides
+    `CREATE TABLE IF NOT EXISTS provider_models (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  provider TEXT NOT NULL,
+  model_name TEXT NOT NULL,
+  ability TEXT NOT NULL,
+  is_default INTEGER NOT NULL DEFAULT 0,
+  updated_at INTEGER NOT NULL DEFAULT (unixepoch())
+)`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS provider_models_unique ON provider_models(provider, ability)`,
   ];
 
   for (const sql of safeMigrations) {

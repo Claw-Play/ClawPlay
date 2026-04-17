@@ -298,7 +298,7 @@ describe("PATCH /api/user/me", () => {
     });
     const res = await PATCH_me(req);
     expect(res.status).toBe(400);
-    expect((await res.json()).error).toMatch(/2.*32|Name must be/);
+    expect((await res.json()).error).toMatch(/2.*32|Name must be|名称必须为/);
   });
 
   it("name too long (> 32 chars) → 400", async () => {
@@ -337,7 +337,7 @@ describe("PATCH /api/user/me", () => {
     });
     const res = await PATCH_me(req);
     expect(res.status).toBe(400);
-    expect((await res.json()).error).toMatch(/color|Invalid/i);
+    expect((await res.json()).error).toMatch(/color|Invalid|颜色格式无效/i);
   });
 
   it("update avatarUrl with valid https URL → 200", async () => {
@@ -390,7 +390,7 @@ describe("PATCH /api/user/me", () => {
     });
     const res = await PATCH_me(req);
     expect(res.status).toBe(400);
-    expect((await res.json()).error).toMatch(/avatar|URL/i);
+    expect((await res.json()).error).toMatch(/avatar|URL|头像 URL 格式无效/i);
   });
 
   it("update avatarInitials → trimmed, uppercased", async () => {

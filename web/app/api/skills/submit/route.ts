@@ -7,6 +7,7 @@ import matter from "gray-matter";
 import { scanSkillContent } from "@/lib/skill-security-scan";
 import { llmSafetyReview } from "@/lib/skill-llm-safety";
 import { analytics } from "@/lib/analytics";
+import { getT } from "@/lib/i18n";
 
 // Generate a slug from name
 function slugify(name: string): string {
@@ -21,9 +22,10 @@ function genId() {
 }
 
 export async function POST(request: NextRequest) {
+  const t = await getT("errors");
   const auth = await getAuthFromCookies();
   if (!auth) {
-    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+    return NextResponse.json({ error: t("unauthorized") }, { status: 401 });
   }
 
   try {
@@ -34,17 +36,19 @@ export async function POST(request: NextRequest) {
       repoUrl,
       iconEmoji,
       skillMdContent,
+      workflowMd,
     } = body as {
       name?: string;
       summary?: string;
       repoUrl?: string;
       iconEmoji?: string;
       skillMdContent?: string;
+      workflowMd?: string;
     };
 
     if (!name || !skillMdContent) {
       return NextResponse.json(
-        { error: "name and skillMdContent are required." },
+        { error: t("name_required") },
         { status: 400 }
       );
     }
@@ -57,7 +61,7 @@ export async function POST(request: NextRequest) {
         .map((f) => `[${f.code}] ${f.description}`);
       return NextResponse.json(
         {
-          error: "Security scan failed.",
+          error: t("security_scan_failed"),
           details: errorFlags,
         },
         { status: 400 }
@@ -86,7 +90,7 @@ export async function POST(request: NextRequest) {
         if (review.verdict === "UNSAFE") {
           return NextResponse.json(
             {
-              error: "LLM safety review flagged this content.",
+              error: t("safety_review_failed"),
               reason: review.reason,
             },
             { status: 400 }
@@ -148,6 +152,7 @@ export async function POST(request: NextRequest) {
       summary: summary?.trim() ?? "",
       authorName: authorName ?? "",
       authorEmail: authorEmail ?? "",
+      authorId: auth.userId,
       repoUrl: repoUrl?.trim() ?? "",
       iconEmoji: iconEmoji ?? "🦐",
       moderationStatus: "pending",
@@ -166,6 +171,10 @@ export async function POST(request: NextRequest) {
       changelog: "Initial submission.",
       content: skillMdContent,
       parsedMetadata: JSON.stringify(parsedMetadata),
+      workflowMd: workflowMd ?? "",
+      authorId: auth.userId,
+      moderationStatus: "pending",
+      moderationFlags: JSON.stringify([]),
     });
 
     analytics.skill.submit(skillId, "pending");
@@ -173,10 +182,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         skill: { id: skillId, slug, name, version },
-        message:
-          allFlags.length > 0
-            ? "Skill submitted. Pending review."
-            : "Skill submitted. Pending review.",
+        message: t("skill_submitted"),
         reviewFlags: allFlags.length > 0 ? allFlags : undefined,
       },
       { status: 201 }
@@ -184,7 +190,7 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     console.error("[api/skills/submit]", err);
     return NextResponse.json(
-      { error: "Internal server error." },
+      { error: t("internal_error") },
       { status: 500 }
     );
   }

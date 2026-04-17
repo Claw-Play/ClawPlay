@@ -1,17 +1,19 @@
 import { ArkVisionProvider } from "./ark";
 import { GeminiVisionProvider } from "./gemini";
 import type { VisionProvider } from "./types";
+import { pickKeyWithRetry, recordKeyUsage } from "../key-pool";
 
 export type { VisionProvider, VisionAnalyzeRequest, VisionAnalyzeResponse, VisionMode, VisionImage } from "./types";
 
 let _arkProvider: VisionProvider | null = null;
+let _geminiKeyId: number | null = null;
 
-export function getVisionProvider(provider?: string): VisionProvider {
+export async function getVisionProvider(provider?: string): Promise<VisionProvider> {
   const actual = provider ?? process.env.VISION_PROVIDER ?? "ark";
   if (actual === "gemini") {
-    const key = process.env.GEMINI_API_KEY;
-    if (!key) throw new Error("GEMINI_API_KEY is required when VISION_PROVIDER=gemini");
-    return new GeminiVisionProvider(key);
+    const { id: keyId, key, endpoint, modelName } = await pickKeyWithRetry("gemini", "vision");
+    _geminiKeyId = keyId;
+    return new GeminiVisionProvider(key, endpoint || undefined, modelName || undefined);
   }
 
   // Ark uses Key Pool — single shared instance
@@ -19,4 +21,11 @@ export function getVisionProvider(provider?: string): VisionProvider {
     _arkProvider = new ArkVisionProvider();
   }
   return _arkProvider;
+}
+
+export async function recordVisionKeyUsage(): Promise<void> {
+  if (_geminiKeyId !== null) {
+    await recordKeyUsage("gemini", "vision", _geminiKeyId);
+    _geminiKeyId = null;
+  }
 }

@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { skills } from "@/lib/db/schema";
 import { eq, and, isNull } from "drizzle-orm";
 import { analytics } from "@/lib/analytics";
+import { getT } from "@/lib/i18n";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -53,8 +54,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ skills: results });
   } catch (err) {
     console.error("[api/skills GET]", err);
+    const t = await getT("errors");
     return NextResponse.json(
-      { error: "Internal server error." },
+      { error: t("internal_error") },
       { status: 500 }
     );
   }

@@ -32,6 +32,7 @@ process.env.JWT_SECRET = "test-jwt-secret-32-bytes-long!!!";
 process.env.CLAWPLAY_SECRET_KEY = "a".repeat(64);
 process.env.UPSTASH_REDIS_REST_URL = "https://mock.upstash.io";
 process.env.UPSTASH_REDIS_REST_TOKEN = "mock-token";
+process.env.NEXT_LOCALE = "en";
 
 const SAMPLE_SKILL_MD = `---
 name: test-skill
@@ -131,10 +132,10 @@ beforeAll(async () => {
 
   // Insert corresponding versions (required by FK)
   await db.insert(skillVersions).values([
-    { id: "v-approved-1", skillId: "approved-1", version: "1.0.0", changelog: "", content: "", parsedMetadata: "{}" },
-    { id: "v-approved-2", skillId: "approved-2", version: "1.0.0", changelog: "", content: "", parsedMetadata: "{}" },
-    { id: "v-pending-1", skillId: "pending-1", version: "1.0.0", changelog: "", content: "", parsedMetadata: "{}" },
-    { id: "v-deleted-1", skillId: "deleted-1", version: "1.0.0", changelog: "", content: "", parsedMetadata: "{}" },
+    { id: "v-approved-1", skillId: "approved-1", version: "1.0.0", changelog: "", content: "", parsedMetadata: "{}", moderationStatus: "approved", moderationFlags: "[]" },
+    { id: "v-approved-2", skillId: "approved-2", version: "1.0.0", changelog: "", content: "", parsedMetadata: "{}", moderationStatus: "approved", moderationFlags: "[]" },
+    { id: "v-pending-1", skillId: "pending-1", version: "1.0.0", changelog: "", content: "", parsedMetadata: "{}", moderationStatus: "pending", moderationFlags: "[]" },
+    { id: "v-deleted-1", skillId: "deleted-1", version: "1.0.0", changelog: "", content: "", parsedMetadata: "{}", moderationStatus: "approved", moderationFlags: "[]" },
   ]);
 });
 
@@ -293,7 +294,7 @@ rm -rf /
     const res = await POST_submit(req);
     expect(res.status).toBe(400);
     const json = await res.json();
-    expect(json.error).toContain("Security scan failed");
+    expect(json.error).toMatch(/Security scan failed|安全扫描失败/);
     expect(json.details).toContainEqual(expect.stringContaining("DANGEROUS_RM"));
   });
 

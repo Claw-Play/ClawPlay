@@ -6,6 +6,7 @@ import bcrypt from "bcryptjs";
 import { signJWT, buildSetCookieHeader } from "@/lib/auth";
 import { analytics } from "@/lib/analytics";
 import { DEFAULT_QUOTA_FREE } from "@/lib/redis";
+import { getT } from "@/lib/i18n";
 
 const AVATAR_COLORS = [
   "#586330",
@@ -22,23 +23,20 @@ const randomAvatarColor = () =>
 
 export async function POST(request: NextRequest) {
   try {
+    const t = await getT("errors");
     const body = await request.json();
-    const { email, password, name } = body as {
-      email?: string;
-      password?: string;
-      name?: string;
-    };
+    const { email, password, name } = body as { email?: string; password?: string; name?: string };
 
     if (!email || !password) {
       return NextResponse.json(
-        { error: "Email and password are required." },
+        { error: t("email_required") },
         { status: 400 }
       );
     }
 
     if (password.length < 8) {
       return NextResponse.json(
-        { error: "Password must be at least 8 characters." },
+        { error: t("password_too_short") },
         { status: 400 }
       );
     }
@@ -46,7 +44,7 @@ export async function POST(request: NextRequest) {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       return NextResponse.json(
-        { error: "Invalid email format." },
+        { error: t("invalid_email_format") },
         { status: 400 }
       );
     }
@@ -60,7 +58,7 @@ export async function POST(request: NextRequest) {
     });
     if (existing) {
       return NextResponse.json(
-        { error: "An account with this email already exists." },
+        { error: t("email_already_exists") },
         { status: 409 }
       );
     }
@@ -87,13 +85,14 @@ export async function POST(request: NextRequest) {
     analytics.user.register(user.id, "email");
 
     const response = NextResponse.json(
-      { user: { id: user.id, email, role: user.role }, message: "Account created successfully." },
+      { user: { id: user.id, email, role: user.role }, message: t("account_created") },
       { status: 201 }
     );
     response.headers.set("Set-Cookie", buildSetCookieHeader(token));
     return response;
   } catch (err) {
     console.error("[auth/register]", err);
-    return NextResponse.json({ error: "Internal server error." }, { status: 500 });
+    const t = await getT("errors");
+    return NextResponse.json({ error: t("internal_error") }, { status: 500 });
   }
 }

@@ -1,9 +1,8 @@
 import type { VisionProvider, VisionAnalyzeRequest, VisionAnalyzeResponse, DetectedObject } from "./types";
 import { pickKeyWithRetry, recordKeyUsage } from "../key-pool";
 
-const ARK_CHAT_ENDPOINT = "https://ark.cn-beijing.volces.com/api/v3/chat/completions";
-const DEFAULT_MODEL = process.env.VISION_MODEL_ARK ?? "ep-20260408230057-cgq9s";
-const PROVIDER = "ark_vision";
+const ARK_CHAT_ENDPOINT_DEFAULT = "https://ark.cn-beijing.volces.com/api/v3/chat/completions";
+const DEFAULT_MODEL = process.env.VISION_MODEL_ARK ?? "doubao-seedream-5-0-260128";
 const MAX_RETRIES = 3;
 
 /**
@@ -42,11 +41,15 @@ export class ArkVisionProvider implements VisionProvider {
     let lastError: Error | null = null;
 
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-      const { id: keyId, key: apiKey } = await pickKeyWithRetry(PROVIDER);
+      const { id: keyId, key: apiKey, endpoint, modelName } =
+        await pickKeyWithRetry("ark", "vision");
+
+      const resolvedEndpoint = endpoint || ARK_CHAT_ENDPOINT_DEFAULT;
+      const resolvedModel = modelName || DEFAULT_MODEL;
 
       try {
-        const result = await this.callArk(apiKey, req);
-        await recordKeyUsage(PROVIDER, keyId);
+        const result = await this.callArk(apiKey, resolvedEndpoint, resolvedModel, req);
+        await recordKeyUsage("ark", "vision", keyId);
         return result;
       } catch (err: unknown) {
         const code = (err as NodeJS.ErrnoException)?.code;
@@ -65,7 +68,12 @@ export class ArkVisionProvider implements VisionProvider {
     throw err;
   }
 
-  private async callArk(apiKey: string, req: VisionAnalyzeRequest): Promise<VisionAnalyzeResponse> {
+  private async callArk(
+    apiKey: string,
+    endpoint: string,
+    model: string,
+    req: VisionAnalyzeRequest
+  ): Promise<VisionAnalyzeResponse> {
     // Build image content parts
     const imageParts = req.images.map((img) => {
       const url =
@@ -92,13 +100,13 @@ export class ArkVisionProvider implements VisionProvider {
       },
     ];
 
-    const res = await fetch(ARK_CHAT_ENDPOINT, {
+    const res = await fetch(endpoint, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ model: DEFAULT_MODEL, messages }),
+      body: JSON.stringify({ model, messages }),
     });
 
     if (!res.ok) {

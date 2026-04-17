@@ -4,18 +4,20 @@ import { db } from "@/lib/db";
 import { skills } from "@/lib/db/schema";
 import { eq, and, isNull } from "drizzle-orm";
 import { analytics } from "@/lib/analytics";
+import { getT } from "@/lib/i18n";
 
 export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const t = await getT("errors");
   const auth = await getAuthFromCookies();
   if (!auth) {
-    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+    return NextResponse.json({ error: t("unauthorized") }, { status: 401 });
   }
 
   if (auth.role !== "admin" && auth.role !== "reviewer") {
-    return NextResponse.json({ error: "Forbidden." }, { status: 403 });
+    return NextResponse.json({ error: t("forbidden") }, { status: 403 });
   }
 
   const { id } = params;
@@ -27,7 +29,7 @@ export async function PATCH(
 
   if (!action || !["approve", "reject", "feature", "unfeature"].includes(action)) {
     return NextResponse.json(
-      { error: "action must be 'approve', 'reject', 'feature', or 'unfeature'." },
+      { error: t("action_invalid") },
       { status: 400 }
     );
   }
@@ -43,7 +45,7 @@ export async function PATCH(
       analytics.skill.unfeature(id, auth.userId);
     }
     return NextResponse.json({
-      message: action === "feature" ? "Skill featured." : "Skill unfeatured.",
+      message: action === "feature" ? t("skill_featured") : t("skill_unfeatured"),
     });
   }
 
@@ -52,7 +54,7 @@ export async function PATCH(
   });
 
   if (!skill) {
-    return NextResponse.json({ error: "Skill not found." }, { status: 404 });
+    return NextResponse.json({ error: t("skill_not_found") }, { status: 404 });
   }
 
   const newStatus = action === "approve" ? "approved" : "rejected";
@@ -76,7 +78,7 @@ export async function PATCH(
     skill: { ...skill, moderationStatus: newStatus },
     message:
       action === "approve"
-        ? "Skill approved and published."
-        : "Skill rejected.",
+        ? t("skill_approved")
+        : t("skill_rejected"),
   });
 }

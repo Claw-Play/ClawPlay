@@ -2,10 +2,6 @@ import type { VisionProvider, VisionAnalyzeRequest, VisionAnalyzeResponse, Detec
 
 const DEFAULT_MODEL = process.env.VISION_MODEL_GEMINI ?? "gemini-2.0-flash";
 
-function geminiEndpoint(model: string): string {
-  return `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
-}
-
 /** Build inline image part for Gemini REST API */
 function inlinePart(data: string, mimeType: string) {
   return { inline_data: { mime_type: mimeType, data } };
@@ -13,9 +9,13 @@ function inlinePart(data: string, mimeType: string) {
 
 export class GeminiVisionProvider implements VisionProvider {
   private apiKey: string;
+  private endpoint: string;
+  private modelName: string;
 
-  constructor(apiKey: string) {
+  constructor(apiKey: string, endpoint?: string, modelName?: string) {
     this.apiKey = apiKey;
+    this.endpoint = endpoint ?? "https://generativelanguage.googleapis.com/v1beta/models";
+    this.modelName = modelName ?? DEFAULT_MODEL;
   }
 
   async analyze(req: VisionAnalyzeRequest): Promise<VisionAnalyzeResponse> {
@@ -61,7 +61,7 @@ export class GeminiVisionProvider implements VisionProvider {
       body.generationConfig = generationConfig;
     }
 
-    const res = await fetch(`${geminiEndpoint(DEFAULT_MODEL)}?key=${this.apiKey}`, {
+    const res = await fetch(`${this.endpoint}/${this.modelName}:generateContent?key=${this.apiKey}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),

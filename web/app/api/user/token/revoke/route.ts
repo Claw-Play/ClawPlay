@@ -4,11 +4,13 @@ import { db } from "@/lib/db";
 import { userTokens } from "@/lib/db/schema";
 import { eq, and, isNull } from "drizzle-orm";
 import { analytics } from "@/lib/analytics";
+import { getT } from "@/lib/i18n";
 
 export async function POST(request: NextRequest) {
+  const t = await getT("errors");
   const auth = await getAuthFromCookies();
   if (!auth) {
-    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+    return NextResponse.json({ error: t("unauthorized") }, { status: 401 });
   }
 
   const body = await request.json().catch(() => ({}));
@@ -32,7 +34,7 @@ export async function POST(request: NextRequest) {
 
   if (!token) {
     return NextResponse.json(
-      { error: "Token not found or already revoked." },
+      { error: t("token_not_found") },
       { status: 404 }
     );
   }
@@ -44,5 +46,5 @@ export async function POST(request: NextRequest) {
 
   analytics.token.revoke(auth.userId, token.id);
 
-  return NextResponse.json({ message: "Token revoked." });
+  return NextResponse.json({ message: t("token_revoked") });
 }

@@ -3,15 +3,17 @@ import { getAuthFromCookies } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { skills, skillRatings } from "@/lib/db/schema";
 import { eq, and, isNull, sql } from "drizzle-orm";
+import { getT } from "@/lib/i18n";
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { slug: string } }
 ) {
+  const t = await getT("errors");
   const { slug } = params;
 
   if (!/^[a-z0-9-]+$/.test(slug)) {
-    return NextResponse.json({ error: "Invalid slug." }, { status: 400 });
+    return NextResponse.json({ error: t("invalid_slug") }, { status: 400 });
   }
 
   const skill = await db.query.skills.findFirst({
@@ -19,7 +21,7 @@ export async function GET(
   });
 
   if (!skill) {
-    return NextResponse.json({ error: "Skill not found." }, { status: 404 });
+    return NextResponse.json({ error: t("skill_not_found") }, { status: 404 });
   }
 
   const reviews = await db
@@ -54,15 +56,16 @@ export async function POST(
   request: NextRequest,
   { params }: { params: { slug: string } }
 ) {
+  const t = await getT("errors");
   const auth = await getAuthFromCookies();
   if (!auth) {
-    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+    return NextResponse.json({ error: t("unauthorized") }, { status: 401 });
   }
 
   const { slug } = params;
 
   if (!/^[a-z0-9-]+$/.test(slug)) {
-    return NextResponse.json({ error: "Invalid slug." }, { status: 400 });
+    return NextResponse.json({ error: t("invalid_slug") }, { status: 400 });
   }
 
   const skill = await db.query.skills.findFirst({
@@ -70,7 +73,7 @@ export async function POST(
   });
 
   if (!skill) {
-    return NextResponse.json({ error: "Skill not found." }, { status: 404 });
+    return NextResponse.json({ error: t("skill_not_found") }, { status: 404 });
   }
 
   try {
@@ -82,7 +85,7 @@ export async function POST(
 
     if (!rating || rating < 1 || rating > 5) {
       return NextResponse.json(
-        { error: "rating must be an integer between 1 and 5." },
+        { error: t("rating_invalid") },
         { status: 400 }
       );
     }
@@ -135,7 +138,7 @@ export async function POST(
 
     return NextResponse.json(
       {
-        message: "Review submitted.",
+        message: t("review_submitted"),
         averageRating: count > 0 ? Number((total / count).toFixed(1)) : null,
         count,
       },
@@ -144,7 +147,7 @@ export async function POST(
   } catch (err) {
     console.error("[api/skills/reviews POST]", err);
     return NextResponse.json(
-      { error: "Internal server error." },
+      { error: t("internal_error") },
       { status: 500 }
     );
   }

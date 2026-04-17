@@ -6,6 +6,7 @@ import { verifySmsCode } from "@/lib/sms";
 import { DEFAULT_QUOTA_FREE } from "@/lib/redis";
 import { signJWT, buildSetCookieHeader } from "@/lib/auth";
 import { analytics } from "@/lib/analytics";
+import { getT } from "@/lib/i18n";
 
 const PHONE_RE = /^1[3-9]\d{9}$/;
 
@@ -27,19 +28,16 @@ const randomAvatarColor = () =>
 
 export async function POST(request: NextRequest) {
   try {
+    const t = await getT("errors");
     const body = await request.json();
-    const { phone, code, name } = body as {
-      phone?: string;
-      code?: string;
-      name?: string;
-    };
+    const { phone, code, name } = body as { phone?: string; code?: string; name?: string };
 
     if (!phone || !PHONE_RE.test(phone)) {
-      return NextResponse.json({ error: "请输入有效的手机号。" }, { status: 400 });
+      return NextResponse.json({ error: t("invalid_phone") }, { status: 400 });
     }
 
     if (!code || !/^\d{6}$/.test(code)) {
-      return NextResponse.json({ error: "请输入6位验证码。" }, { status: 400 });
+      return NextResponse.json({ error: t("code_required") }, { status: 400 });
     }
 
     // Test bypass: "000000" always passes (for E2E testing only)
@@ -47,7 +45,7 @@ export async function POST(request: NextRequest) {
     if (!valid) {
       analytics.user.smsVerifyFail(phone, "invalid_code");
       return NextResponse.json(
-        { error: "验证码错误或已过期，请重新获取。" },
+        { error: t("code_invalid") },
         { status: 401 }
       );
     }
@@ -93,6 +91,7 @@ export async function POST(request: NextRequest) {
     return response;
   } catch (err) {
     console.error("[auth/sms/verify]", err);
-    return NextResponse.json({ error: "服务器错误，请稍后重试。" }, { status: 500 });
+    const t = await getT("errors");
+    return NextResponse.json({ error: t("server_error") }, { status: 500 });
   }
 }

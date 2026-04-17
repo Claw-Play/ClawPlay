@@ -76,6 +76,8 @@ beforeAll(async () => {
     changelog: "Initial release",
     content: SAMPLE_SKILL_MD,
     parsedMetadata: JSON.stringify({ name: "avatar-creator" }),
+    moderationStatus: "approved",
+    moderationFlags: "[]",
   });
 
   // Seed a second version
@@ -86,6 +88,8 @@ beforeAll(async () => {
     changelog: "First version",
     content: "# Avatar Creator v1\nOld version.",
     parsedMetadata: "{}",
+    moderationStatus: "approved",
+    moderationFlags: "[]",
   });
 });
 

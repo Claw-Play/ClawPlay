@@ -1,9 +1,11 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { db } from "@/lib/db";
 import { skills, skillVersions } from "@/lib/db/schema";
 import { eq, and, isNull, desc } from "drizzle-orm";
 import { getT } from "@/lib/i18n";
+import { VersionActionButtons } from "./VersionActions";
 
 export async function generateMetadata({ params }: { params: { slug: string } }) {
   const t = await getT("skill_versions");
@@ -74,6 +76,23 @@ export default async function SkillVersionsPage({
 }) {
   const t = await getT("skill_versions");
   const tCommon = await getT("common");
+  const cookieStore = await cookies();
+  const token = cookieStore.get("clawplay_token")?.value;
+
+  let authUserId: number | null = null;
+  let authRole: string | null = null;
+  if (token) {
+    try {
+      const { verifyJWT } = await import("@/lib/auth");
+      const payload = await verifyJWT(token);
+      if (payload) {
+        authUserId = payload.userId;
+        authRole = payload.role;
+      }
+    } catch {
+      // Invalid token — treat as unauthenticated
+    }
+  }
 
   const skill = await db.query.skills.findFirst({
     where: and(eq(skills.slug, params.slug), isNull(skills.deletedAt)),
@@ -87,6 +106,9 @@ export default async function SkillVersionsPage({
       version: skillVersions.version,
       changelog: skillVersions.changelog,
       content: skillVersions.content,
+      moderationStatus: skillVersions.moderationStatus,
+      deprecatedAt: skillVersions.deprecatedAt,
+      authorId: skillVersions.authorId,
       createdAt: skillVersions.createdAt,
     })
     .from(skillVersions)
@@ -137,12 +159,24 @@ export default async function SkillVersionsPage({
 
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold font-heading text-[#564337] mb-2">
-            {t("title")}
-          </h1>
-          <p className="text-[#7a6a5a] font-body">
-            {t("subtitle", { name: skill.name })}
-          </p>
+          <div className="flex items-start justify-between gap-4 mb-2">
+            <div>
+              <h1 className="text-3xl font-bold font-heading text-[#564337] mb-2">
+                {t("title")}
+              </h1>
+              <p className="text-[#7a6a5a] font-body">
+                {t("subtitle", { name: skill.name })}
+              </p>
+            </div>
+            {skill.authorId === authUserId && skill.moderationStatus === "approved" && (
+              <Link
+                href={`/skills/${skill.slug}/versions/new`}
+                className="flex-shrink-0 px-4 py-2 text-sm font-semibold text-white bg-gradient-to-r from-[#a23f00] to-[#fa7025] rounded-full font-heading shadow hover:opacity-90 transition-opacity"
+              >
+                + {t("submit_new_version")}
+              </Link>
+            )}
+          </div>
         </div>
 
         {/* Version list */}
@@ -158,7 +192,7 @@ export default async function SkillVersionsPage({
               >
                 {/* Version header */}
                 <div className="flex items-center justify-between px-6 py-4 border-b border-[#e8dfc8]">
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-xl font-bold font-heading text-[#564337]">
                       v{version}
                     </span>
@@ -167,20 +201,46 @@ export default async function SkillVersionsPage({
                         {tCommon("latest")}
                       </span>
                     )}
-                  </div>
-                  <div className="flex items-center gap-4 text-sm text-[#7a6a5a] font-body">
-                    {v.changelog && (
-                      <span>{t("changelog")}: {v.changelog}</span>
+                    {v.moderationStatus === "pending" && (
+                      <span className="px-2 py-0.5 bg-[#a23f00]/10 text-[#a23f00] text-xs font-semibold rounded-full font-body">
+                        {tCommon("pending")}
+                      </span>
                     )}
-                    <span>
-                      {v.createdAt?.toLocaleDateString("zh-CN", {
-                        year: "numeric",
-                        month: "2-digit",
-                        day: "2-digit",
-                      })}
-                    </span>
+                    {v.deprecatedAt && (
+                      <span className="px-2 py-0.5 bg-red-100 text-red-600 text-xs font-semibold rounded-full font-body">
+                        {t("deprecated")}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <VersionActionButtons
+                      slug={skill.slug}
+                      version={v.version}
+                      isAuthor={v.authorId === authUserId}
+                      isAdmin={authRole === "admin" || authRole === "reviewer"}
+                      isDeprecated={!!v.deprecatedAt}
+                    />
+                    <div className="flex items-center gap-4 text-sm text-[#7a6a5a] font-body">
+                      {v.changelog && (
+                        <span>{t("changelog")}: {v.changelog}</span>
+                      )}
+                      <span>
+                        {v.createdAt?.toLocaleDateString("zh-CN", {
+                          year: "numeric",
+                          month: "2-digit",
+                          day: "2-digit",
+                        })}
+                      </span>
+                    </div>
                   </div>
                 </div>
+
+                {/* Deprecation warning */}
+                {v.deprecatedAt && (
+                  <div className="px-6 py-2 bg-red-50 text-red-600 text-xs font-body">
+                    {t("deprecated_warning")}
+                  </div>
+                )}
 
                 {/* Diff view */}
                 {diffLines && diffLines.length > 0 ? (

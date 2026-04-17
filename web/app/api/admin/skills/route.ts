@@ -3,15 +3,17 @@ import { getAuthFromCookies } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { skills, skillVersions } from "@/lib/db/schema";
 import { eq, and, isNull, desc, asc } from "drizzle-orm";
+import { getT } from "@/lib/i18n";
 
 export async function GET() {
+  const t = await getT("errors");
   const auth = await getAuthFromCookies();
   if (!auth) {
-    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+    return NextResponse.json({ error: t("unauthorized") }, { status: 401 });
   }
 
   if (auth.role !== "admin" && auth.role !== "reviewer") {
-    return NextResponse.json({ error: "Forbidden." }, { status: 403 });
+    return NextResponse.json({ error: t("forbidden") }, { status: 403 });
   }
 
   const pendingSkills = await db.query.skills.findMany({
@@ -26,7 +28,7 @@ export async function GET() {
   const skillsWithContent = await Promise.all(
     pendingSkills.map(async (skill) => {
       const latestVersion = await db
-        .select({ content: skillVersions.content })
+        .select({ content: skillVersions.content, workflowMd: skillVersions.workflowMd })
         .from(skillVersions)
         .where(eq(skillVersions.skillId, skill.id))
         .orderBy(desc(skillVersions.createdAt))
@@ -34,6 +36,7 @@ export async function GET() {
       return {
         ...skill,
         skillMdContent: latestVersion[0]?.content ?? null,
+        workflowMd: latestVersion[0]?.workflowMd ?? null,
       };
     })
   );

@@ -126,11 +126,11 @@ describe("GET /api/admin/analytics/overview", () => {
     expect(res.status).toBe(403);
   });
 
-  it("unauthenticated → 403", async () => {
+  it("unauthenticated → 401", async () => {
     cookieStore.token = undefined;
     const req = makeRequest("GET", "/api/admin/analytics/overview");
     const res = await GET_overview(req);
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(401);
   });
 });
 

@@ -11,6 +11,7 @@ interface Skill {
   authorName: string;
   statsStars: number;
   statsRatingsCount: number;
+  statsInstalls: number;
 }
 
 interface Props {
@@ -21,8 +22,14 @@ function SkillCard({ skill }: { skill: Skill }) {
   const tGrid = useT("skills_grid");
   const avgRating =
     skill.statsRatingsCount > 0
-      ? Number((skill.statsStars / skill.statsRatingsCount).toFixed(1))
+      ? (skill.statsStars / skill.statsRatingsCount).toFixed(1)
       : null;
+
+  const installs = skill.statsInstalls > 0
+    ? skill.statsInstalls >= 1000
+      ? `${(skill.statsInstalls / 1000).toFixed(1)}k`
+      : String(skill.statsInstalls)
+    : null;
 
   return (
     <Link
@@ -32,11 +39,18 @@ function SkillCard({ skill }: { skill: Skill }) {
       {/* Emoji icon */}
       <div className="flex items-start justify-between">
         <span className="text-2xl leading-none">{skill.iconEmoji}</span>
-        {avgRating !== null && (
-          <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-[#fa7025] bg-[#fa7025]/10 px-1.5 py-0.5 rounded-full">
-            ★ {avgRating}
-          </span>
-        )}
+        <div className="flex items-center gap-1.5">
+          {installs !== null && (
+            <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-[#7a6a5a] bg-[#e8dfc8] px-1.5 py-0.5 rounded-full">
+              ⬇ {installs}
+            </span>
+          )}
+          {avgRating !== null && (
+            <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-[#fa7025] bg-[#fa7025]/10 px-1.5 py-0.5 rounded-full">
+              ★ {avgRating}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Name */}
@@ -89,18 +103,6 @@ export function FeaturedGrid({ skills }: Props) {
             <SkillCard key={skill.slug} skill={skill} />
           ))}
         </div>
-
-        {/* Load more */}
-        {skills.length >= 8 && (
-          <div className="mt-8 text-center">
-            <Link
-              href="/skills"
-              className="inline-flex items-center gap-1 text-sm font-medium text-[#a23f00] hover:text-[#c45000] transition-colors font-body"
-            >
-              {t("see_all")}
-            </Link>
-          </div>
-        )}
       </div>
     </section>
   );

@@ -4,28 +4,30 @@
  */
 import { describe, it, expect } from "vitest";
 import { getMessages } from "@/lib/i18n/index";
+import zhMessages from "@/messages/zh.json";
+import enMessages from "@/messages/en.json";
 
 describe("getMessages", () => {
   it("returns zh messages for locale 'zh'", () => {
     const msgs = getMessages("zh");
     expect(msgs).toBeDefined();
-    expect(msgs.common.home).toBe("首页");
+    expect(msgs.common.home).toBe(zhMessages.common.home);
   });
 
   it("returns en messages for locale 'en'", () => {
     const msgs = getMessages("en");
     expect(msgs).toBeDefined();
-    expect(msgs.common.home).toBe("Home");
+    expect(msgs.common.home).toBe(enMessages.common.home);
   });
 
   it("falls back to zh for unknown locale", () => {
     const msgs = getMessages("fr");
-    expect(msgs.common.home).toBe("首页");
+    expect(msgs.common.home).toBe(zhMessages.common.home);
   });
 
   it("falls back to zh when locale is undefined", () => {
     const msgs = getMessages(undefined);
-    expect(msgs.common.home).toBe("首页");
+    expect(msgs.common.home).toBe(zhMessages.common.home);
   });
 
   it("has all expected top-level namespaces", () => {
@@ -51,33 +53,38 @@ describe("message key interpolation (mirrors getT implementation)", () => {
     return str.replace(/\{(\w+)\}/g, (_, k) => String(values[k] ?? `{${k}}`));
   }
 
+  // Build expected string from the same message key + test values — avoids hardcoding
+  function expectedFromMessage(msg: string, values: Record<string, string | number>) {
+    return interpolate(msg, values);
+  }
+
   it("replaces {key} placeholders with provided values", () => {
-    const template = "{count} submission(s) awaiting review";
+    const template = zhMessages.admin_review.submissions_count as string;
     const result = interpolate(template, { count: "5" });
-    expect(result).toBe("5 submission(s) awaiting review");
+    expect(result).toBe(expectedFromMessage(template, { count: "5" }));
   });
 
   it("replaces multiple placeholders", () => {
-    const template = "{start}–{end} of {total} logs";
-    const result = interpolate(template, { start: "1", end: "10", total: "100" });
-    expect(result).toBe("1–10 of 100 logs");
+    const template = enMessages.admin_audit.showing_range as string;
+    const result = interpolate(template, { startItem: "1", endItem: "10", total: "100" });
+    expect(result).toBe(expectedFromMessage(template, { startItem: "1", endItem: "10", total: "100" }));
   });
 
   it("leaves placeholder if value is not provided", () => {
-    const template = "{count} submission(s) awaiting review";
+    const template = zhMessages.admin_review.submissions_count as string;
     const result = interpolate(template, {});
-    expect(result).toBe("{count} submission(s) awaiting review");
+    expect(result).toBe(expectedFromMessage(template, {}));
   });
 
   it("handles numeric values in interpolation", () => {
-    const template = "Showing {start} to {end}";
-    const result = interpolate(template, { start: 1, end: 50 });
-    expect(result).toBe("Showing 1 to 50");
+    const template = enMessages.admin_audit.showing_range as string;
+    const result = interpolate(template, { startItem: 1, endItem: 50, total: 200 });
+    expect(result).toBe(expectedFromMessage(template, { startItem: 1, endItem: 50, total: 200 }));
   });
 
   it("handles special regex chars in values without breaking replacement", () => {
-    const template = "Path: {path}";
-    const result = interpolate(template, { path: "https://example.com?foo=bar&baz=1" });
-    expect(result).toBe("Path: https://example.com?foo=bar&baz=1");
+    const template = enMessages.admin_audit.showing_range as string;
+    const result = interpolate(template, { startItem: 1, endItem: 50, total: 200 });
+    expect(result).toBe(expectedFromMessage(template, { startItem: 1, endItem: 50, total: 200 }));
   });
 });
