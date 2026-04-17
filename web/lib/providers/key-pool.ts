@@ -287,26 +287,41 @@ export async function addProviderKey(
 
   const now = Math.floor(Date.now() / 60000) * 60;
 
-  const result = await db.insert(providerKeys).values({
-    provider,
-    ability,
-    encryptedKey: encrypted,
-    keyHash: hash,
-    endpoint: opts.endpoint ?? "",
-    apiFormat: opts.apiFormat ?? "",
-    modelName: opts.modelName ?? "",
-    quota: opts.quota ?? 500,
-    windowUsed: 0,
-    windowStart: now,
-    enabled: true,
-  });
+  try {
+    const result = await db.insert(providerKeys).values({
+      provider,
+      ability,
+      encryptedKey: encrypted,
+      keyHash: hash,
+      endpoint: opts.endpoint ?? "",
+      apiFormat: opts.apiFormat ?? "",
+      modelName: opts.modelName ?? "",
+      quota: opts.quota ?? 500,
+      windowUsed: 0,
+      windowStart: now,
+      enabled: true,
+    });
 
-  const r = getRedis();
-  if (r) {
-    r.del(`clawplay:keys:${provider}_${ability}`).catch(() => {});
+    const r = getRedis();
+    if (r) {
+      r.del(`clawplay:keys:${provider}_${ability}`).catch(() => {});
+    }
+
+    return result.lastInsertRowid as number;
+  } catch (err: unknown) {
+    // SQLite UNIQUE constraint on key_hash: same key for different ability
+    if (
+      typeof err === "object" &&
+      err !== null &&
+      "code" in err &&
+      (err as { code: string }).code === "SQLITE_CONSTRAINT_UNIQUE"
+    ) {
+      const e = new Error("Duplicate key for this provider and ability");
+      (e as NodeJS.ErrnoException).code = "DUPLICATE_KEY";
+      throw e;
+    }
+    throw err;
   }
-
-  return result.lastInsertRowid as number;
 }
 
 /** Toggle a key's enabled state */
