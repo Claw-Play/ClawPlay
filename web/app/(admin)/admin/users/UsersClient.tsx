@@ -1,9 +1,13 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useT } from "@/lib/i18n/context";
 import { useAdminUser } from "@/lib/context/AdminUserContext";
+import { formatDate } from "@/lib/timestamp";
 
 type RoleValue = "user" | "reviewer" | "admin";
+type RoleFilter = RoleValue | "all";
+type SortField = "events" | "token_used" | "last_active";
+type SortOrder = "asc" | "desc";
 
 interface UserRecord {
   userId: number;
@@ -26,12 +30,6 @@ interface ApiUserRecord {
   topAbilities?: { ability: string; count: number }[];
 }
 
-function formatTs(ts: number): string {
-  if (!ts) return "—";
-  const d = new Date(ts);
-  return d.toLocaleDateString("en-GB", { year: "numeric", month: "2-digit", day: "2-digit" });
-}
-
 function formatAbility(ability: string): string {
   return ability
     .replace("llm.generate", "LLM")
@@ -49,31 +47,49 @@ const ABILITY_COLORS: Record<string, string> = {
   "voice.synthesize": "#5a7a4a",
 };
 
+const panelClassName =
+  "rounded-xl border border-[#eadfc8] bg-[radial-gradient(circle_at_top,_rgba(250,244,228,0.92),_rgba(255,252,246,0.98)_38%,_rgba(250,246,237,0.98)_100%)] shadow-[0_18px_44px_rgba(86,67,55,0.08)]";
+const menuClassName =
+  "absolute left-0 top-full z-20 mt-2 min-w-[112px] rounded-xl border border-[#eadfc8] bg-[linear-gradient(180deg,#fffdf8_0%,#f7efe1_100%)] p-1 shadow-[0_16px_34px_rgba(86,67,55,0.16)] backdrop-blur-sm";
+const menuItemClassName =
+  "flex min-h-[30px] w-full items-center justify-between rounded-lg px-2.5 py-1 text-left text-xs font-semibold transition-colors";
+const headerCellClassName =
+  "px-3 py-2 text-[15px] font-semibold uppercase text-black";
+const bodyCellClassName = "px-3 py-2.5 align-middle";
+
 export default function UsersClient() {
   const t = useT("admin");
   const { currentUserId } = useAdminUser();
+  const roleFilterRef = useRef<HTMLDivElement | null>(null);
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [period, setPeriod] = useState<"7d" | "30d">("7d");
-  const [sort, setSort] = useState<"events" | "quota_used">("quota_used");
+  const [roleFilter, setRoleFilter] = useState<RoleFilter>("all");
+  const [sortField, setSortField] = useState<SortField>("token_used");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   const [offset, setOffset] = useState(0);
   const limit = 20;
 
   const [pendingRole, setPendingRole] = useState<Record<number, RoleValue>>({});
   const [roleLoading, setRoleLoading] = useState<Record<number, boolean>>({});
   const [roleError, setRoleError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [isRoleMenuOpen, setIsRoleMenuOpen] = useState(false);
+  const [openUserRoleMenuId, setOpenUserRoleMenuId] = useState<number | null>(null);
 
   const fetchUsers = useCallback(() => {
     setLoading(true);
     setError(null);
     const params = new URLSearchParams({
-      period,
-      sort,
+      period: "all",
+      sortBy: sortField,
+      sortOrder,
       limit: String(limit),
       offset: String(offset),
     });
+    if (search.trim()) params.set("search", search.trim());
+    if (roleFilter !== "all") params.set("role", roleFilter);
     fetch(`/api/admin/analytics/users?${params}`)
       .then((r) => r.json())
       .then((d) => {
@@ -93,9 +109,37 @@ export default function UsersClient() {
       })
       .catch(() => setError("Failed to load user data."))
       .finally(() => setLoading(false));
-  }, [period, sort, offset]);
+  }, [offset, roleFilter, search, sortField, sortOrder]);
 
   useEffect(() => { fetchUsers(); }, [fetchUsers]);
+
+  useEffect(() => {
+    if (!isRoleMenuOpen && openUserRoleMenuId === null) return;
+
+    const handlePointerDown = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!roleFilterRef.current?.contains(target)) {
+        setIsRoleMenuOpen(false);
+      }
+      if (!target.closest("[data-user-role-root='true']")) {
+        setOpenUserRoleMenuId(null);
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsRoleMenuOpen(false);
+        setOpenUserRoleMenuId(null);
+      }
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [isRoleMenuOpen, openUserRoleMenuId]);
 
   const handleRoleChange = async (userId: number, newRole: RoleValue) => {
     setPendingRole((prev) => ({ ...prev, [userId]: newRole }));
@@ -131,154 +175,400 @@ export default function UsersClient() {
 
   const totalPages = Math.ceil(total / limit);
   const currentPage = Math.floor(offset / limit) + 1;
+  const hasUsers = users.length > 0;
+  const fillerRowCount = hasUsers ? Math.max(limit - users.length, 0) : Math.max(limit - 1, 0);
 
   const getDisplayRole = (u: UserRecord): RoleValue =>
     pendingRole[u.userId] ?? u.role;
 
+  const handleSortChange = (field: SortField) => {
+    setOffset(0);
+    if (sortField === field) {
+      setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+      return;
+    }
+
+    setSortField(field);
+    setSortOrder("desc");
+  };
+
+  const renderSortIndicator = (field: SortField) => {
+    const active = sortField === field;
+    return (
+      <span
+        aria-hidden="true"
+        className={`ml-2 inline-flex h-7 w-7 items-center justify-center rounded-full transition-colors ${
+          active
+            ? "bg-black/10 text-black shadow-[0_6px_16px_rgba(0,0,0,0.08)]"
+            : "text-black/30 hover:bg-black/5 hover:text-black"
+        }`}
+      >
+        <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+          {active ? (
+            sortOrder === "asc" ? (
+              <path
+                d="M2.5 7.5L6 4L9.5 7.5"
+                stroke="currentColor"
+                strokeWidth="1.4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            ) : (
+              <path
+                d="M2.5 4.5L6 8L9.5 4.5"
+                stroke="currentColor"
+                strokeWidth="1.4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            )
+          ) : (
+            <>
+              <path
+                d="M3 5L6 2L9 5"
+                stroke="currentColor"
+                strokeWidth="1.3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                opacity="0.9"
+              />
+              <path
+                d="M3 7L6 10L9 7"
+                stroke="currentColor"
+                strokeWidth="1.3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                opacity="0.9"
+              />
+            </>
+          )}
+        </svg>
+      </span>
+    );
+  };
+
+  const renderSortButton = (field: SortField, label: string) => (
+    <div className="flex min-h-[44px] items-center">
+      <span>{label}</span>
+      <button
+        type="button"
+        onClick={() => handleSortChange(field)}
+        className="rounded-full focus:outline-none focus:ring-2 focus:ring-black/15"
+        aria-label={`Sort by ${label}`}
+      >
+        {renderSortIndicator(field)}
+      </button>
+    </div>
+  );
+
+  const roleFilterOptions: { value: RoleFilter; label: string }[] = [
+    { value: "all", label: t("all_roles") },
+    { value: "user", label: t("role_user") },
+    { value: "reviewer", label: t("role_reviewer") },
+    { value: "admin", label: t("role_admin") },
+  ];
+  const roleEditorOptions: { value: RoleValue; label: string }[] = [
+    { value: "user", label: t("role_user") },
+    { value: "reviewer", label: t("role_reviewer") },
+    { value: "admin", label: t("role_admin") },
+  ];
+
+  const currentRoleFilterLabel =
+    roleFilterOptions.find((option) => option.value === roleFilter)?.label ?? t("all_roles");
+
+  const getRoleChipClassName = (role: RoleValue) => {
+    if (role === "admin") return "bg-red-100 text-red-700";
+    if (role === "reviewer") return "bg-green-100 text-green-800";
+    return "bg-gray-100 text-gray-500";
+  };
+
+  const getRoleTextClassName = (role: RoleValue) => {
+    if (role === "admin") return "text-red-700";
+    if (role === "reviewer") return "text-green-800";
+    return "text-gray-500";
+  };
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {/* Controls */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <div className="flex gap-1 bg-white rounded-full p-1 shadow-[0_4px_12px_rgba(86,67,55,0.08)]">
-          {(["7d", "30d"] as const).map((p) => (
-            <button
-              key={p}
-              onClick={() => { setPeriod(p); setOffset(0); }}
-              className={`px-4 py-1.5 rounded-full text-sm font-body transition-all ${
-                period === p
-                  ? "bg-gradient-to-r from-[#a23f00] to-[#fa7025] text-white"
-                  : "text-[#586330] hover:bg-[#ede9cf]"
-              }`}
-            >
-              {p === "7d" ? t("period_7d") : t("period_30d")}
-            </button>
-          ))}
+      <div className={`${panelClassName} flex flex-wrap items-center gap-3 px-4 py-4`}>
+        {/* Search */}
+        <div className="relative">
+          <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-black/30">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <circle cx="7" cy="7" r="4.5" stroke="currentColor" strokeWidth="1.5"/>
+              <path d="M10.5 10.5L14 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
+          </div>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setOffset(0); }}
+            placeholder={t("search_users")}
+            className="min-w-[220px] rounded-full border border-black/10 bg-white py-2.5 pl-10 pr-4 text-sm text-black placeholder:text-black/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_8px_20px_rgba(86,67,55,0.05)] transition-colors focus:border-black/30 focus:outline-none focus:ring-2 focus:ring-black/15"
+            style={{ fontFamily: "var(--font-vietnam)" }}
+          />
         </div>
-        <div className="flex gap-1 bg-white rounded-full p-1 shadow-[0_4px_12px_rgba(86,67,55,0.08)]">
-          <button
-            onClick={() => { setSort("quota_used"); setOffset(0); }}
-            className={`px-4 py-1.5 rounded-full text-sm font-body transition-all ${
-              sort === "quota_used"
-                ? "bg-gradient-to-r from-[#a23f00] to-[#fa7025] text-white"
-                : "text-[#586330] hover:bg-[#ede9cf]"
-            }`}
-          >
-            By Token
-          </button>
-          <button
-            onClick={() => { setSort("events"); setOffset(0); }}
-            className={`px-4 py-1.5 rounded-full text-sm font-body transition-all ${
-              sort === "events"
-                ? "bg-gradient-to-r from-[#a23f00] to-[#fa7025] text-white"
-                : "text-[#586330] hover:bg-[#ede9cf]"
-            }`}
-          >
-            By Events
-          </button>
-        </div>
-        <span className="text-sm text-[#a89070] font-body ml-auto">{total} users</span>
+
+        <span className="ml-auto text-[11px] font-semibold uppercase tracking-[0.18em] text-black/40">
+          {t("users_count", { count: total.toLocaleString() })}
+        </span>
       </div>
 
       {/* Role error toast */}
       {roleError && (
-        <div className="px-4 py-3 rounded-2xl bg-red-50 border border-red-200 text-red-600 text-sm font-body">
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-body text-red-700 shadow-[0_10px_24px_rgba(193,75,50,0.08)]">
           {roleError}
         </div>
       )}
 
       {/* Table */}
-      <div className="bg-white rounded-[32px] shadow-[0_8px_24px_rgba(86,67,55,0.06)] overflow-hidden">
-        {loading ? (
-          <div className="p-8 text-center text-[#a89070] font-body animate-pulse">Loading...</div>
-        ) : error ? (
-          <div className="p-8 text-center text-[#a23f00] font-body">{error}</div>
+      <div className={`${panelClassName} min-h-[900px] overflow-hidden`}>
+        {loading && users.length === 0 ? (
+          <div className="p-10 text-center font-body text-black/40 animate-pulse">{t("loading")}</div>
+        ) : error && users.length === 0 ? (
+          <div className="p-10 text-center font-body text-red-600">{error}</div>
         ) : users.length === 0 ? (
-          <div className="p-8 text-center text-[#a89070] font-body">No user data.</div>
+          <div className="p-10 text-center font-body text-black/40">{t("no_user_data")}</div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm font-body">
+          <div className="relative overflow-x-auto">
+            <table className="w-full min-w-[980px] table-fixed text-sm font-body">
+              <colgroup>
+                <col className="w-[72px]" />
+                <col className="w-[232px]" />
+                <col className="w-[116px]" />
+                <col className="w-[128px]" />
+                <col className="w-[144px]" />
+                <col className="w-[144px]" />
+                <col className="w-[240px]" />
+              </colgroup>
               <thead>
-                <tr className="border-b border-[#e8dfc8] text-left">
-                  <th className="px-4 py-3 text-xs text-[#a89070] font-semibold">#</th>
-                  <th className="px-4 py-3 text-xs text-[#a89070] font-semibold">User</th>
-                  <th className="px-4 py-3 text-xs text-[#a89070] font-semibold">{t("role")}</th>
-                  <th className="px-4 py-3 text-xs text-[#a89070] font-semibold">Events</th>
-                  <th className="px-4 py-3 text-xs text-[#a89070] font-semibold">Token Used</th>
-                  <th className="px-4 py-3 text-xs text-[#a89070] font-semibold">Last Active</th>
-                  <th className="px-4 py-3 text-xs text-[#a89070] font-semibold">Top Abilities</th>
+                <tr className="border-b border-[#e6dac2] bg-[linear-gradient(180deg,rgba(255,252,246,0.96),rgba(249,243,232,0.96))] text-left">
+                  <th className="pl-5 pr-3 py-2 text-[15px] font-semibold uppercase text-black">ID</th>
+                  <th className={headerCellClassName}>{t("user_label")}</th>
+                  <th className={headerCellClassName}>
+                    <div ref={roleFilterRef} className="relative flex min-h-[44px] items-center">
+                      <span>{t("role")}</span>
+                      <button
+                        type="button"
+                        onClick={() => setIsRoleMenuOpen((prev) => !prev)}
+                        className={`ml-2 inline-flex h-6 w-6 items-center justify-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-black/15 ${
+                          roleFilter === "all"
+                            ? "text-black/30 hover:bg-black/5 hover:text-black focus:bg-black/5 focus:text-black"
+                            : "bg-black/10 text-black hover:bg-black/15 focus:bg-black/15"
+                        }`}
+                        aria-haspopup="menu"
+                        aria-expanded={isRoleMenuOpen}
+                        aria-label={`Filter by role: ${currentRoleFilterLabel}`}
+                        title={currentRoleFilterLabel}
+                      >
+                        <span
+                          aria-hidden="true"
+                          className={`inline-flex h-3.5 w-3.5 items-center justify-center transition-transform ${
+                            isRoleMenuOpen ? "rotate-180" : ""
+                          }`}
+                        >
+                          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                            <path
+                              d="M2.5 4L6 7.5L9.5 4"
+                              stroke="currentColor"
+                              strokeWidth="1.4"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                        </span>
+                      </button>
+                      {isRoleMenuOpen && (
+                        <div className={menuClassName}>
+                          {roleFilterOptions.map((option) => {
+                            const selected = option.value === roleFilter;
+                            return (
+                              <button
+                                key={option.value}
+                                type="button"
+                                onClick={() => {
+                                  setRoleFilter(option.value);
+                                  setOffset(0);
+                                  setIsRoleMenuOpen(false);
+                                }}
+                                className={`${menuItemClassName} ${
+                                  selected
+                                    ? "bg-black/10 text-black"
+                                    : "text-black/60 hover:bg-black/5 hover:text-black"
+                                }`}
+                                style={{ fontFamily: "var(--font-vietnam)" }}
+                                role="menuitemradio"
+                                aria-checked={selected}
+                              >
+                                <span>{option.label}</span>
+                                <span
+                                  aria-hidden="true"
+                                  className={`inline-flex h-4 w-4 items-center justify-center ${
+                                    selected ? "text-black" : "text-transparent"
+                                  }`}
+                                >
+                                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                                    <path
+                                      d="M2.25 6.25L4.75 8.75L9.75 3.25"
+                                      stroke="currentColor"
+                                      strokeWidth="1.6"
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                    />
+                                  </svg>
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </th>
+                  <th className={headerCellClassName}>
+                    {renderSortButton("events", t("events"))}
+                  </th>
+                  <th className={headerCellClassName}>
+                    {renderSortButton("token_used", t("quota_used"))}
+                  </th>
+                  <th className={headerCellClassName}>
+                    {renderSortButton("last_active", t("last_active"))}
+                  </th>
+                  <th className={headerCellClassName}>{t("top_abilities")}</th>
                 </tr>
               </thead>
               <tbody>
                 {users.map((u, i) => {
                   const displayRole = getDisplayRole(u);
                   return (
-                    <tr key={u.userId} className="border-b border-[#f0e8d0] hover:bg-[#faf5e8] transition-colors">
-                      <td className="px-4 py-3 text-[#a89070] font-mono-custom text-xs">
-                        {(offset + i + 1).toString().padStart(3, "0")}
+                    <tr key={u.userId} className="border-b border-[#efe4cf] transition-colors hover:bg-[linear-gradient(90deg,rgba(248,241,226,0.75),rgba(255,252,246,0.15))]">
+                      <td className="pl-5 pr-3 py-2.5 whitespace-nowrap text-[14px] font-semibold text-black [font-variant-numeric:tabular-nums]">
+                        {u.userId.toLocaleString()}
                       </td>
-                      <td className="px-4 py-3">
+                      <td className={bodyCellClassName}>
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#a23f00] to-[#fa7025] flex items-center justify-center text-white font-bold text-xs font-body flex-shrink-0">
+                          <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-[linear-gradient(135deg,#b45822_0%,#eb8747_100%)] text-[12px] font-bold text-white shadow-[0_8px_18px_rgba(178,88,34,0.2)]">
                             {(u.name || `U${u.userId}`).charAt(0).toUpperCase()}
                           </div>
-                          <div>
-                            <p className="text-sm font-semibold text-[#564337] font-body">{u.name || `User ${u.userId}`}</p>
-                            <p className="text-xs text-[#a89070] font-body">{u.userId}</p>
+                          <div className="min-w-0">
+                            <p className="truncate text-[14px] font-semibold leading-tight">{u.name || `User ${u.userId}`}</p>
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className={bodyCellClassName}>
                         {currentUserId === u.userId ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold bg-[#ede9cf] text-[#a89070]">
-                            {t(`role_${displayRole}`)} {t("you_suffix")}
+                          <span className={`inline-flex items-center gap-1 text-xs font-semibold tracking-[0.01em] ${getRoleTextClassName(displayRole)}`}>
+                            <span>{t(`role_${displayRole}`)}</span>
+                            <span>{t("you_suffix")}</span>
                           </span>
                         ) : (
-                          <div className="relative inline-flex items-center">
-                            <select
-                              value={displayRole}
+                          <div
+                            data-user-role-root="true"
+                            className="relative inline-flex items-center"
+                          >
+                            <button
+                              type="button"
                               disabled={!!roleLoading[u.userId]}
-                              onChange={(e) => handleRoleChange(u.userId, e.target.value as RoleValue)}
-                              className={`text-xs rounded-full px-2 pr-5 py-1 font-semibold border-0 cursor-pointer transition-all appearance-none ${
-                                roleLoading[u.userId] ? "opacity-50 cursor-wait" : "hover:opacity-80"
-                              } ${
-                                displayRole === "admin"
-                                  ? "bg-[#a23f0015] text-[#a23f00]"
-                                  : displayRole === "reviewer"
-                                  ? "bg-[#58633015] text-[#586330]"
-                                  : "bg-[#a8907020] text-[#a89070]"
+                              onClick={() =>
+                                setOpenUserRoleMenuId((prev) => (prev === u.userId ? null : u.userId))
+                              }
+                              className={`inline-flex min-h-[24px] items-center gap-1.5 text-xs font-semibold tracking-[0.01em] transition-colors focus:outline-none ${
+                                roleLoading[u.userId]
+                                  ? "cursor-wait opacity-50"
+                                  : "hover:opacity-90"
                               }`}
+                              style={{ fontFamily: "var(--font-vietnam)" }}
+                              aria-haspopup="menu"
+                              aria-expanded={openUserRoleMenuId === u.userId}
+                              aria-label={`Change role for ${u.name || `User ${u.userId}`}`}
                             >
-                              <option value="user">{t("role_user")}</option>
-                              <option value="reviewer">{t("role_reviewer")}</option>
-                              <option value="admin">{t("role_admin")}</option>
-                            </select>
-                            <span className="absolute right-1.5 pointer-events-none text-current opacity-60">
-                              ▾
-                            </span>
+                              <span className={getRoleTextClassName(displayRole)}>
+                                {t(`role_${displayRole}`)}
+                              </span>
+                              <span
+                                aria-hidden="true"
+                                className={`inline-flex h-5 w-5 items-center justify-center rounded-full transition-all ${
+                                  getRoleChipClassName(displayRole)
+                                } ${openUserRoleMenuId === u.userId ? "rotate-180 shadow-[0_6px_16px_rgba(86,67,55,0.1)]" : ""}`}
+                              >
+                                <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+                                  <path
+                                    d="M2.5 4L6 7.5L9.5 4"
+                                    stroke="currentColor"
+                                    strokeWidth="1.4"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                  />
+                                </svg>
+                              </span>
+                            </button>
+                            {openUserRoleMenuId === u.userId && (
+                              <div className={menuClassName}>
+                                {roleEditorOptions.map((option) => {
+                                  const selected = option.value === displayRole;
+                                  return (
+                                    <button
+                                      key={option.value}
+                                      type="button"
+                                      onClick={() => {
+                                        void handleRoleChange(u.userId, option.value);
+                                        setOpenUserRoleMenuId(null);
+                                      }}
+                                      className={`${menuItemClassName} ${
+                                        selected
+                                          ? "bg-[#eee0c9] text-[#75563f]"
+                                          : "text-[#8d745e] hover:bg-[#f5ede0] hover:text-[#a23f00]"
+                                      }`}
+                                      style={{ fontFamily: "var(--font-vietnam)" }}
+                                      role="menuitemradio"
+                                      aria-checked={selected}
+                                    >
+                                      <span>{option.label}</span>
+                                      <span
+                                        aria-hidden="true"
+                                        className={`inline-flex h-4 w-4 items-center justify-center ${
+                                          selected ? "text-[#a23f00]" : "text-transparent"
+                                        }`}
+                                      >
+                                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                                          <path
+                                            d="M2.25 6.25L4.75 8.75L9.75 3.25"
+                                            stroke="currentColor"
+                                            strokeWidth="1.6"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                          />
+                                        </svg>
+                                      </span>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            )}
                           </div>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-sm text-[#564337] font-semibold">
+                      <td className={`${bodyCellClassName} whitespace-nowrap text-[14px] font-semibold text-black [font-variant-numeric:tabular-nums]`}>
                         {u.totalEvents.toLocaleString()}
                       </td>
-                      <td className="px-4 py-3 text-sm text-[#564337] font-semibold">
+                      <td className={`${bodyCellClassName} whitespace-nowrap text-[14px] font-semibold text-black [font-variant-numeric:tabular-nums]`}>
                         {u.totalQuotaUsed.toLocaleString()}
                       </td>
-                      <td className="px-4 py-3 text-xs text-[#a89070] font-body whitespace-nowrap">
-                        {formatTs(u.lastActive)}
+                      <td className={`${bodyCellClassName} whitespace-nowrap text-[14px] font-semibold text-black [font-variant-numeric:tabular-nums]`}>
+                        {formatDate(u.lastActive ? new Date(u.lastActive) : null)}
                       </td>
-                      <td className="px-4 py-3">
-                        <div className="flex flex-wrap gap-1">
+                      <td className={bodyCellClassName}>
+                        <div className="flex flex-wrap gap-1.5 overflow-hidden">
                           {u.topAbilities.length === 0 ? (
-                            <span className="text-xs text-[#a89070]">—</span>
+                            <span className="text-xs font-medium text-black/40">—</span>
                           ) : (
                             u.topAbilities.map((a) => (
                               <span
                                 key={a.ability}
-                                className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold"
+                                className="inline-flex items-center rounded-full border border-white/40 px-2.5 py-1 text-[11px] font-semibold tracking-[0.02em] shadow-[inset_0_1px_0_rgba(255,255,255,0.35)]"
                                 style={{
-                                  backgroundColor: (ABILITY_COLORS[a.ability] ?? "#a89070") + "20",
-                                  color: ABILITY_COLORS[a.ability] ?? "#a89070",
+                                  backgroundColor: (ABILITY_COLORS[a.ability] ?? "#666") + "1a",
+                                  color: ABILITY_COLORS[a.ability] ?? "#666",
                                 }}
                               >
                                 {formatAbility(a.ability)} {a.count}
@@ -292,6 +582,11 @@ export default function UsersClient() {
                 })}
               </tbody>
             </table>
+            {loading && (
+              <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,253,248,0.24),rgba(247,240,226,0.14))] backdrop-blur-[1px]">
+                <div className="absolute inset-x-6 top-6 h-px bg-[linear-gradient(90deg,transparent,rgba(0,0,0,0.18),transparent)] animate-pulse" />
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -302,19 +597,22 @@ export default function UsersClient() {
           <button
             disabled={offset === 0}
             onClick={() => setOffset(Math.max(0, offset - limit))}
-            className="px-4 py-2 rounded-full text-sm font-body text-[#564337] bg-white shadow-[0_4px_12px_rgba(86,67,55,0.08)] disabled:opacity-40 hover:bg-[#ede9cf] transition-colors"
+            className="rounded-lg border border-black/10 bg-white px-4 py-2 text-sm font-body text-black shadow-[0_8px_20px_rgba(86,67,55,0.06)] transition-colors hover:bg-black/5 disabled:opacity-40"
           >
-            ← Prev
+            ← {t("pagination_prev")}
           </button>
-          <span className="text-sm text-[#a89070] font-body px-4">
-            Page {currentPage} of {totalPages}
+          <span className="px-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-black/40">
+            {t("pagination_status", {
+              current: String(currentPage),
+              total: String(totalPages),
+            })}
           </span>
           <button
             disabled={offset + limit >= total}
             onClick={() => setOffset(offset + limit)}
-            className="px-4 py-2 rounded-full text-sm font-body text-[#564337] bg-white shadow-[0_4px_12px_rgba(86,67,55,0.08)] disabled:opacity-40 hover:bg-[#ede9cf] transition-colors"
+            className="rounded-lg border border-black/10 bg-white px-4 py-2 text-sm font-body text-black shadow-[0_8px_20px_rgba(86,67,55,0.06)] transition-colors hover:bg-black/5 disabled:opacity-40"
           >
-            Next →
+            {t("pagination_next")} →
           </button>
         </div>
       )}

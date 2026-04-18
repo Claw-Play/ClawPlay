@@ -1,5 +1,5 @@
 "use client";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useT } from "@/lib/i18n/context";
@@ -16,10 +16,12 @@ function NavIcon({ name }: { name: string }) {
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() ?? "";
+  const searchParams = useSearchParams();
   const router = useRouter();
   const t = useT("nav");
   const tCommon = useT("common");
   const isSkillsRoute = pathname.startsWith("/skills");
+  const currentSort = searchParams.get("sort") ?? "";
   const [user, setUser] = useState<{
     id?: number;
     name?: string;
@@ -83,17 +85,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   ];
 
   const sidebarItems = [
-    { label: t("all_skills"), href: "/skills", icon: "grid" as const },
-    { label: t("trending"), href: "/skills?sort=trending", icon: "trending" as const },
-    { label: t("new"), href: "/skills?sort=new", icon: "new" as const },
-    { label: t("favorites"), href: "/dashboard", icon: "bookmark" as const },
-    { label: t("settings"), href: "/dashboard", icon: "settings" as const },
+    { label: t("all_skills"), href: "/skills", icon: "grid" as const, sortKey: "" },
+    { label: t("trending"), href: "/skills?sort=trending", icon: "trending" as const, sortKey: "trending" },
+    { label: t("new"), href: "/skills?sort=new", icon: "new" as const, sortKey: "new" },
+    { label: t("favorites"), href: "/dashboard", icon: "bookmark" as const, sortKey: "" },
   ].map((item) => ({
     ...item,
     active:
-      item.href === "/skills"
-        ? pathname === "/skills" || pathname.startsWith("/skills")
-        : false,
+      item.href === "/dashboard"
+        ? pathname === "/dashboard"
+        : isSkillsRoute && item.sortKey === currentSort,
   }));
 
   const avatarUrl = user?.avatarUrl

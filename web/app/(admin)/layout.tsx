@@ -42,22 +42,31 @@ export default function AdminLayout({
   const [user, setUser] = useState<UserInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    fetch("/api/user/me")
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.user?.role !== "admin" && data.user?.role !== "reviewer") {
+    async function init() {
+      try {
+        const meRes = await fetch("/api/user/me");
+        const meData = await meRes.json();
+        if (meData.user?.role !== "admin" && meData.user?.role !== "reviewer") {
           window.location.href = "/";
           return;
         }
-        setUser(data.user);
-      })
-      .catch(() => {
+        setUser(meData.user);
+
+        const skillsRes = await fetch("/api/admin/skills");
+        const skillsData = await skillsRes.json();
+        const count = Array.isArray(skillsData.skills) ? skillsData.skills.length : 0;
+        setPendingCount(count);
+      } catch {
         window.location.href = "/login";
-      })
-      .finally(() => setLoading(false));
+      } finally {
+        setLoading(false);
+      }
+    }
+    init();
   }, []);
 
   // Close dropdown on outside click
@@ -81,6 +90,10 @@ export default function AdminLayout({
     if (href === "/admin/audit") return pathname.startsWith("/admin/audit");
     if (href === "/admin/providers") return pathname === "/admin/providers";
     return false;
+  }
+
+  function displayCount(n: number): string {
+    return n > 99 ? "99+" : String(n);
   }
 
   function getPageTitle(): string {
@@ -127,7 +140,11 @@ export default function AdminLayout({
               }`}
             >
               <span className="text-base">{item.icon}</span>
-              <span className="text-sm font-medium">{t(item.labelKey)}</span>
+              <span className="text-sm font-medium">
+                {item.href === "/admin/review"
+                  ? `${t(item.labelKey)} (${displayCount(pendingCount)})`
+                  : t(item.labelKey)}
+              </span>
             </Link>
           ))}
         </nav>

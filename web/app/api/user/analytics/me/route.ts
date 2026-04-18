@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAuthFromCookies } from "@/lib/auth";
 import { raw } from "@/lib/db";
+import { toUnixSec } from "@/lib/timestamp";
 
 function getPeriodMs(period: string): number {
   return period === "30d" ? 30 * 24 * 60 * 60 * 1000 : 7 * 24 * 60 * 60 * 1000;
@@ -12,8 +13,8 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
-  const since7d = Math.floor(Date.now() / 1000) - getPeriodMs("7d") / 1000;
-  const since30d = Math.floor(Date.now() / 1000) - getPeriodMs("30d") / 1000;
+  const since7d = toUnixSec(Date.now() - getPeriodMs("7d"));
+  const since30d = toUnixSec(Date.now() - getPeriodMs("30d"));
 
   // 7-day stats — count quota.use events (actual API calls)
   const stats7dRows = raw(

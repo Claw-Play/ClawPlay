@@ -1,8 +1,24 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useT } from "@/lib/i18n/context";
-import LineChart from "@/components/charts/LineChart";
 import PieChart from "@/components/charts/PieChart";
+import EventTrendCard from "./EventTrendCard";
+
+type Period = "7d" | "30d" | "3m" | "1y";
+
+const PERIOD_OPTIONS: { value: Period; labelKey: string }[] = [
+  { value: "7d", labelKey: "period_7d" },
+  { value: "30d", labelKey: "period_30d" },
+  { value: "3m", labelKey: "period_3m" },
+  { value: "1y", labelKey: "period_1y" },
+];
+
+const filterControlClassName =
+  "rounded-full border border-[#eadfc8] bg-[#fffdf8] px-4 py-2.5 text-sm text-[#5f493a] shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_8px_20px_rgba(86,67,55,0.05)] transition-colors focus:border-[#d8b07d] focus:outline-none focus:ring-2 focus:ring-[#a23f00]/15";
+const menuClassName =
+  "absolute left-0 top-full z-20 mt-2 min-w-[120px] rounded-[18px] border border-[#eadfc8] bg-[linear-gradient(180deg,#fffdf8_0%,#f7efe1_100%)] p-1 shadow-[0_16px_34px_rgba(86,67,55,0.16)] backdrop-blur-sm";
+const menuItemClassName =
+  "flex min-h-[30px] w-full items-center justify-between rounded-xl px-2.5 py-1 text-left text-xs font-semibold transition-colors";
 
 interface OverviewData {
   period: string;
@@ -39,13 +55,32 @@ const PROVIDER_COLORS: Record<string, string> = {
 
 export default function OverviewClient() {
   const t = useT("admin");
-  const [period, setPeriod] = useState<"7d" | "30d">("7d");
+  const [period, setPeriod] = useState<Period>("7d");
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
   const [data, setData] = useState<OverviewData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const currentOption = PERIOD_OPTIONS.find((o) => o.value === period)!;
+
+  useEffect(() => {
+    if (!isMenuOpen) return;
+    const handlePointerDown = (e: MouseEvent) => {
+      if (!menuRef.current?.contains(e.target as Node)) setIsMenuOpen(false);
+    };
+    const handleEscape = (e: KeyboardEvent) => { if (e.key === "Escape") setIsMenuOpen(false); };
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [isMenuOpen]);
+
   useEffect(() => {
     setLoading(true);
+    setError(null);
     fetch(`/api/admin/analytics/overview?period=${period}`)
       .then((r) => r.json())
       .then((d) => {
@@ -56,7 +91,7 @@ export default function OverviewClient() {
       .finally(() => setLoading(false));
   }, [period]);
 
-  if (loading) {
+  if (loading && !data) {
     return (
       <div className="space-y-6">
         <div className="grid grid-cols-4 gap-4">
@@ -108,20 +143,47 @@ export default function OverviewClient() {
     <div className="space-y-6">
       {/* Period selector */}
       <div className="flex justify-end">
-        <div className="flex gap-1 bg-white rounded-full p-1 shadow-[0_4px_12px_rgba(86,67,55,0.08)]">
-          {(["7d", "30d"] as const).map((p) => (
-            <button
-              key={p}
-              onClick={() => setPeriod(p)}
-              className={`px-4 py-1.5 rounded-full text-sm font-body transition-all ${
-                period === p
-                  ? "bg-gradient-to-r from-[#a23f00] to-[#fa7025] text-white"
-                  : "text-[#586330] hover:bg-[#ede9cf]"
-              }`}
-            >
-              {p === "7d" ? t("period_7d") : t("period_30d")}
-            </button>
-          ))}
+        <div ref={menuRef} className="relative">
+          <button
+            type="button"
+            onClick={() => setIsMenuOpen((prev) => !prev)}
+            className={`${filterControlClassName} inline-flex min-w-[120px] items-center justify-between gap-3`}
+            style={{ fontFamily: "var(--font-vietnam)" }}
+            aria-haspopup="menu"
+            aria-expanded={isMenuOpen}
+          >
+            <span>{t(currentOption.labelKey)}</span>
+            <span className={`inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#f3e6d0] text-[#a23f00] transition-transform ${isMenuOpen ? "rotate-180" : ""}`}>
+              <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+                <path d="M2.5 4L6 7.5L9.5 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </span>
+          </button>
+          {isMenuOpen && (
+            <div className={menuClassName}>
+              {PERIOD_OPTIONS.map((option) => {
+                const selected = option.value === period;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => { setPeriod(option.value); setIsMenuOpen(false); }}
+                    className={`${menuItemClassName} ${selected ? "bg-[#eee0c9] text-[#75563f]" : "text-[#8d745e] hover:bg-[#f5ede0] hover:text-[#a23f00]"}`}
+                    style={{ fontFamily: "var(--font-vietnam)" }}
+                    role="menuitemradio"
+                    aria-checked={selected}
+                  >
+                    <span className="truncate">{t(option.labelKey)}</span>
+                    <span className={`ml-3 inline-flex h-4 w-4 items-center justify-center ${selected ? "text-[#a23f00]" : "text-transparent"}`}>
+                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                        <path d="M2.25 6.25L4.75 8.75L9.75 3.25" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
 
@@ -169,14 +231,7 @@ export default function OverviewClient() {
         </div>
 
         {/* Event trend */}
-        <div className="bg-white rounded-[32px] p-6 shadow-[0_8px_24px_rgba(86,67,55,0.06)]">
-          <h3 className="text-sm font-semibold text-[#a23f00] font-heading mb-4">{t("event_trend")}</h3>
-          <LineChart
-            data={trend.eventsByDay}
-            color="#a23f00"
-            height={160}
-          />
-        </div>
+        <EventTrendCard period={period} t={(k: string) => t(k)} />
       </div>
 
       {/* Bottom row */}

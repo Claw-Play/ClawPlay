@@ -230,24 +230,6 @@ export default function AdminReviewPage() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 px-4">
-      {/* Page header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2
-            className="text-xl font-bold text-[#564337]"
-            style={{ fontFamily: "var(--font-jakarta)" }}
-          >
-            {t("pending_reviews")}
-          </h2>
-          <p className="text-[#7a6a5a] text-sm mt-1 font-body">
-            {t("submissions_count", { count: String(filtered.length) })}
-          </p>
-        </div>
-        <span className="px-3 py-1 bg-[#fa7025]/10 text-[#fa7025] text-xs font-semibold rounded-full">
-          {filtered.length} {t("pending")}
-        </span>
-      </div>
-
       {/* Search bar */}
       <div className="relative">
         <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[#6b7280]">

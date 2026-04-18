@@ -15,7 +15,7 @@ export default async function HomePage() {
   const t = await getT("home");
   const tCommon = await getT("common");
 
-  // Fetch featured skills: isFeatured first, then latest approved to fill up to 12
+  // Fetch featured skills: isFeatured first, then statsInstalls + statsStars, top 12
   let featuredSkills: {
     slug: string;
     name: string;

@@ -14,6 +14,14 @@ export function unixSecToDate(unixSec: number | null | undefined): Date | null {
 }
 
 /**
+ * Convert JS milliseconds to Unix seconds (for DB queries).
+ * All raw SQL `WHERE created_at >= ?` params must use this.
+ */
+export function toUnixSec(ms: number): number {
+  return Math.floor(ms / 1000);
+}
+
+/**
  * Format date part: "Apr 17, 2026"
  */
 export function formatDate(date: Date | null, locale = "en-US"): string {

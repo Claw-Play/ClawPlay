@@ -23,6 +23,8 @@ export async function GET(request: NextRequest) {
     if (eventFilter) { conditions.push(`event = ?`); params.push(eventFilter); }
     if (userIdFilter) { conditions.push(`user_id = ?`); params.push(parseInt(userIdFilter)); }
     if (targetTypeFilter) { conditions.push(`target_type = ?`); params.push(targetTypeFilter); }
+    const targetIdFilter = searchParams.get("target_id");
+    if (targetIdFilter) { conditions.push(`target_id = ?`); params.push(targetIdFilter); }
     if (from) { conditions.push(`created_at >= ?`); params.push(parseInt(from)); }
     if (to) { conditions.push(`created_at <= ?`); params.push(parseInt(to)); }
 

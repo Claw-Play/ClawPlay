@@ -62,18 +62,6 @@ export default function AdminAuditPage() {
 
   return (
     <div className="max-w-6xl space-y-6">
-      {/* Page header */}
-      <div className="flex items-end justify-between">
-        <div>
-          <h2 className="text-3xl font-extrabold font-heading text-[#1d1c0d] tracking-tight">
-            {t("title")}
-          </h2>
-          <p className="text-[#564337] text-sm mt-2 font-body">
-            {t("subtitle")}
-          </p>
-        </div>
-      </div>
-
       {/* Tabs */}
       <div className="flex items-center gap-1">
         <div className="bg-[#ede9cf] rounded-full p-1 flex gap-1">
@@ -94,7 +82,7 @@ export default function AdminAuditPage() {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-[48px] card-shadow overflow-hidden">
+      <div className="bg-white rounded-[48px] card-shadow min-h-[980px] overflow-hidden">
         {/* Table header */}
         <div className="bg-[rgba(237,233,207,0.5)] border-b border-[rgba(220,193,177,0.1)]">
           <div className="grid grid-cols-[170px_200px_1fr_180px_120px] gap-0">
@@ -107,12 +95,12 @@ export default function AdminAuditPage() {
         </div>
 
         {/* Loading */}
-        {loading ? (
+        {loading && entries.length === 0 ? (
           <div className="py-12 text-center text-[#7a6a5a] animate-pulse font-body">{tCommon("loading")}</div>
         ) : entries.length === 0 ? (
           <div className="py-12 text-center text-[#7a6a5a] font-body">{t("no_entries")}</div>
         ) : (
-          <>
+          <div className="relative">
             {entries.map((entry, i) => {
               const style = ACTION_STYLES[entry.event] ?? { bg: "#ede9cf", text: "#586330", label: entry.event };
               const ts = unixSecToDate(entry.timestamp ?? null);
@@ -208,24 +196,15 @@ export default function AdminAuditPage() {
                 </div>
               </div>
             )}
-          </>
+            {loading && (
+              <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,253,248,0.22),rgba(247,240,226,0.12))] backdrop-blur-[1px]">
+                <div className="absolute inset-x-6 top-6 h-px bg-[linear-gradient(90deg,transparent,rgba(0,0,0,0.14),transparent)] animate-pulse" />
+              </div>
+            )}
+          </div>
         )}
       </div>
 
-      {/* Empty state hint */}
-      {!loading && expanded === null && entries.length > 0 && (
-        <div className="bg-[#f8f4db] rounded-[48px] p-8 border border-[rgba(220,193,177,0.2)] space-y-4">
-          <div className="flex items-center gap-2">
-            <div className="w-12 h-12 bg-[#a23f00] rounded-[48px] flex items-center justify-center">
-              <span className="text-white text-lg">📄</span>
-            </div>
-            <div>
-              <h3 className="font-bold font-heading text-[#1d1c0d] text-lg">{t("metadata_insight")}</h3>
-              <p className="text-sm text-[#564337] font-body">{t("click_row_hint")}</p>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

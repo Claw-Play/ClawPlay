@@ -1,10 +1,22 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useT } from "@/lib/i18n/context";
 import { formatTs } from "@/lib/timestamp";
 
+const panelClassName =
+  "rounded-xl border border-[#eadfc8] bg-[radial-gradient(circle_at_top,_rgba(250,244,228,0.92),_rgba(255,252,246,0.98)_38%,_rgba(250,246,237,0.98)_100%)] shadow-[0_18px_44px_rgba(86,67,55,0.08)]";
+const headerCellClassName =
+  "px-3 py-2 text-[15px] font-semibold uppercase text-black";
+const bodyCellClassName = "px-3 py-2.5 align-middle";
+const filterControlClassName =
+  "rounded-full border border-[#eadfc8] bg-[#fffdf8] px-4 py-2.5 text-sm text-[#5f493a] shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_8px_20px_rgba(86,67,55,0.05)] transition-colors focus:border-[#d8b07d] focus:outline-none focus:ring-2 focus:ring-[#a23f00]/15";
+const menuClassName =
+  "absolute left-0 top-full z-20 mt-2 min-w-[160px] rounded-[18px] border border-[#eadfc8] bg-[linear-gradient(180deg,#fffdf8_0%,#f7efe1_100%)] p-1 shadow-[0_16px_34px_rgba(86,67,55,0.16)] backdrop-blur-sm";
+const menuItemClassName =
+  "flex min-h-[30px] w-full items-center justify-between rounded-xl px-2.5 py-1 text-left text-xs font-semibold transition-colors";
+
 const EVENT_OPTIONS = [
-  { value: "", label: "All events" },
+  { value: "", label: "all_events" },
   { value: "user.register", label: "user.register" },
   { value: "user.login", label: "user.login" },
   { value: "skill.view", label: "skill.view" },
@@ -21,11 +33,11 @@ const EVENT_OPTIONS = [
 ];
 
 const TARGET_TYPE_OPTIONS = [
-  { value: "", label: "All types" },
+  { value: "", label: "all_types" },
   { value: "skill", label: "skill" },
   { value: "user", label: "user" },
   { value: "token", label: "token" },
-  { value: "quota", label: "token" },
+  { value: "quota", label: "quota" },
   { value: "ability", label: "ability" },
 ];
 
@@ -40,8 +52,16 @@ interface EventRecord {
   created_at: number;
 }
 
+function datetimeLocalToTimestamp(value: string): string {
+  if (!value) return "";
+  const timestamp = new Date(value).getTime();
+  return Number.isNaN(timestamp) ? "" : String(timestamp);
+}
+
 export default function EventsClient() {
-  useT("admin");
+  const t = useT("admin");
+  const eventMenuRef = useRef<HTMLDivElement | null>(null);
+  const targetTypeMenuRef = useRef<HTMLDivElement | null>(null);
   const [events, setEvents] = useState<EventRecord[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -50,9 +70,12 @@ export default function EventsClient() {
   const [eventFilter, setEventFilter] = useState("");
   const [userIdFilter, setUserIdFilter] = useState("");
   const [targetTypeFilter, setTargetTypeFilter] = useState("");
+  const [targetIdFilter, setTargetIdFilter] = useState("");
   const [fromFilter, setFromFilter] = useState("");
   const [toFilter, setToFilter] = useState("");
   const [offset, setOffset] = useState(0);
+  const [isEventMenuOpen, setIsEventMenuOpen] = useState(false);
+  const [isTargetTypeMenuOpen, setIsTargetTypeMenuOpen] = useState(false);
   const limit = 50;
 
   const fetchEvents = useCallback(() => {
@@ -62,8 +85,11 @@ export default function EventsClient() {
     if (eventFilter) params.set("event", eventFilter);
     if (userIdFilter) params.set("user_id", userIdFilter);
     if (targetTypeFilter) params.set("target_type", targetTypeFilter);
-    if (fromFilter) params.set("from", fromFilter);
-    if (toFilter) params.set("to", toFilter);
+    if (targetIdFilter) params.set("target_id", targetIdFilter);
+    const fromTimestamp = datetimeLocalToTimestamp(fromFilter);
+    const toTimestamp = datetimeLocalToTimestamp(toFilter);
+    if (fromTimestamp) params.set("from", fromTimestamp);
+    if (toTimestamp) params.set("to", toTimestamp);
     params.set("limit", String(limit));
     params.set("offset", String(offset));
 
@@ -74,16 +100,41 @@ export default function EventsClient() {
         setEvents(d.events ?? []);
         setTotal(d.pagination?.total ?? 0);
       })
-      .catch(() => setError("Failed to load events."))
+      .catch(() => setError(t("events_load_err")))
       .finally(() => setLoading(false));
-  }, [eventFilter, userIdFilter, targetTypeFilter, fromFilter, toFilter, offset]);
+  }, [eventFilter, userIdFilter, targetTypeFilter, targetIdFilter, fromFilter, toFilter, offset]);
 
   useEffect(() => { fetchEvents(); }, [fetchEvents]);
+
+  useEffect(() => {
+    if (!isEventMenuOpen && !isTargetTypeMenuOpen) return;
+
+    const handlePointerDown = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!eventMenuRef.current?.contains(target)) setIsEventMenuOpen(false);
+      if (!targetTypeMenuRef.current?.contains(target)) setIsTargetTypeMenuOpen(false);
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsEventMenuOpen(false);
+        setIsTargetTypeMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [isEventMenuOpen, isTargetTypeMenuOpen]);
 
   function resetFilters() {
     setEventFilter("");
     setUserIdFilter("");
     setTargetTypeFilter("");
+    setTargetIdFilter("");
     setFromFilter("");
     setToFilter("");
     setOffset(0);
@@ -91,111 +142,230 @@ export default function EventsClient() {
 
   const totalPages = Math.ceil(total / limit);
   const currentPage = Math.floor(offset / limit) + 1;
+  const currentEventLabel =
+    t(EVENT_OPTIONS.find((option) => option.value === eventFilter)?.label ?? "all_events");
+  const currentTargetTypeLabel =
+    t(TARGET_TYPE_OPTIONS.find((option) => option.value === targetTypeFilter)?.label ?? "all_types");
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {/* Filters */}
-      <div className="bg-white rounded-[32px] p-6 shadow-[0_8px_24px_rgba(86,67,55,0.06)] space-y-3">
-        <div className="flex flex-wrap gap-3">
-          <select
-            value={eventFilter}
-            onChange={(e) => { setEventFilter(e.target.value); setOffset(0); }}
-            className="border border-[#e8dfc8] rounded-full px-4 py-2 text-sm font-body text-[#564337] bg-[#fefae0] focus:outline-none focus:ring-2 focus:ring-[#a23f00]/30"
-          >
-            {EVENT_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
-            ))}
-          </select>
+      <div className={panelClassName}>
+        <div className="flex flex-wrap items-center gap-3 px-4 py-3">
+          <div ref={eventMenuRef} className="relative">
+            <button
+              type="button"
+              onClick={() => { setIsEventMenuOpen((prev) => !prev); setIsTargetTypeMenuOpen(false); }}
+              className={`${filterControlClassName} inline-flex min-w-[140px] items-center justify-between gap-3`}
+              style={{ fontFamily: "var(--font-vietnam)" }}
+              aria-haspopup="menu"
+              aria-expanded={isEventMenuOpen}
+            >
+              <span className="truncate">{currentEventLabel}</span>
+              <span className={`inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#f3e6d0] text-[#a23f00] transition-transform ${isEventMenuOpen ? "rotate-180" : ""}`}>
+                <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+                  <path d="M2.5 4L6 7.5L9.5 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </span>
+            </button>
+            {isEventMenuOpen && (
+              <div className={menuClassName}>
+                {EVENT_OPTIONS.map((option) => {
+                  const selected = option.value === eventFilter;
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => { setEventFilter(option.value); setOffset(0); setIsEventMenuOpen(false); }}
+                      className={`${menuItemClassName} ${selected ? "bg-[#eee0c9] text-[#75563f]" : "text-[#8d745e] hover:bg-[#f5ede0] hover:text-[#a23f00]"}`}
+                      style={{ fontFamily: "var(--font-vietnam)" }}
+                      role="menuitemradio"
+                      aria-checked={selected}
+                    >
+                      <span className="truncate">{t(option.label)}</span>
+                      <span className={`ml-3 inline-flex h-4 w-4 items-center justify-center ${selected ? "text-[#a23f00]" : "text-transparent"}`}>
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                          <path d="M2.25 6.25L4.75 8.75L9.75 3.25" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
           <input
-            type="number"
-            placeholder="User ID"
+            type="text"
+            inputMode="numeric"
+            placeholder={t("user_id")}
             value={userIdFilter}
             onChange={(e) => { setUserIdFilter(e.target.value); setOffset(0); }}
-            className="border border-[#e8dfc8] rounded-full px-4 py-2 text-sm font-body text-[#564337] bg-[#fefae0] focus:outline-none focus:ring-2 focus:ring-[#a23f00]/30 w-32"
+            className={`${filterControlClassName} w-28`}
+            style={{ fontFamily: "var(--font-vietnam)" }}
           />
-          <select
-            value={targetTypeFilter}
-            onChange={(e) => { setTargetTypeFilter(e.target.value); setOffset(0); }}
-            className="border border-[#e8dfc8] rounded-full px-4 py-2 text-sm font-body text-[#564337] bg-[#fefae0] focus:outline-none focus:ring-2 focus:ring-[#a23f00]/30"
-          >
-            {TARGET_TYPE_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
-            ))}
-          </select>
+
+          <label className="flex items-center gap-1.5 text-xs font-semibold text-[#ae9a7d]">
+            {t("col_time_from")}
+            <input
+              type="datetime-local"
+              value={fromFilter}
+              onChange={(e) => { setFromFilter(e.target.value); setOffset(0); }}
+              max={toFilter || undefined}
+              className={`${filterControlClassName} w-[180px]`}
+              style={{ fontFamily: "var(--font-vietnam)" }}
+              aria-label="From date and time"
+            />
+          </label>
+          <label className="flex items-center gap-1.5 text-xs font-semibold text-[#ae9a7d]">
+            {t("col_time_to")}
+            <input
+              type="datetime-local"
+              value={toFilter}
+              onChange={(e) => { setToFilter(e.target.value); setOffset(0); }}
+              min={fromFilter || undefined}
+              className={`${filterControlClassName} w-[180px]`}
+              style={{ fontFamily: "var(--font-vietnam)" }}
+              aria-label="To date and time"
+            />
+          </label>
+
+          <div ref={targetTypeMenuRef} className="relative">
+            <button
+              type="button"
+              onClick={() => { setIsTargetTypeMenuOpen((prev) => !prev); setIsEventMenuOpen(false); }}
+              className={`${filterControlClassName} inline-flex min-w-[120px] items-center justify-between gap-3`}
+              style={{ fontFamily: "var(--font-vietnam)" }}
+              aria-haspopup="menu"
+              aria-expanded={isTargetTypeMenuOpen}
+            >
+              <span className="truncate">{currentTargetTypeLabel}</span>
+              <span className={`inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#f3e6d0] text-[#a23f00] transition-transform ${isTargetTypeMenuOpen ? "rotate-180" : ""}`}>
+                <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+                  <path d="M2.5 4L6 7.5L9.5 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </span>
+            </button>
+            {isTargetTypeMenuOpen && (
+              <div className={menuClassName}>
+                {TARGET_TYPE_OPTIONS.map((option) => {
+                  const selected = option.value === targetTypeFilter;
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => { setTargetTypeFilter(option.value); setOffset(0); setIsTargetTypeMenuOpen(false); }}
+                      className={`${menuItemClassName} ${selected ? "bg-[#eee0c9] text-[#75563f]" : "text-[#8d745e] hover:bg-[#f5ede0] hover:text-[#a23f00]"}`}
+                      style={{ fontFamily: "var(--font-vietnam)" }}
+                      role="menuitemradio"
+                      aria-checked={selected}
+                    >
+                      <span className="truncate">{t(option.label)}</span>
+                      <span className={`ml-3 inline-flex h-4 w-4 items-center justify-center ${selected ? "text-[#a23f00]" : "text-transparent"}`}>
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                          <path d="M2.25 6.25L4.75 8.75L9.75 3.25" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
           <input
-            type="number"
-            placeholder="From (Unix ms)"
-            value={fromFilter}
-            onChange={(e) => { setFromFilter(e.target.value); setOffset(0); }}
-            className="border border-[#e8dfc8] rounded-full px-4 py-2 text-sm font-body text-[#564337] bg-[#fefae0] focus:outline-none focus:ring-2 focus:ring-[#a23f00]/30 w-40"
+            type="text"
+            inputMode="numeric"
+            placeholder={t("filter_target_id")}
+            value={targetIdFilter}
+            onChange={(e) => { setTargetIdFilter(e.target.value); setOffset(0); }}
+            className={`${filterControlClassName} w-28`}
+            style={{ fontFamily: "var(--font-vietnam)" }}
           />
-          <input
-            type="number"
-            placeholder="To (Unix ms)"
-            value={toFilter}
-            onChange={(e) => { setToFilter(e.target.value); setOffset(0); }}
-            className="border border-[#e8dfc8] rounded-full px-4 py-2 text-sm font-body text-[#564337] bg-[#fefae0] focus:outline-none focus:ring-2 focus:ring-[#a23f00]/30 w-40"
-          />
+
           <button
             onClick={resetFilters}
-            className="px-4 py-2 rounded-full text-sm font-body text-[#586330] hover:bg-[#ede9cf] transition-colors border border-[#e8dfc8]"
+            className="rounded-full border border-[#eadfc8] bg-[#fffdf8] px-4 py-2.5 text-sm text-[#8c745e] shadow-[0_8px_20px_rgba(86,67,55,0.05)] transition-colors hover:bg-[#f7f0e3]"
+            style={{ fontFamily: "var(--font-vietnam)" }}
           >
-            Reset
+            {t("pagination_reset")}
           </button>
+
+          <span className="ml-auto text-[11px] font-semibold uppercase text-black/40">
+            {t("events_total", { count: total.toLocaleString() })}
+          </span>
         </div>
-        <p className="text-xs text-[#a89070] font-body">
-          {total.toLocaleString()} events total
-        </p>
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-[32px] shadow-[0_8px_24px_rgba(86,67,55,0.06)] overflow-hidden">
-        {loading ? (
-          <div className="p-8 text-center text-[#a89070] font-body animate-pulse">Loading...</div>
-        ) : error ? (
-          <div className="p-8 text-center text-[#a23f00] font-body">{error}</div>
+      <div className={`${panelClassName} min-h-[1500px] overflow-hidden`}>
+        {loading && events.length === 0 ? (
+          <div className="p-10 text-center font-body text-black/40 animate-pulse">{t("loading")}</div>
+        ) : error && events.length === 0 ? (
+          <div className="p-10 text-center font-body text-red-600">{error}</div>
         ) : events.length === 0 ? (
-          <div className="p-8 text-center text-[#a89070] font-body">No events found.</div>
+          <div className="p-10 text-center font-body text-black/40">{t("no_events")}</div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm font-body">
+          <div className="relative overflow-x-auto">
+            <table className="w-full min-w-[980px] table-fixed text-sm font-body">
+              <colgroup>
+                <col className="w-[72px]" />
+                <col className="w-[176px]" />
+                <col className="w-[180px]" />
+                <col className="w-[112px]" />
+                <col className="w-[112px]" />
+                <col className="w-[144px]" />
+                <col className="w-[184px]" />
+              </colgroup>
               <thead>
-                <tr className="border-b border-[#e8dfc8] text-left">
-                  <th className="px-4 py-3 text-xs text-[#a89070] font-semibold">Time</th>
-                  <th className="px-4 py-3 text-xs text-[#a89070] font-semibold">Event</th>
-                  <th className="px-4 py-3 text-xs text-[#a89070] font-semibold">User</th>
-                  <th className="px-4 py-3 text-xs text-[#a89070] font-semibold">Type</th>
-                  <th className="px-4 py-3 text-xs text-[#a89070] font-semibold">Target</th>
-                  <th className="px-4 py-3 text-xs text-[#a89070] font-semibold">Metadata</th>
+                <tr className="border-b border-[#e6dac2] bg-[linear-gradient(180deg,rgba(255,252,246,0.96),rgba(249,243,232,0.96))] text-left">
+                  <th className="pl-5 pr-3 py-2 text-[15px] font-semibold uppercase text-black">ID</th>
+                  <th className={headerCellClassName}>{t("col_time")}</th>
+                  <th className={headerCellClassName}>{t("col_event")}</th>
+                  <th className={headerCellClassName}>{t("col_user")}</th>
+                  <th className={headerCellClassName}>{t("col_type")}</th>
+                  <th className={headerCellClassName}>{t("col_target")}</th>
+                  <th className={headerCellClassName}>{t("col_metadata")}</th>
                 </tr>
               </thead>
               <tbody>
-                {events.map((e) => (
-                  <tr key={e.id} className="border-b border-[#f0e8d0] hover:bg-[#faf5e8] transition-colors">
-                    <td className="px-4 py-3 text-xs text-[#564337] font-mono-custom whitespace-nowrap">
+                {events.map((e, i) => (
+                  <tr key={e.id} className="border-b border-[#efe4cf] transition-colors hover:bg-[linear-gradient(90deg,rgba(248,241,226,0.75),rgba(255,252,246,0.15))]">
+                    <td className="pl-5 pr-3 py-2.5 whitespace-nowrap text-[14px] font-semibold text-black [font-variant-numeric:tabular-nums]">
+                      {(offset + i + 1).toLocaleString()}
+                    </td>
+                    <td className={`${bodyCellClassName} whitespace-nowrap text-[14px] font-semibold text-black [font-variant-numeric:tabular-nums]`}>
                       {formatTs(e.created_at)}
                     </td>
-                    <td className="px-4 py-3">
-                      <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-[#ede9cf] text-[#a23f00]">
+                    <td className={bodyCellClassName}>
+                      <span className="inline-flex items-center rounded-full border border-black/10 bg-black/5 px-2.5 py-1 text-[11px] font-semibold text-black">
                         {e.event}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-xs text-[#564337]">
-                      {e.user_id ?? <span className="text-[#a89070]">—</span>}
+                    <td className={`${bodyCellClassName} text-[14px] font-semibold text-black`}>
+                      {e.user_id ?? <span className="text-black/40">—</span>}
                     </td>
-                    <td className="px-4 py-3 text-xs text-[#564337]">
-                      {e.target_type ?? <span className="text-[#a89070]">—</span>}
+                    <td className={`${bodyCellClassName} text-[14px] font-semibold text-black`}>
+                      {e.target_type ?? <span className="text-black/40">—</span>}
                     </td>
-                    <td className="px-4 py-3 text-xs text-[#564337] max-w-[120px] truncate">
-                      {e.target_id ?? <span className="text-[#a89070]">—</span>}
+                    <td className={`${bodyCellClassName} max-w-[120px] truncate text-[14px] font-semibold text-black`}>
+                      {e.target_id ?? <span className="text-black/40">—</span>}
                     </td>
-                    <td className="px-4 py-3 text-xs text-[#a89070] max-w-[200px] truncate">
+                    <td
+                      className={`${bodyCellClassName} max-w-[200px] truncate text-[14px] font-semibold text-black/60`}
+                      title={JSON.stringify(e.metadata, null, 2)}
+                    >
                       {JSON.stringify(e.metadata)}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+            {loading && (
+              <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,253,248,0.24),rgba(247,240,226,0.14))] backdrop-blur-[1px]">
+                <div className="absolute inset-x-6 top-6 h-px bg-[linear-gradient(90deg,transparent,rgba(0,0,0,0.18),transparent)] animate-pulse" />
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -206,19 +376,19 @@ export default function EventsClient() {
           <button
             disabled={offset === 0}
             onClick={() => setOffset(Math.max(0, offset - limit))}
-            className="px-4 py-2 rounded-full text-sm font-body text-[#564337] bg-white shadow-[0_4px_12px_rgba(86,67,55,0.08)] disabled:opacity-40 hover:bg-[#ede9cf] transition-colors"
+            className="rounded-lg border border-black/10 bg-white px-4 py-2 text-sm font-body text-black shadow-[0_8px_20px_rgba(86,67,55,0.06)] transition-colors hover:bg-black/5 disabled:opacity-40"
           >
-            ← Prev
+            ← {t("pagination_prev")}
           </button>
-          <span className="text-sm text-[#a89070] font-body px-4">
-            Page {currentPage} of {totalPages}
+          <span className="px-4 text-[11px] font-semibold uppercase text-black/40">
+            {t("pagination_status", { current: String(currentPage), total: String(totalPages) })}
           </span>
           <button
             disabled={offset + limit >= total}
             onClick={() => setOffset(offset + limit)}
-            className="px-4 py-2 rounded-full text-sm font-body text-[#564337] bg-white shadow-[0_4px_12px_rgba(86,67,55,0.08)] disabled:opacity-40 hover:bg-[#ede9cf] transition-colors"
+            className="rounded-lg border border-black/10 bg-white px-4 py-2 text-sm font-body text-black shadow-[0_8px_20px_rgba(86,67,55,0.06)] transition-colors hover:bg-black/5 disabled:opacity-40"
           >
-            Next →
+            {t("pagination_next")} →
           </button>
         </div>
       )}

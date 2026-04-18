@@ -1,4 +1,5 @@
 import { raw } from "@/lib/db";
+import { toUnixSec } from "@/lib/timestamp";
 import { StatsSectionClient } from "./StatsSectionClient";
 import type { Stats } from "./StatsSectionClient";
 
@@ -30,10 +31,10 @@ export async function StatsSection() {
     stats.skills = Number(skillsRows[0]?.total ?? 0);
 
     // Active users this week
-    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const weekAgoSec = toUnixSec(Date.now() - 7 * 24 * 60 * 60 * 1000);
     const activeRows = (await raw(
       `SELECT COUNT(DISTINCT user_id) as total FROM event_logs WHERE user_id IS NOT NULL AND created_at >= ?`,
-      [weekAgo.getTime()]
+      [weekAgoSec]
     )) as { total: number }[];
     stats.activeThisWeek = Number(activeRows[0]?.total ?? 0);
   } catch {

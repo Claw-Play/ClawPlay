@@ -200,6 +200,29 @@ describe("GET /api/admin/analytics/users", () => {
     expect(Array.isArray(json.users)).toBe(true);
   });
 
+  it("supports role filter", async () => {
+    cookieStore.token = adminCookie.replace("clawplay_token=", "");
+    const req = makeRequest("GET", "/api/admin/analytics/users?role=reviewer&period=all");
+    const res = await GET_users(req);
+    const json = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(Array.isArray(json.users)).toBe(true);
+    for (const user of json.users) {
+      expect(user.role).toBe("reviewer");
+    }
+  });
+
+  it("supports sortBy last_active ascending", async () => {
+    cookieStore.token = adminCookie.replace("clawplay_token=", "");
+    const req = makeRequest("GET", "/api/admin/analytics/users?sortBy=last_active&sortOrder=asc&period=all");
+    const res = await GET_users(req);
+    const json = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(Array.isArray(json.users)).toBe(true);
+  });
+
   it("regular user → 403", async () => {
     cookieStore.token = userCookie.replace("clawplay_token=", "");
     const req = makeRequest("GET", "/api/admin/analytics/users");
