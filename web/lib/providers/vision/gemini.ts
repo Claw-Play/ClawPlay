@@ -1,4 +1,5 @@
 import type { VisionProvider, VisionAnalyzeRequest, VisionAnalyzeResponse, DetectedObject, SegmentMask } from "./types";
+import { recordKeyUsage } from "../key-pool";
 
 const DEFAULT_MODEL = process.env.VISION_MODEL_GEMINI ?? "gemini-2.0-flash";
 
@@ -11,14 +12,17 @@ export class GeminiVisionProvider implements VisionProvider {
   private apiKey: string;
   private endpoint: string;
   private modelName: string;
+  private keyId: number;
 
-  constructor(apiKey: string, endpoint?: string, modelName?: string) {
+  constructor(apiKey: string, keyId: number, endpoint?: string, modelName?: string) {
     this.apiKey = apiKey;
+    this.keyId = keyId;
     this.endpoint = endpoint ?? "https://generativelanguage.googleapis.com/v1beta/models";
     this.modelName = modelName ?? DEFAULT_MODEL;
   }
 
   async analyze(req: VisionAnalyzeRequest): Promise<VisionAnalyzeResponse> {
+    try {
     // Build image parts (all as inline base64; URL inputs are passed as-is via inline_data workaround)
     // For URLs we fetch and convert to base64 server-side to stay within Gemini inline limits
     const imageParts: unknown[] = [];
@@ -137,5 +141,9 @@ export class GeminiVisionProvider implements VisionProvider {
       mask: item.mask ?? "",
     }));
     return { type: "json", data: masks, usage };
+    } finally {
+      // Record key usage after each call
+      await recordKeyUsage("gemini", "vision", this.keyId);
+    }
   }
 }

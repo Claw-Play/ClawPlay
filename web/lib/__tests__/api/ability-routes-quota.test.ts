@@ -48,17 +48,13 @@ vi.mock("@/lib/redis", () => ({
 const visionAnalyzeMock = vi.hoisted(() => vi.fn());
 const imageGenerateMock = vi.hoisted(() => vi.fn());
 const llmGenerateMock = vi.hoisted(() => vi.fn());
-const recordVisionKeyUsageMock = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
-const recordImageKeyUsageMock = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 
 vi.mock("@/lib/providers/vision", () => ({
   getVisionProvider: vi.fn(() => Promise.resolve({ analyze: visionAnalyzeMock })),
-  recordVisionKeyUsage: recordVisionKeyUsageMock,
 }));
 
 vi.mock("@/lib/providers/image", () => ({
   getImageProvider: vi.fn(() => Promise.resolve({ generate: imageGenerateMock })),
-  recordImageKeyUsage: recordImageKeyUsageMock,
 }));
 
 vi.mock("@/lib/providers/llm", () => ({
@@ -130,8 +126,6 @@ beforeEach(() => {
   checkQuotaMock.mockResolvedValue({ allowed: true, remaining: 999 });
   incrementQuotaMock.mockResolvedValue({ ok: true, remaining: 999 });
   getQuotaMock.mockResolvedValue({ used: 0, limit: 100000, remaining: 100000 });
-  recordVisionKeyUsageMock.mockResolvedValue(undefined);
-  recordImageKeyUsageMock.mockResolvedValue(undefined);
 });
 
 function authHeader() {

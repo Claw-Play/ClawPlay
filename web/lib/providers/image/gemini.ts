@@ -1,4 +1,5 @@
 import type { ImageProvider, ImageGenerateRequest, ImageGenerateResponse } from "./types";
+import { recordKeyUsage } from "../key-pool";
 
 const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 const DEFAULT_MODEL = process.env.IMAGE_MODEL_GEMINI ?? "gemini-3.1-flash-image-preview";
@@ -38,14 +39,17 @@ export class GeminiProvider implements ImageProvider {
   private apiKey: string;
   private endpoint: string;
   private modelName: string;
+  private keyId: number;
 
-  constructor(apiKey: string, endpoint?: string, modelName?: string) {
+  constructor(apiKey: string, keyId: number, endpoint?: string, modelName?: string) {
     this.apiKey = apiKey;
+    this.keyId = keyId;
     this.endpoint = endpoint ?? GEMINI_BASE;
     this.modelName = modelName ?? DEFAULT_MODEL;
   }
 
   async generate(req: ImageGenerateRequest): Promise<ImageGenerateResponse> {
+    try {
     const aspectRatio = VALID_ASPECT_RATIOS.has(req.size ?? "1:1")
       ? req.size
       : "1:1";
@@ -119,5 +123,9 @@ export class GeminiProvider implements ImageProvider {
     }
 
     throw new Error("Gemini API returned no image data.");
+    } finally {
+      // Record key usage after each call
+      await recordKeyUsage("gemini", "image", this.keyId);
+    }
   }
 }

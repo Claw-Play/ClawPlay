@@ -161,7 +161,7 @@ describe("POST /api/admin/models", () => {
   it("admin → 200, sets a custom model name", async () => {
     cookieStore.token = adminCookie.replace("clawplay_token=", "");
     const req = makeRequest("POST", "/api/admin/models", {
-      body: { provider: "ark_image", ability: "image", modelName: "my-custom-image-model" },
+      body: { provider: "ark", ability: "image", modelName: "my-custom-image-model" },
       cookie: adminCookie,
     });
     const h = await getHandler();
@@ -174,7 +174,7 @@ describe("POST /api/admin/models", () => {
     // Verify in DB
     const { listModelConfigs } = await import("@/lib/providers/model-config");
     const configs = await listModelConfigs();
-    const arkImg = configs.find(c => c.provider === "ark_image" && c.ability === "image");
+    const arkImg = configs.find(c => c.provider === "ark" && c.ability === "image");
     expect(arkImg).toBeDefined();
     expect(arkImg!.modelName).toBe("my-custom-image-model");
     expect(arkImg!.isDefault).toBe(false);
@@ -184,12 +184,12 @@ describe("POST /api/admin/models", () => {
     const mc = await import("@/lib/providers/model-config");
 
     // Set initial value
-    await mc.setModelConfig("ark_image", "image", "initial-model");
+    await mc.setModelConfig("ark", "image", "initial-model");
 
     // Update via API
     cookieStore.token = adminCookie.replace("clawplay_token=", "");
     const req = makeRequest("POST", "/api/admin/models", {
-      body: { provider: "ark_image", ability: "image", modelName: "updated-model" },
+      body: { provider: "ark", ability: "image", modelName: "updated-model" },
       cookie: adminCookie,
     });
     const h = await getHandler();
@@ -197,14 +197,14 @@ describe("POST /api/admin/models", () => {
     expect(res.status).toBe(200);
 
     const configs = await mc.listModelConfigs();
-    const arkImg = configs.find(c => c.provider === "ark_image" && c.ability === "image");
+    const arkImg = configs.find(c => c.provider === "ark" && c.ability === "image");
     expect(arkImg!.modelName).toBe("updated-model");
   });
 
   it("admin → 400, invalid provider/ability combo", async () => {
     cookieStore.token = adminCookie.replace("clawplay_token=", "");
     const req = makeRequest("POST", "/api/admin/models", {
-      body: { provider: "ark_image", ability: "invalid_ability", modelName: "foo" },
+      body: { provider: "ark", ability: "invalid_ability", modelName: "foo" },
       cookie: adminCookie,
     });
     const h = await getHandler();
@@ -216,7 +216,7 @@ describe("POST /api/admin/models", () => {
   it("admin → 400, missing required fields", async () => {
     cookieStore.token = adminCookie.replace("clawplay_token=", "");
     const req = makeRequest("POST", "/api/admin/models", {
-      body: { provider: "ark_image" }, // missing ability + modelName
+      body: { provider: "ark" }, // missing ability + modelName
       cookie: adminCookie,
     });
     const h = await getHandler();
@@ -227,7 +227,7 @@ describe("POST /api/admin/models", () => {
   it("regular user → 403", async () => {
     cookieStore.token = userCookie.replace("clawplay_token=", "");
     const req = makeRequest("POST", "/api/admin/models", {
-      body: { provider: "ark_image", ability: "image", modelName: "hacked" },
+      body: { provider: "ark", ability: "image", modelName: "hacked" },
       cookie: userCookie,
     });
     const h = await getHandler();
@@ -238,7 +238,7 @@ describe("POST /api/admin/models", () => {
   it("unauthenticated → 401", async () => {
     cookieStore.token = undefined;
     const req = makeRequest("POST", "/api/admin/models", {
-      body: { provider: "ark_image", ability: "image", modelName: "hacked" },
+      body: { provider: "ark", ability: "image", modelName: "hacked" },
     });
     const h = await getHandler();
     const res = await h.POST(req);
@@ -257,16 +257,16 @@ describe("DELETE /api/admin/models", () => {
     const mc = await import("@/lib/providers/model-config");
 
     // First set a custom model
-    await mc.setModelConfig("ark_llm", "llm", "my-custom-llm-model");
+    await mc.setModelConfig("ark", "llm", "my-custom-llm-model");
 
     // Verify it was set
     let configs = await mc.listModelConfigs();
-    const arkLlm = configs.find(c => c.provider === "ark_llm" && c.ability === "llm");
+    const arkLlm = configs.find(c => c.provider === "ark" && c.ability === "llm");
     expect(arkLlm!.modelName).toBe("my-custom-llm-model");
 
     // Delete via API
     cookieStore.token = adminCookie.replace("clawplay_token=", "");
-    const req = makeRequest("DELETE", "/api/admin/models?provider=ark_llm&ability=llm", {
+    const req = makeRequest("DELETE", "/api/admin/models?provider=ark&ability=llm", {
       cookie: adminCookie,
     });
     const h = await getHandler();
@@ -276,7 +276,7 @@ describe("DELETE /api/admin/models", () => {
 
     // Verify cleared — row should be gone (env default is used)
     configs = await mc.listModelConfigs();
-    const row = configs.find(c => c.provider === "ark_llm" && c.ability === "llm");
+    const row = configs.find(c => c.provider === "ark" && c.ability === "llm");
     // After clear (delete), the row is removed, so listModelConfigs won't include it
     expect(row).toBeUndefined();
   });
@@ -293,7 +293,7 @@ describe("DELETE /api/admin/models", () => {
 
   it("regular user → 403", async () => {
     cookieStore.token = userCookie.replace("clawplay_token=", "");
-    const req = makeRequest("DELETE", "/api/admin/models?provider=ark_image&ability=image", {
+    const req = makeRequest("DELETE", "/api/admin/models?provider=ark&ability=image", {
       cookie: userCookie,
     });
     const h = await getHandler();
@@ -303,7 +303,7 @@ describe("DELETE /api/admin/models", () => {
 
   it("unauthenticated → 401", async () => {
     cookieStore.token = undefined;
-    const req = makeRequest("DELETE", "/api/admin/models?provider=ark_image&ability=image");
+    const req = makeRequest("DELETE", "/api/admin/models?provider=ark&ability=image");
     const h = await getHandler();
     const res = await h.DELETE(req);
     expect(res.status).toBe(401);

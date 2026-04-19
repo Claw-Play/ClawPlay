@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { decryptToken, type TokenPayload } from "@/lib/token";
 import { checkQuota, incrementQuota } from "@/lib/redis";
-import { getImageProvider, recordImageKeyUsage, type ImageGenerateRequest } from "@/lib/providers/image";
+import { getImageProvider, type ImageGenerateRequest } from "@/lib/providers/image";
 import { analytics } from "@/lib/analytics";
 import { getT } from "@/lib/i18n";
 
@@ -63,9 +63,6 @@ export async function POST(request: NextRequest) {
   try {
     const providerName = process.env.IMAGE_PROVIDER ?? "ark";
     const result = await provider.generate({ prompt, size, quality, refImages, webSearch });
-
-    // Record key usage for key pool tracking
-    await recordImageKeyUsage();
 
     // 5. Deduct quota after successful generation using actual tokens
     const actualTokens = result.usage?.totalTokens ?? 0;

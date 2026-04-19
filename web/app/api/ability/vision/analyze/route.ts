@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { decryptToken, type TokenPayload } from "@/lib/token";
 import { checkQuota, incrementQuota } from "@/lib/redis";
-import { getVisionProvider, recordVisionKeyUsage, type VisionAnalyzeRequest, type VisionImage } from "@/lib/providers/vision";
+import { getVisionProvider, type VisionAnalyzeRequest, type VisionImage } from "@/lib/providers/vision";
 import { analytics } from "@/lib/analytics";
 import { getT } from "@/lib/i18n";
 
@@ -88,9 +88,6 @@ export async function POST(request: NextRequest) {
 
   try {
     const result = await visionProvider.analyze({ images: normalizedImages, prompt, mode });
-
-    // Record key usage for key pool tracking
-    await recordVisionKeyUsage();
 
     // 5. Deduct quota after success using actual tokens
     const actualTokens = result.usage?.totalTokens ?? 0;

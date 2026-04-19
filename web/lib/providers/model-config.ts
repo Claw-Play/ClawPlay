@@ -13,24 +13,22 @@ import { eq, and } from "drizzle-orm";
 // Env var defaults
 // ---------------------------------------------------------------------------
 
-/** Map: DB provider name → env var name for model */
+/** Map: flat provider name → default model name for each ability */
 const MODEL_ENV_MAP: Record<string, string> = {
-  ark_image: process.env.IMAGE_MODEL_ARK ?? "doubao-seedream-5-0-260128",
-  ark_llm: process.env.LLM_MODEL_ARK ?? "ep-20260408230057-cgq9s",
-  ark_vision: process.env.VISION_MODEL_ARK ?? "ep-20260408230057-cgq9s",
-  gemini_image: process.env.IMAGE_MODEL_GEMINI ?? "gemini-3.1-flash-image-preview",
-  gemini_llm: process.env.LLM_MODEL_GEMINI ?? "gemini-3-flash-preview",
-  gemini_vision: process.env.VISION_MODEL_GEMINI ?? "gemini-2.0-flash",
+  // Ark
+  ark: process.env.LLM_MODEL_ARK ?? "ep-20260408230057-cgq9s",
+  // Gemini
+  gemini: process.env.LLM_MODEL_GEMINI ?? "gemini-3-flash-preview",
 };
 
 /** All known provider × ability combinations */
 export const ALL_PROVIDER_ABILITIES: Array<{ provider: string; ability: string; label: string }> = [
-  { provider: "ark_image", ability: "image", label: "Ark Image" },
-  { provider: "ark_llm", ability: "llm", label: "Ark LLM" },
-  { provider: "ark_vision", ability: "vision", label: "Ark Vision" },
-  { provider: "gemini_image", ability: "image", label: "Gemini Image" },
-  { provider: "gemini_llm", ability: "llm", label: "Gemini LLM" },
-  { provider: "gemini_vision", ability: "vision", label: "Gemini Vision" },
+  { provider: "ark", ability: "image", label: "Ark Image" },
+  { provider: "ark", ability: "llm", label: "Ark LLM" },
+  { provider: "ark", ability: "vision", label: "Ark Vision" },
+  { provider: "gemini", ability: "image", label: "Gemini Image" },
+  { provider: "gemini", ability: "llm", label: "Gemini LLM" },
+  { provider: "gemini", ability: "vision", label: "Gemini Vision" },
 ];
 
 // ---------------------------------------------------------------------------
@@ -38,11 +36,11 @@ export const ALL_PROVIDER_ABILITIES: Array<{ provider: string; ability: string; 
 // ---------------------------------------------------------------------------
 
 /**
- * Get the active model name for a provider + ability.
- * Returns DB value if set, otherwise the env var default.
+ * Get the default model name for a provider + ability from env vars.
+ * Only LLM has a single env var; image/vision use hard-coded defaults.
  */
 export function getModelName(provider: string, ability: string): string {
-  return MODEL_ENV_MAP[`${provider}_${ability}`] ?? MODEL_ENV_MAP[provider] ?? "unknown";
+  return MODEL_ENV_MAP[provider] ?? "unknown";
 }
 
 /**
@@ -90,7 +88,7 @@ export async function listModelConfigs(): Promise<
     modelName: row.modelName,
     isDefault: Boolean(row.isDefault),
     updatedAt: row.updatedAt,
-    envDefault: MODEL_ENV_MAP[`${row.provider}_${row.ability}`] ?? "unknown",
+    envDefault: getModelName(row.provider, row.ability),
   }));
 }
 
@@ -98,11 +96,18 @@ export async function listModelConfigs(): Promise<
  * Initialize model config from env vars (idempotent — only inserts if missing).
  * Called on server start.
  */
+const MODEL_ENV_DEFAULTS: Array<{ provider: string; ability: string; envKey: string; fallback: string }> = [
+  { provider: "ark", ability: "image", envKey: "IMAGE_MODEL_ARK", fallback: "doubao-seedream-5-0-260128" },
+  { provider: "ark", ability: "llm", envKey: "LLM_MODEL_ARK", fallback: "ep-20260408230057-cgq9s" },
+  { provider: "ark", ability: "vision", envKey: "VISION_MODEL_ARK", fallback: "ep-20260408230057-cgq9s" },
+  { provider: "gemini", ability: "image", envKey: "IMAGE_MODEL_GEMINI", fallback: "gemini-3.1-flash-image-preview" },
+  { provider: "gemini", ability: "llm", envKey: "LLM_MODEL_GEMINI", fallback: "gemini-3-flash-preview" },
+  { provider: "gemini", ability: "vision", envKey: "VISION_MODEL_GEMINI", fallback: "gemini-2.0-flash" },
+];
+
 export async function initModelConfigFromEnv(): Promise<void> {
-  const envKeys = Object.entries(MODEL_ENV_MAP);
-  for (const [providerKey, defaultModel] of envKeys) {
-    const [provider, ability] = providerKey.split("_", 2);
-    if (!provider || !ability) continue;
+  for (const { provider, ability, envKey, fallback } of MODEL_ENV_DEFAULTS) {
+    const defaultModel = process.env[envKey] ?? fallback;
 
     const existing = await db
       .select({ id: providerModels.id })
