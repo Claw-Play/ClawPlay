@@ -98,12 +98,17 @@ cmd_setup() {
   local lang=$(_setup_lang)
   local token=""
   local open_browser=false
+  local agent=false
 
   # Parse flags
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --open-browser)
         open_browser=true
+        shift
+        ;;
+      --agent)
+        agent=true
         shift
         ;;
       --token)
@@ -119,11 +124,13 @@ cmd_setup() {
           echo "用法: clawplay setup [选项]"
           echo "  --token VALUE      直接指定 token，无需交互"
           echo "  --open-browser     自动打开浏览器（注册/控制台）"
+          echo "  --agent            以 stdout 输出步骤，供 Agent 转述给用户"
           echo "  --lang zh|en       强制语言"
         else
           echo "Usage: clawplay setup [options]"
           echo "  --token VALUE      Pass token directly, non-interactive"
           echo "  --open-browser     Auto-open browser (login/dashboard)"
+          echo "  --agent            Print setup steps to stdout for agents"
           echo "  --lang zh|en       Force language"
         fi
         return 0
@@ -215,6 +222,11 @@ cmd_setup() {
   local register_url="${web_url}/login"
   local dashboard_url="${web_url}/dashboard"
 
+  if [[ "$agent" == "true" && "$open_browser" == "true" ]]; then
+    echo "[clawplay] --agent cannot be combined with --open-browser" >&2
+    return 1
+  fi
+
   echo ""
   echo " ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   echo "   $(_msg title)"
@@ -236,104 +248,144 @@ cmd_setup() {
     return 0
   fi
 
-  # Step 1: account check with arrow-key selection
-  local selected=1
+  if [[ "$agent" == "true" && -z "$token" ]]; then
+    if [[ "$lang" == "zh" ]]; then
+      cat << EOF
+ClawPlay CLI 配置向导（Agent 模式）
 
-  echo ""
-  if [[ "$lang" == "zh" ]]; then
-    echo " ┌─────────────────────────────────────────┐"
-    echo " │ $(_msg step1)                        │"
-    echo " └─────────────────────────────────────────┘"
-  else
-    echo " ┌──────────────────────────────────────────┐"
-    echo " │ $(_msg step1)                  │"
-    echo " └──────────────────────────────────────────┘"
-  fi
-  echo ""
-  echo "  $(_msg account_q)"
-  echo ""
+1. 让用户打开注册/登录页：
+   ${register_url}
+2. 如果用户还没有账号，先完成注册并登录。
+3. 打开控制台：
+   ${dashboard_url}
+4. 点击「生成密钥」，复制导出的 \`export CLAWPLAY_TOKEN=...\` 命令。
+5. 让用户任选一种方式完成配置：
+   - \`export CLAWPLAY_TOKEN='...'\`
+   - \`clawplay setup --token '...'\`
+6. 配置完成后，运行 \`clawplay whoami\` 验证。
 
-  while true; do
-    if [[ "$selected" == "1" ]]; then
-      echo "  ▸ $(_msg opt1_label)"
-      echo "    $(_msg opt2_label)"
+EOF
     else
-      echo "    $(_msg opt1_label)"
-      echo "  ▸ $(_msg opt2_label)"
+      cat << EOF
+ClawPlay CLI Setup Guide (Agent Mode)
+
+1. Have the user open the login / registration page:
+   ${register_url}
+2. If they do not have an account yet, finish registration and sign in.
+3. Open the dashboard:
+   ${dashboard_url}
+4. Click Generate Key and copy the exported \`CLAWPLAY_TOKEN\` command.
+5. Ask the user to complete setup with one of these options:
+   - \`export CLAWPLAY_TOKEN='...'\`
+   - \`clawplay setup --token '...'\`
+6. After setup, run \`clawplay whoami\` to verify.
+
+EOF
+    fi
+    return 0
+  fi
+
+  # If a token was provided, skip the interactive prompts and go straight to verification.
+  if [[ -z "$token" ]]; then
+    # Step 1: account check with arrow-key selection
+    local selected=1
+
+    echo ""
+    if [[ "$lang" == "zh" ]]; then
+      echo " ┌─────────────────────────────────────────┐"
+      echo " │ $(_msg step1)                        │"
+      echo " └─────────────────────────────────────────┘"
+    else
+      echo " ┌──────────────────────────────────────────┐"
+      echo " │ $(_msg step1)                  │"
+      echo " └──────────────────────────────────────────┘"
     fi
     echo ""
-    printf "  %s " "$( _msg arrow_hint)"
-    IFS= read -rsn1 key
-    # Move cursor up 5 lines (past the 2 option lines, blank, arrow-hint line, and extra blank above)
-    # then clear from that position to end of screen — overwrites old menu cleanly
-    printf '\033[3A\r\033[K\033[0J'
-    case "$key" in
-      $'\033')
-        read -rsn1 next
-        if [[ "$next" == "[" ]]; then
-          read -rsn1 arrow
-          case "$arrow" in
-            A) (( selected = selected > 1 ? selected - 1 : selected )) ;;
-            B) (( selected = selected < 2 ? selected + 1 : selected )) ;;
-          esac
-        fi
-        ;;
-      '')
-        # Clear menu lines (cursor is at arrow-hint line)
-        printf '\033[1A\r\033[K\033[0J'
-        echo ""
-        if [[ "$selected" == "1" ]]; then
-          echo "  $(_msg open_dash)"
-          open "$dashboard_url" 2>/dev/null || true
-        else
-          echo "  $(_msg open_reg)"
-          open "$register_url" 2>/dev/null || true
-        fi
-        break
-        ;;
-    esac
-  done
+    echo "  $(_msg account_q)"
+    echo ""
 
-  echo ""
-  echo "  $(_msg press_done)"
-  read -r _
-  echo ""
+    while true; do
+      if [[ "$selected" == "1" ]]; then
+        echo "  ▸ $(_msg opt1_label)"
+        echo "    $(_msg opt2_label)"
+      else
+        echo "    $(_msg opt1_label)"
+        echo "  ▸ $(_msg opt2_label)"
+      fi
+      echo ""
+      printf "  %s " "$( _msg arrow_hint)"
+      IFS= read -rsn1 key
+      # Move cursor up 5 lines (past the 2 option lines, blank, arrow-hint line, and extra blank above)
+      # then clear from that position to end of screen — overwrites old menu cleanly
+      printf '\033[3A\r\033[K\033[0J'
+      case "$key" in
+        $'\033')
+          read -rsn1 next
+          if [[ "$next" == "[" ]]; then
+            read -rsn1 arrow
+            case "$arrow" in
+              A) (( selected = selected > 1 ? selected - 1 : selected )) ;;
+              B) (( selected = selected < 2 ? selected + 1 : selected )) ;;
+            esac
+          fi
+          ;;
+        '')
+          # Clear menu lines (cursor is at arrow-hint line)
+          printf '\033[1A\r\033[K\033[0J'
+          echo ""
+          if [[ "$selected" == "1" ]]; then
+            echo "  $(_msg open_dash)"
+            open "$dashboard_url" 2>/dev/null || true
+          else
+            echo "  $(_msg open_reg)"
+            open "$register_url" 2>/dev/null || true
+          fi
+          break
+          ;;
+      esac
+    done
 
-  # Step 2: get token
-  if [[ "$lang" == "zh" ]]; then
-    echo " ┌─────────────────────────────────────────┐"
-    echo " │ $(_msg step2)                      │"
-    echo " └─────────────────────────────────────────┘"
-  else
-    echo " ┌──────────────────────────────────────────┐"
-    echo " │ $(_msg step2)                        │"
-    echo " └──────────────────────────────────────────┘"
+    echo ""
+    echo "  $(_msg press_done)"
+    read -r _
+    echo ""
+
+    # Step 2: get token
+    if [[ "$lang" == "zh" ]]; then
+      echo " ┌─────────────────────────────────────────┐"
+      echo " │ $(_msg step2)                      │"
+      echo " └─────────────────────────────────────────┘"
+    else
+      echo " ┌──────────────────────────────────────────┐"
+      echo " │ $(_msg step2)                        │"
+      echo " └──────────────────────────────────────────┘"
+    fi
+    echo ""
+    echo "  $(_msg no_token)  $(_msg generate_btn)"
+    echo "  ${dashboard_url}"
+    echo ""
+    echo "  $(_msg token_hint)"
+    echo ""
+    if [[ "$lang" == "zh" ]]; then
+      echo " ┌─────────────────────────────────────────┐"
+      echo " │  1. 打开控制台，点击「生成 Token」      │"
+      echo " │  2. 点击复制按钮（会复制 export 命令）  │"
+      echo " │  3. 粘贴到这里，回车                    │"
+      echo " └─────────────────────────────────────────┘"
+    else
+      echo " ┌──────────────────────────────────────────┐"
+      echo " │  1. Open Dashboard, click Generate Token │"
+      echo " │  2. Click Copy (copies export command)   │"
+      echo " │  3. Paste here and press Enter           │"
+      echo " └──────────────────────────────────────────┘"
+    fi
+    echo ""
+    printf " Token :"
+    read -r input_token
+
+    # Use --token flag value if provided, otherwise use input
+    token="${token:-$input_token}"
   fi
-  echo ""
-  echo "  $(_msg no_token)  $(_msg generate_btn)"
-  echo "  ${dashboard_url}"
-  echo ""
-  echo "  $(_msg token_hint)"
-  echo ""
-  if [[ "$lang" == "zh" ]]; then
-    echo " ┌─────────────────────────────────────────┐"
-    echo " │  1. 打开控制台，点击「生成 Token」      │"
-    echo " │  2. 点击复制按钮（会复制 export 命令）  │"
-    echo " │  3. 粘贴到这里，回车                    │"
-    echo " └─────────────────────────────────────────┘"
-  else
-    echo " ┌──────────────────────────────────────────┐"
-    echo " │  1. Open Dashboard, click Generate Token │"
-    echo " │  2. Click Copy (copies export command)   │"
-    echo " │  3. Paste here and press Enter           │"
-    echo " └──────────────────────────────────────────┘"
-  fi
-  echo ""
-  printf " Token :"
-  read -r input_token
-
-  # Use --token flag value if provided, otherwise use input
-  token="${token:-$input_token}"
 
   if [[ -z "$token" ]]; then
     echo ""

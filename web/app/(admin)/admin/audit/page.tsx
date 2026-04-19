@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useT } from "@/lib/i18n/context";
 import { unixSecToDate, formatDate, formatTime } from "@/lib/timestamp";
+import { ChevronLeftIcon, ChevronRightIcon } from "@/components/icons";
 
 interface AuditEntry {
   id?: number;
@@ -61,15 +62,15 @@ export default function AdminAuditPage() {
   const endItem = Math.min(page * PAGE_SIZE, total);
 
   return (
-    <div className="max-w-6xl space-y-6">
+    <div className="max-w-6xl space-y-6 px-4 md:px-0">
       {/* Tabs */}
-      <div className="flex items-center gap-1">
-        <div className="bg-[#ede9cf] rounded-full p-1 flex gap-1">
+      <div className="flex items-start gap-2 md:items-center">
+        <div className="bg-[#ede9cf] rounded-full p-1 flex w-full gap-1 md:w-auto">
           {(["all", "skills"] as FilterTab[]).map((tabItem) => (
             <button
               key={tabItem}
               onClick={() => { setTab(tabItem); setPage(1); }}
-              className={`px-5 py-2 rounded-full text-sm font-medium transition-all font-body ${
+              className={`flex-1 px-5 py-2 rounded-full text-sm font-medium transition-all font-body md:flex-none ${
                 tab === tabItem
                   ? "bg-white text-[#a23f00] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)]"
                   : "text-[#5c6834] hover:text-[#1d1c0d]"
@@ -82,9 +83,9 @@ export default function AdminAuditPage() {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-[48px] card-shadow min-h-[980px] overflow-hidden">
+      <div className="bg-white rounded-[32px] md:rounded-[48px] card-shadow min-h-[980px] overflow-hidden">
         {/* Table header */}
-        <div className="bg-[rgba(237,233,207,0.5)] border-b border-[rgba(220,193,177,0.1)]">
+        <div className="hidden bg-[rgba(237,233,207,0.5)] border-b border-[rgba(220,193,177,0.1)] md:block">
           <div className="grid grid-cols-[170px_200px_1fr_180px_120px] gap-0">
             <div className="px-6 py-4 text-[12px] font-semibold text-[#897365] uppercase tracking-widest font-body">{t("time")}</div>
             <div className="px-6 py-4 text-[12px] font-semibold text-[#897365] uppercase tracking-widest font-body">{t("action")}</div>
@@ -101,6 +102,75 @@ export default function AdminAuditPage() {
           <div className="py-12 text-center text-[#7a6a5a] font-body">{t("no_entries")}</div>
         ) : (
           <div className="relative">
+            <div className="grid gap-3 px-4 py-4 md:hidden">
+              {entries.map((entry, i) => {
+                const style = ACTION_STYLES[entry.event] ?? { bg: "#ede9cf", text: "#586330", label: entry.event };
+                const ts = unixSecToDate(entry.timestamp ?? null);
+                const actorId = entry.actorId ?? entry.userId ?? "";
+                const actorStr = actorId !== "" && actorId !== null && actorId !== undefined ? String(actorId) : "";
+                const initials = actorStr.length >= 2 ? actorStr.slice(0, 2).toUpperCase() : actorStr.toUpperCase();
+                return (
+                  <article key={entry.id ?? i} className="rounded-[24px] border border-[#eadfc8] bg-white/90 p-4 shadow-[0_8px_20px_rgba(86,67,55,0.05)]">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-[#1d1c0d] font-body">
+                          {formatDate(ts, "en-US")}
+                        </p>
+                        <p className="text-xs text-[#564337] font-body">
+                          {formatTime(ts)}
+                        </p>
+                      </div>
+                      <span
+                        className="inline-block rounded-full px-3 py-1 text-[10px] font-semibold uppercase font-body"
+                        style={{ backgroundColor: style.bg, color: style.text }}
+                      >
+                        {style.label}
+                      </span>
+                    </div>
+
+                    <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
+                      <div className="rounded-2xl bg-[#faf3d0] px-3 py-2">
+                        <p className="text-black/40">{t("actor")}</p>
+                        <div className="mt-1 flex items-center gap-2">
+                          <div
+                            className="flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold font-body"
+                            style={{ backgroundColor: style.bg, color: style.text }}
+                          >
+                            {initials || "?"}
+                          </div>
+                          <p className="truncate font-semibold text-black">
+                            {actorStr ? `User ${actorStr}` : t("system")}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="rounded-2xl bg-[#faf3d0] px-3 py-2">
+                        <p className="text-black/40">{t("target")}</p>
+                        <p className="mt-1 truncate font-semibold text-black">
+                          {entry.targetId ? entry.targetId.slice(0, 12) + (entry.targetId.length > 12 ? "..." : "") : "—"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => setExpanded(expanded === i ? null : i)}
+                      className="mt-4 inline-flex min-h-11 items-center justify-center rounded-full border border-[#eadfc8] bg-white px-4 text-sm font-semibold text-[#a23f00] shadow-[0_8px_20px_rgba(86,67,55,0.06)]"
+                    >
+                      {t("details")}
+                    </button>
+
+                    {expanded === i && (
+                      <div className="mt-4 rounded-[20px] bg-[#1d1c0d] px-4 py-4 text-left">
+                        <div className="max-h-56 overflow-auto rounded-[16px] bg-[#1d1c0d] font-mono-custom text-xs text-[#fefae0] whitespace-pre-wrap">
+                          {JSON.stringify(entry, null, 2)}
+                        </div>
+                      </div>
+                    )}
+                  </article>
+                );
+              })}
+            </div>
+
+            <div className="hidden md:block">
             {entries.map((entry, i) => {
               const style = ACTION_STYLES[entry.event] ?? { bg: "#ede9cf", text: "#586330", label: entry.event };
               const ts = unixSecToDate(entry.timestamp ?? null);
@@ -176,15 +246,18 @@ export default function AdminAuditPage() {
                 </div>
               );
             })}
+            </div>
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="bg-[rgba(237,233,207,0.3)] border-t border-[rgba(220,193,177,0.1)] px-6 py-4 flex items-center justify-between">
+              <div className="bg-[rgba(237,233,207,0.3)] border-t border-[rgba(220,193,177,0.1)] px-4 py-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between md:px-6">
                 <p className="text-xs text-[#564337] font-body">
                   {t("showing_range", { startItem: String(startItem), endItem: String(endItem), total: String(total.toLocaleString()) })}
                 </p>
-                <div className="flex items-center gap-2">
-                  <PageBtn onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1}>‹</PageBtn>
+                <div className="flex flex-wrap items-center gap-2">
+                  <PageBtn onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1}>
+                    <ChevronLeftIcon className="w-3 h-3" />
+                  </PageBtn>
                   {pageNumbers(page, totalPages).map((n, i) =>
                     n === "..." ? (
                       <span key={`ellipsis-${i}`} className="px-2 text-[#897365] font-body">...</span>
@@ -192,7 +265,9 @@ export default function AdminAuditPage() {
                       <PageBtn key={n} onClick={() => setPage(Number(n))} active={Number(n) === page}>{n}</PageBtn>
                     )
                   )}
-                  <PageBtn onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages}>›</PageBtn>
+                  <PageBtn onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages}>
+                    <ChevronRightIcon className="w-3 h-3" />
+                  </PageBtn>
                 </div>
               </div>
             )}

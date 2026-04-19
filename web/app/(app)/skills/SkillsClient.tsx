@@ -77,13 +77,13 @@ export function SkillsClient({ initialSkills, initialSort = "" }: SkillsClientPr
   return (
     <div className="min-h-screen bg-[#fefae0] flex flex-col">
       {/* Main content — centered, max-w-[1280px] */}
-      <div className="flex-1 w-full max-w-[1280px] mx-auto px-6 pb-20">
+      <div className="flex-1 w-full max-w-[1280px] mx-auto px-4 sm:px-6 pb-16 sm:pb-20">
         {/* Hero Header */}
-        <div className="text-center pt-16 pb-8">
-          <h1 className="text-6xl md:text-7xl font-extrabold font-heading text-[#1d1c0d] tracking-tight leading-[1.05] mb-4">
+        <div className="text-center pt-12 sm:pt-16 pb-8">
+          <h1 className="text-4xl sm:text-5xl md:text-7xl font-extrabold font-heading text-[#1d1c0d] tracking-tight leading-[1.05] mb-4 break-words">
             {t("title")}
           </h1>
-          <p className="text-lg text-[#564337] font-body max-w-2xl mx-auto leading-relaxed">
+          <p className="text-sm sm:text-lg text-[#564337] font-body max-w-2xl mx-auto leading-relaxed">
             {t("subtitle")}
           </p>
         </div>
@@ -103,12 +103,12 @@ export function SkillsClient({ initialSkills, initialSort = "" }: SkillsClientPr
         </div>
 
         {/* Category Filters — centered row */}
-        <div className="flex flex-wrap gap-3 justify-center mb-10">
+        <div className="flex flex-wrap gap-2 sm:gap-3 justify-center mb-8 sm:mb-10">
           {categories.map(({ label, emoji, filter }) => (
             <button
               key={filter}
               onClick={() => setActiveCategory(filter)}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-base font-semibold font-body transition-all ${
+              className={`flex items-center gap-2 px-4 sm:px-5 py-2.5 rounded-full text-sm sm:text-base font-semibold font-body transition-all ${
                 activeCategory === filter
                   ? "bg-gradient-to-r from-[#a23f00] to-[#fa7025] text-white shadow-[0_6px_20px_rgba(162,63,0,0.25)]"
                   : "bg-[#ede9cf] text-[#586330] hover:bg-[#ddd8b8]"
@@ -122,9 +122,9 @@ export function SkillsClient({ initialSkills, initialSort = "" }: SkillsClientPr
 
         {/* Skills Grid — 4 columns */}
         {filtered.length === 0 ? (
-          <div className="text-center py-24 space-y-4">
+          <div className="text-center py-16 sm:py-24 space-y-4">
             <div className="text-6xl">{activeCategory || "🦐"}</div>
-            <h2 className="text-2xl font-bold text-[#564337] font-heading">
+            <h2 className="text-xl sm:text-2xl font-bold text-[#564337] font-heading">
               {search ? t("no_results", { query: search }) : t("no_category")}
             </h2>
             <p className="text-[#7a6a5a] font-body">
@@ -140,7 +140,7 @@ export function SkillsClient({ initialSkills, initialSort = "" }: SkillsClientPr
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
             {filtered.map((s) => (
               <SkillCard
                 key={s.slug}

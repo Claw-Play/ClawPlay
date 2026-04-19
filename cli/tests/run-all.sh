@@ -36,6 +36,7 @@ for suite in \
   "${TESTS_DIR}/image.test.sh" \
   "${TESTS_DIR}/llm.test.sh" \
   "${TESTS_DIR}/vision.test.sh" \
+  "${TESTS_DIR}/setup.test.sh" \
   "${TESTS_DIR}/install.test.sh"; do
   run_suite "$suite"
 done

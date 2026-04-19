@@ -67,6 +67,7 @@ clawplay install my-skill
 # Other
 clawplay whoami
 clawplay setup
+clawplay setup --agent   # Print setup steps for an agent to relay
 ```
 
 ---

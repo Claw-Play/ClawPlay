@@ -68,7 +68,7 @@ export function MySkillsClient() {
     return (
       <div className="space-y-4">
         {[1, 2].map((i) => (
-          <div key={i} className="bg-[#fffdf7] rounded-[24px] p-6 border border-[#e8dfc8] animate-pulse">
+          <div key={i} className="bg-[#fffdf7] rounded-[24px] p-5 sm:p-6 border border-[#e8dfc8] animate-pulse">
             <div className="h-5 bg-[#e8dfc8] rounded w-1/3 mb-3" />
             <div className="h-4 bg-[#e8dfc8] rounded w-2/3 mb-4" />
             <div className="h-4 bg-[#e8dfc8] rounded w-1/4" />
@@ -88,7 +88,7 @@ export function MySkillsClient() {
 
   if (skills.length === 0) {
     return (
-      <div className="bg-[#fffdf7] rounded-[24px] p-10 border border-[#e8dfc8] text-center space-y-3">
+      <div className="bg-[#fffdf7] rounded-[24px] p-8 sm:p-10 border border-[#e8dfc8] text-center space-y-3">
         <div className="text-4xl">🌱</div>
         <p className="text-[#7a6a5a] font-body">{t("empty")}</p>
         <Link
@@ -106,9 +106,9 @@ export function MySkillsClient() {
       {skills.map((skill) => (
         <div
           key={skill.id}
-          className="bg-[#fffdf7] rounded-[24px] p-6 border border-[#e8dfc8] card-shadow"
+          className="bg-[#fffdf7] rounded-[24px] p-5 sm:p-6 border border-[#e8dfc8] card-shadow"
         >
-          <div className="flex items-start justify-between gap-4">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex items-start gap-4 min-w-0">
               <span className="text-3xl flex-shrink-0">{skill.iconEmoji}</span>
               <div className="min-w-0">
@@ -139,17 +139,17 @@ export function MySkillsClient() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="flex flex-wrap items-center gap-2 flex-shrink-0">
               <Link
                 href={`/skills/${skill.slug}/versions`}
-                className="px-3 py-1.5 text-xs font-semibold text-[#564337] bg-[#f0e8d0] rounded-full font-body hover:bg-[#e8dfc8] transition-colors"
+                className="inline-flex min-h-11 items-center px-3 py-1.5 text-xs font-semibold text-[#564337] bg-[#f0e8d0] rounded-full font-body hover:bg-[#e8dfc8] transition-colors"
               >
                 {t("versions")}
               </Link>
               {skill.moderationStatus === "approved" && (
                 <Link
                   href={`/skills/${skill.slug}/versions/new`}
-                  className="px-3 py-1.5 text-xs font-semibold text-white bg-gradient-to-r from-[#a23f00] to-[#fa7025] rounded-full font-heading hover:opacity-90 transition-opacity"
+                  className="inline-flex min-h-11 items-center px-3 py-1.5 text-xs font-semibold text-white bg-gradient-to-r from-[#a23f00] to-[#fa7025] rounded-full font-heading hover:opacity-90 transition-opacity"
                 >
                   {t("new_version")}
                 </Link>

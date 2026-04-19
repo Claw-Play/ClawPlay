@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ShrimpLogoIcon } from "@/components/icons";
 
 interface NavProps {
   auth: { userId: number; role: string } | null;
@@ -9,7 +10,7 @@ export default function Nav({ auth }: NavProps) {
     <nav className="bg-[#fefae0]/90 border-b border-[#e8dfc8] sticky top-0 z-50 backdrop-blur-md">
       <div className="max-w-6xl mx-auto px-6 md:px-8 py-4 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2 group">
-          <span className="text-2xl">🦐</span>
+          <ShrimpLogoIcon className="w-6 h-6 text-[#a23f00]" />
           <span className="text-xl font-bold font-heading text-[#564337] group-hover:text-[#a23f00] transition-colors">
             ClawPlay
           </span>

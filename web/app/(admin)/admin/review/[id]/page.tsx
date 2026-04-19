@@ -4,6 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useT } from "@/lib/i18n/context";
 import SkillDiagramPreview from "@/components/SkillDiagramPreview";
+import { CalendarIcon, CheckIcon, CloseIcon, DocumentIcon, LinkIcon } from "@/components/icons";
 
 interface SkillDetail {
   id: string;
@@ -41,7 +42,7 @@ const ChecklistItem = ({
         checked ? "bg-[#a23f00] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)]" : "border-2 border-[#dcc1b1]"
       }`}
     >
-      {checked && <span className="text-white text-xs">✓</span>}
+      {checked && <CheckIcon className="w-3 h-3 text-white" />}
     </div>
     <span className={`text-sm font-medium font-body ${checked ? "text-[#1d1c0d]" : "text-[#586330]"}`}>
       {label}
@@ -139,34 +140,34 @@ export default function AdminReviewDetailPage() {
     : null;
 
   return (
-    <div className="max-w-6xl space-y-6">
+    <div className="max-w-6xl space-y-6 px-4 sm:px-6">
       {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-sm text-[#7a6a5a] font-body">
+      <div className="flex flex-wrap items-center gap-2 text-sm text-[#7a6a5a] font-body">
         <Link href="/admin/review" className="hover:text-[#a23f00]">{t("breadcrumb")}</Link>
         <span>/</span>
-        <span className="font-semibold text-[#564337]">{skill.name}</span>
+        <span className="font-semibold text-[#564337] break-words">{skill.name}</span>
       </div>
 
-      <div className="grid grid-cols-12 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Main content - 8 cols */}
-        <div className="col-span-12 lg:col-span-8 space-y-6">
+        <div className="lg:col-span-8 space-y-6">
           {/* Hero Header Card */}
-          <div className="bg-[#f8f4db] rounded-[48px] p-8 flex items-center gap-6">
-            <div className="w-[96px] h-[96px] bg-white rounded-[48px] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)] flex items-center justify-center flex-shrink-0">
-              <span className="text-5xl">{skill.iconEmoji}</span>
+          <div className="bg-[#f8f4db] rounded-[28px] md:rounded-[48px] p-4 md:p-8 flex flex-col sm:flex-row sm:items-center gap-4 md:gap-6">
+            <div className="w-[56px] h-[56px] md:w-[96px] md:h-[96px] bg-white rounded-[24px] md:rounded-[48px] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)] flex items-center justify-center flex-shrink-0">
+              <span className="text-4xl md:text-5xl">{skill.iconEmoji}</span>
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-3 flex-wrap">
-                <h1 className="text-2xl font-extrabold font-heading text-[#1d1c0d] tracking-tight">
+                <h1 className="text-lg md:text-2xl font-extrabold font-heading text-[#1d1c0d] tracking-tight break-words">
                   {skill.name}
                 </h1>
                 <span className="px-3 py-1 bg-[rgba(162,63,0,0.1)] border border-[rgba(162,63,0,0.2)] text-[#a23f00] text-[10px] font-semibold uppercase tracking-wider rounded-full font-body">
                   {t("pending_review")}
                 </span>
               </div>
-              <div className="flex items-center gap-4 mt-2 text-sm text-[#586330] font-body flex-wrap">
+              <div className="flex flex-col gap-2 mt-2 text-sm text-[#586330] font-body sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
                 <span className="flex items-center gap-1">
-                  <span>📅</span>
+                  <CalendarIcon className="w-4 h-4" />
                   <span>{t("submitted")} {new Date(skill.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
                 </span>
                 {skill.authorEmail && (
@@ -180,9 +181,9 @@ export default function AdminReviewDetailPage() {
           </div>
 
           {/* Metadata Grid */}
-          <div className="grid grid-cols-2 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             {/* Bio & Description */}
-            <div className="bg-white rounded-[48px] p-6 border border-[rgba(220,193,177,0.1)] card-shadow space-y-3">
+            <div className="bg-white rounded-[28px] md:rounded-[48px] p-4 md:p-6 border border-[rgba(220,193,177,0.1)] card-shadow space-y-3">
               <p className="text-[10px] font-bold text-[#a23f00] uppercase tracking-widest font-body">
                 {t("bio_description")}
               </p>
@@ -194,7 +195,7 @@ export default function AdminReviewDetailPage() {
             </div>
 
             {/* Author Details */}
-            <div className="bg-white rounded-[48px] p-6 border border-[rgba(220,193,177,0.1)] card-shadow space-y-4">
+            <div className="bg-white rounded-[28px] md:rounded-[48px] p-4 md:p-6 border border-[rgba(220,193,177,0.1)] card-shadow space-y-4">
               <p className="text-[10px] font-bold text-[#a23f00] uppercase tracking-widest font-body">
                 {t('author_details')}
               </p>
@@ -218,7 +219,7 @@ export default function AdminReviewDetailPage() {
                     rel="noopener noreferrer"
                     className="flex items-center gap-2 text-sm font-semibold text-[#a23f00] hover:text-[#c45000] transition-colors font-body"
                   >
-                    <span>🔗</span>
+                    <LinkIcon className="w-4 h-4" />
                     <span>{repoDomain}</span>
                   </a>
                 )}
@@ -228,16 +229,16 @@ export default function AdminReviewDetailPage() {
 
           {/* SKILL.md Preview */}
           {skill.skillMdContent && (
-            <div className="bg-white rounded-[48px] border border-[rgba(220,193,177,0.1)] card-shadow overflow-hidden">
+            <div className="bg-white rounded-[28px] md:rounded-[48px] border border-[rgba(220,193,177,0.1)] card-shadow overflow-hidden">
               <div className="bg-[#ede9cf] px-6 py-3 flex items-center justify-between">
                 <span className="flex items-center gap-2 text-sm font-bold text-[#586330] uppercase tracking-widest font-body">
-                  <span>📄</span> {t("skill_md_preview")}
+                  <DocumentIcon className="w-4 h-4" /> {t("skill_md_preview")}
                 </span>
                 <span className="text-[10px] text-[rgba(88,99,48,0.6)] font-mono-custom">
                   UTF-8 • {(skill.skillMdContent?.length ?? 0)} chars
                 </span>
               </div>
-              <div className="p-8 max-h-[500px] overflow-y-auto">
+              <div className="p-4 md:p-8 max-h-[500px] overflow-y-auto">
                 <pre className="whitespace-pre-wrap text-sm font-mono-custom text-[#1d1c0d] leading-relaxed">
                   {skill.skillMdContent}
                 </pre>
@@ -251,14 +252,14 @@ export default function AdminReviewDetailPage() {
               <p className="text-xs font-bold text-[#564337] mb-3 font-body">
                 {t("diagram_preview_label")}
               </p>
-              <div className="bg-[#f8f4db] rounded-[32px] p-6 border border-[rgba(220,193,177,0.3)]">
+              <div className="bg-[#f8f4db] rounded-[22px] md:rounded-[32px] p-4 md:p-6 border border-[rgba(220,193,177,0.3)]">
                 <SkillDiagramPreview skillMdContent={skill.skillMdContent} />
               </div>
             </div>
           )}
 
           {/* Submission Timeline */}
-          <div className="bg-[#f8f4db] rounded-[48px] p-6 space-y-4">
+          <div className="bg-[#f8f4db] rounded-[28px] md:rounded-[48px] p-4 md:p-6 space-y-3">
             <p className="text-[10px] font-bold text-[#a23f00] uppercase tracking-widest font-body">
               {t("submission_timeline")}
             </p>
@@ -284,11 +285,11 @@ export default function AdminReviewDetailPage() {
         </div>
 
         {/* Right sidebar - 4 cols */}
-        <div className="col-span-12 lg:col-span-4 space-y-5">
+        <div className="space-y-3.5">
           {/* Moderator Checklist */}
-          <div className="bg-[#ede9cf] border border-[rgba(220,193,177,0.3)] rounded-[16px] p-5 space-y-3">
+          <div className="bg-[#ede9cf] border border-[rgba(220,193,177,0.3)] rounded-[16px] p-3 md:p-5 space-y-2.5">
             <div className="flex items-center gap-2">
-              <span>✅</span>
+              <CheckIcon className="w-4 h-4" />
               <p className="text-xs font-bold text-[#1d1c0d] uppercase tracking-widest font-body">
                 {t("moderator_checklist")}
               </p>
@@ -316,16 +317,16 @@ export default function AdminReviewDetailPage() {
           </div>
 
           {/* Review Decision Card */}
-          <div className="bg-white rounded-[24px] p-8 border border-[rgba(162,63,0,0.05)] card-shadow shadow-[0px_20px_50px_0px_rgba(86,67,55,0.12)] space-y-5">
+          <div className="bg-white rounded-[22px] p-3.5 md:p-8 border border-[rgba(162,63,0,0.05)] card-shadow shadow-[0px_20px_50px_0px_rgba(86,67,55,0.12)] space-y-3.5">
             <div>
-              <h3 className="text-xl font-extrabold font-heading text-[#a23f00]">{t("final_decision")}</h3>
+              <h3 className="text-base md:text-xl font-extrabold font-heading text-[#a23f00]">{t("final_decision")}</h3>
               <p className="text-[10px] text-[#586330]/60 uppercase tracking-widest font-body mt-0.5">
                 {t("admin_verification")}
               </p>
             </div>
 
             {/* Rejection feedback */}
-            <div>
+            <div className="space-y-1.5">
               <div className="flex items-center justify-between mb-1">
                 <p className="text-[11px] font-bold uppercase tracking-wider text-[#1d1c0d] font-body">
                   {t("rejection_feedback")}
@@ -339,30 +340,30 @@ export default function AdminReviewDetailPage() {
                 value={feedback}
                 onChange={(e) => setFeedback(e.target.value)}
                 rows={5}
-                className="w-full border-2 border-[#ede9cf] rounded-[16px] p-4 text-sm text-[#1d1c0d] focus:outline-none focus:border-[#a23f00] resize-none font-body placeholder:text-[rgba(88,99,48,0.3)]"
+                className="w-full border-2 border-[#ede9cf] rounded-[16px] p-3.5 md:p-4 text-sm text-[#1d1c0d] focus:outline-none focus:border-[#a23f00] resize-none font-body placeholder:text-[rgba(88,99,48,0.3)]"
               />
             </div>
 
             {/* Action buttons */}
-            <div className="space-y-3">
+            <div className="space-y-2.5">
               <button
                 onClick={approve}
                 disabled={actioning}
-                className="w-full flex items-center justify-center gap-3 h-[56px] bg-gradient-to-r from-[#a23f00] to-[#fa7025] text-white font-semibold rounded-full shadow-[0px_10px_15px_-3px_rgba(162,63,0,0.2),0px_4px_6px_-4px_rgba(162,63,0,0.2)] hover:opacity-90 transition-all font-heading disabled:opacity-50"
+                className="w-full flex items-center justify-center gap-3 min-h-12 bg-gradient-to-r from-[#a23f00] to-[#fa7025] text-white font-semibold rounded-full shadow-[0px_10px_15px_-3px_rgba(162,63,0,0.2),0px_4px_6px_-4px_rgba(162,63,0,0.2)] hover:opacity-90 transition-all font-heading disabled:opacity-50"
               >
                 {actioning ? t("processing") : t("approve_publish")}
               </button>
               <button
                 onClick={reject}
                 disabled={actioning}
-                className="w-full flex items-center justify-center gap-3 h-[56px] border-2 border-[rgba(186,26,26,0.2)] text-[#ba1a1a] font-semibold rounded-full hover:bg-red-50 transition-colors font-heading disabled:opacity-50"
+                className="w-full flex items-center justify-center gap-3 min-h-12 border-2 border-[rgba(186,26,26,0.2)] text-[#ba1a1a] font-semibold rounded-full hover:bg-red-50 transition-colors font-heading disabled:opacity-50"
               >
-                ✕ {t("reject_submission")}
+                <CloseIcon className="w-4 h-4" /> {t("reject_submission")}
               </button>
             </div>
 
             {/* Disclaimer */}
-            <div className="border-t border-[#ede9cf] pt-6">
+            <div className="border-t border-[#ede9cf] pt-4">
               <p className="text-[11px] text-[#586330] leading-relaxed font-body">
                 &ldquo;{t("approve_disclaimer")}&rdquo;
               </p>

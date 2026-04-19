@@ -50,7 +50,7 @@ export function SkillsGrid({ initialSkills, allEmojis }: SkillsGridProps) {
           placeholder={t("search_placeholder")}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full h-16 pl-14 pr-5 rounded-[24px] bg-[#fffdf7]/80 backdrop-blur-md border border-[#e8dfc8] text-[#564337] placeholder-[#a89888] text-sm focus:outline-none focus:ring-2 focus:ring-[#a23f00]/30 focus:border-[#a23f00] transition-all shadow-sm"
+          className="w-full h-14 sm:h-16 pl-14 pr-5 rounded-[24px] bg-[#fffdf7]/80 backdrop-blur-md border border-[#e8dfc8] text-[#564337] placeholder-[#a89888] text-sm focus:outline-none focus:ring-2 focus:ring-[#a23f00]/30 focus:border-[#a23f00] transition-all shadow-sm"
         />
       </div>
 
@@ -58,7 +58,7 @@ export function SkillsGrid({ initialSkills, allEmojis }: SkillsGridProps) {
       <div className="flex flex-wrap gap-2">
         <button
           onClick={() => setActiveEmoji(null)}
-          className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+          className={`min-h-11 px-4 py-2 rounded-full text-sm font-medium transition-all ${
             activeEmoji === null
               ? "bg-gradient-to-r from-[#a23f00] to-[#fa7025] text-white shadow-[0_4px_12px_rgba(162,63,0,0.2)]"
               : "bg-[#fffdf7] border border-[#e8dfc8] text-[#7a6a5a] hover:border-[#a23f00] hover:text-[#a23f00]"
@@ -70,7 +70,7 @@ export function SkillsGrid({ initialSkills, allEmojis }: SkillsGridProps) {
           <button
             key={e}
             onClick={() => setActiveEmoji(e === activeEmoji ? null : e)}
-            className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+            className={`min-h-11 px-4 py-2 rounded-full text-sm font-medium transition-all ${
               activeEmoji === e
                 ? "bg-gradient-to-r from-[#a23f00] to-[#fa7025] text-white shadow-[0_4px_12px_rgba(162,63,0,0.2)]"
                 : "bg-[#fffdf7] border border-[#e8dfc8] text-[#7a6a5a] hover:border-[#a23f00] hover:text-[#a23f00]"
@@ -95,11 +95,11 @@ export function SkillsGrid({ initialSkills, allEmojis }: SkillsGridProps) {
 
       {/* Skills grid */}
       {filtered.length === 0 ? (
-        <div className="text-center py-20 space-y-4">
+        <div className="text-center py-16 sm:py-20 space-y-4">
           <div className="text-5xl">
             {activeEmoji ?? "🦐"}
           </div>
-          <h2 className="text-xl font-semibold text-[#564337]">
+          <h2 className="text-lg sm:text-xl font-semibold text-[#564337]">
             {search ? t("no_results", {search}) : t("no_emoji_filter")}
           </h2>
           <p className="text-[#7a6a5a]">
@@ -107,7 +107,7 @@ export function SkillsGrid({ initialSkills, allEmojis }: SkillsGridProps) {
           </p>
         </div>
       ) : (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
           {filtered.map((s) => (
             <Link
               key={s.slug}

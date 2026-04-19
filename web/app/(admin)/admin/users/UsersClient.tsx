@@ -3,6 +3,13 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useT } from "@/lib/i18n/context";
 import { useAdminUser } from "@/lib/context/AdminUserContext";
 import { formatDate } from "@/lib/timestamp";
+import {
+  ChevronDownIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  CheckIcon,
+  SearchIcon,
+} from "@/components/icons";
 
 type RoleValue = "user" | "reviewer" | "admin";
 type RoleFilter = RoleValue | "all";
@@ -261,6 +268,25 @@ export default function UsersClient() {
     </div>
   );
 
+  const renderMobileSortButton = (field: SortField, label: string) => {
+    const active = sortField === field;
+    return (
+      <button
+        key={field}
+        type="button"
+        onClick={() => handleSortChange(field)}
+        className={`inline-flex min-h-11 items-center gap-2 rounded-full border px-3 py-2 text-xs font-semibold transition-colors ${
+          active
+            ? "border-[#a23f00] bg-[#f6e9d7] text-[#a23f00]"
+            : "border-[#eadfc8] bg-white text-black/60"
+        }`}
+      >
+        <span>{label}</span>
+        {renderSortIndicator(field)}
+      </button>
+    );
+  };
+
   const roleFilterOptions: { value: RoleFilter; label: string }[] = [
     { value: "all", label: t("all_roles") },
     { value: "user", label: t("role_user") },
@@ -291,26 +317,23 @@ export default function UsersClient() {
   return (
     <div className="space-y-5">
       {/* Controls */}
-      <div className={`${panelClassName} flex flex-wrap items-center gap-3 px-4 py-4`}>
+      <div className={`${panelClassName} flex flex-col items-stretch gap-3 px-4 py-4 md:flex-row md:flex-wrap md:items-center`}>
         {/* Search */}
-        <div className="relative">
+        <div className="relative w-full md:w-auto">
           <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-black/30">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <circle cx="7" cy="7" r="4.5" stroke="currentColor" strokeWidth="1.5"/>
-              <path d="M10.5 10.5L14 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-            </svg>
+            <SearchIcon className="w-4 h-4" />
           </div>
           <input
             type="text"
             value={search}
             onChange={(e) => { setSearch(e.target.value); setOffset(0); }}
             placeholder={t("search_users")}
-            className="min-w-[220px] rounded-full border border-black/10 bg-white py-2.5 pl-10 pr-4 text-sm text-black placeholder:text-black/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_8px_20px_rgba(86,67,55,0.05)] transition-colors focus:border-black/30 focus:outline-none focus:ring-2 focus:ring-black/15"
+            className="w-full min-w-0 rounded-full border border-black/10 bg-white py-2.5 pl-10 pr-4 text-sm text-black placeholder:text-black/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_8px_20px_rgba(86,67,55,0.05)] transition-colors focus:border-black/30 focus:outline-none focus:ring-2 focus:ring-black/15 md:min-w-[220px]"
             style={{ fontFamily: "var(--font-vietnam)" }}
           />
         </div>
 
-        <span className="ml-auto text-[11px] font-semibold uppercase tracking-[0.18em] text-black/40">
+        <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-black/40 md:ml-auto">
           {t("users_count", { count: total.toLocaleString() })}
         </span>
       </div>
@@ -331,7 +354,77 @@ export default function UsersClient() {
         ) : users.length === 0 ? (
           <div className="p-10 text-center font-body text-black/40">{t("no_user_data")}</div>
         ) : (
-          <div className="relative overflow-x-auto">
+          <>
+            <div className="flex flex-wrap gap-2 border-b border-[#e6dac2] px-4 py-3 md:hidden">
+              {renderMobileSortButton("events", t("events"))}
+              {renderMobileSortButton("token_used", t("quota_used"))}
+              {renderMobileSortButton("last_active", t("last_active"))}
+            </div>
+
+            <div className="grid gap-3 px-4 py-4 md:hidden">
+              {users.map((u) => {
+                const displayRole = getDisplayRole(u);
+                return (
+                  <article key={u.userId} className="rounded-[24px] border border-[#eadfc8] bg-white/90 p-4 shadow-[0_8px_20px_rgba(86,67,55,0.05)]">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-[linear-gradient(135deg,#b45822_0%,#eb8747_100%)] text-[12px] font-bold text-white shadow-[0_8px_18px_rgba(178,88,34,0.2)]">
+                          {(u.name || `U${u.userId}`).charAt(0).toUpperCase()}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-black">{u.name || `User ${u.userId}`}</p>
+                          <p className="text-xs font-semibold text-black/40 [font-variant-numeric:tabular-nums]">#{u.userId.toLocaleString()}</p>
+                        </div>
+                      </div>
+                      <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${getRoleChipClassName(displayRole)}`}>
+                        {t(`role_${displayRole}`)}
+                      </span>
+                    </div>
+
+                    <div className="mt-4 grid grid-cols-3 gap-2 text-xs">
+                      <div className="rounded-2xl bg-[#faf3d0] px-3 py-2">
+                        <p className="text-black/40">{t("events")}</p>
+                        <p className="mt-1 font-semibold text-black [font-variant-numeric:tabular-nums]">{u.totalEvents.toLocaleString()}</p>
+                      </div>
+                      <div className="rounded-2xl bg-[#faf3d0] px-3 py-2">
+                        <p className="text-black/40">{t("quota_used")}</p>
+                        <p className="mt-1 font-semibold text-black [font-variant-numeric:tabular-nums]">{u.totalQuotaUsed.toLocaleString()}</p>
+                      </div>
+                      <div className="rounded-2xl bg-[#faf3d0] px-3 py-2">
+                        <p className="text-black/40">{t("last_active")}</p>
+                        <p className="mt-1 text-[11px] font-semibold text-black [font-variant-numeric:tabular-nums]">
+                          {formatDate(u.lastActive ? new Date(u.lastActive) : null)}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-4">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-black/35">{t("top_abilities")}</p>
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {u.topAbilities.length === 0 ? (
+                          <span className="text-xs font-medium text-black/40">—</span>
+                        ) : (
+                          u.topAbilities.slice(0, 3).map((a) => (
+                            <span
+                              key={a.ability}
+                              className="inline-flex items-center rounded-full border border-white/40 px-2.5 py-1 text-[11px] font-semibold tracking-[0.02em] shadow-[inset_0_1px_0_rgba(255,255,255,0.35)]"
+                              style={{
+                                backgroundColor: (ABILITY_COLORS[a.ability] ?? "#666") + "1a",
+                                color: ABILITY_COLORS[a.ability] ?? "#666",
+                              }}
+                            >
+                              {formatAbility(a.ability)} {a.count}
+                            </span>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+
+            <div className="relative hidden overflow-x-auto md:block">
             <table className="w-full min-w-[980px] table-fixed text-sm font-body">
               <colgroup>
                 <col className="w-[72px]" />
@@ -368,15 +461,7 @@ export default function UsersClient() {
                             isRoleMenuOpen ? "rotate-180" : ""
                           }`}
                         >
-                          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                            <path
-                              d="M2.5 4L6 7.5L9.5 4"
-                              stroke="currentColor"
-                              strokeWidth="1.4"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                          </svg>
+                          <ChevronDownIcon className="w-3 h-3" />
                         </span>
                       </button>
                       {isRoleMenuOpen && (
@@ -408,15 +493,7 @@ export default function UsersClient() {
                                     selected ? "text-black" : "text-transparent"
                                   }`}
                                 >
-                                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                                    <path
-                                      d="M2.25 6.25L4.75 8.75L9.75 3.25"
-                                      stroke="currentColor"
-                                      strokeWidth="1.6"
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                    />
-                                  </svg>
+                                  <CheckIcon className="w-3 h-3" />
                                 </span>
                               </button>
                             );
@@ -491,15 +568,7 @@ export default function UsersClient() {
                                   getRoleChipClassName(displayRole)
                                 } ${openUserRoleMenuId === u.userId ? "rotate-180 shadow-[0_6px_16px_rgba(86,67,55,0.1)]" : ""}`}
                               >
-                                <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
-                                  <path
-                                    d="M2.5 4L6 7.5L9.5 4"
-                                    stroke="currentColor"
-                                    strokeWidth="1.4"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                  />
-                                </svg>
+                                <ChevronDownIcon className="w-2.5 h-2.5" />
                               </span>
                             </button>
                             {openUserRoleMenuId === u.userId && (
@@ -530,15 +599,7 @@ export default function UsersClient() {
                                           selected ? "text-[#a23f00]" : "text-transparent"
                                         }`}
                                       >
-                                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                                          <path
-                                            d="M2.25 6.25L4.75 8.75L9.75 3.25"
-                                            stroke="currentColor"
-                                            strokeWidth="1.6"
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                          />
-                                        </svg>
+                                        <CheckIcon className="w-3 h-3" />
                                       </span>
                                     </button>
                                   );
@@ -588,18 +649,19 @@ export default function UsersClient() {
               </div>
             )}
           </div>
+          </>
         )}
       </div>
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2">
+        <div className="flex flex-wrap items-center justify-center gap-2">
           <button
             disabled={offset === 0}
             onClick={() => setOffset(Math.max(0, offset - limit))}
             className="rounded-lg border border-black/10 bg-white px-4 py-2 text-sm font-body text-black shadow-[0_8px_20px_rgba(86,67,55,0.06)] transition-colors hover:bg-black/5 disabled:opacity-40"
           >
-            ← {t("pagination_prev")}
+            <ChevronLeftIcon className="w-3 h-3" /> {t("pagination_prev")}
           </button>
           <span className="px-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-black/40">
             {t("pagination_status", {
@@ -612,7 +674,7 @@ export default function UsersClient() {
             onClick={() => setOffset(offset + limit)}
             className="rounded-lg border border-black/10 bg-white px-4 py-2 text-sm font-body text-black shadow-[0_8px_20px_rgba(86,67,55,0.06)] transition-colors hover:bg-black/5 disabled:opacity-40"
           >
-            {t("pagination_next")} →
+            {t("pagination_next")} <ChevronRightIcon className="w-3 h-3" />
           </button>
         </div>
       )}

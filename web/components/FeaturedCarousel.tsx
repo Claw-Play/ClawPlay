@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useT } from "@/lib/i18n/context";
+import { ChevronLeftIcon, ChevronRightIcon, StarIcon } from "@/components/icons";
 
 interface Skill {
   slug: string;
@@ -55,7 +56,7 @@ export function FeaturedCarousel({ skills }: Props) {
               </h3>
               {avgRating !== null && (
                 <span className="inline-flex items-center gap-0.5 px-2 py-0.5 bg-[#fa7025]/10 text-[#fa7025] text-xs font-semibold rounded-full font-body">
-                  ⭐ {avgRating}
+                  <StarIcon className="w-3 h-3" /> {avgRating}
                 </span>
               )}
             </div>
@@ -94,14 +95,14 @@ export function FeaturedCarousel({ skills }: Props) {
               className="w-8 h-8 rounded-full border border-[#e8dfc8] bg-[#fffdf7] text-[#7a6a5a] hover:text-[#a23f00] hover:border-[#a23f00] transition-all flex items-center justify-center"
               aria-label={t("previous")}
             >
-              ‹
+              <ChevronLeftIcon className="w-3 h-3" />
             </button>
             <button
               onClick={next}
               className="w-8 h-8 rounded-full border border-[#e8dfc8] bg-[#fffdf7] text-[#7a6a5a] hover:text-[#a23f00] hover:border-[#a23f00] transition-all flex items-center justify-center"
               aria-label={t("next")}
             >
-              ›
+              <ChevronRightIcon className="w-3 h-3" />
             </button>
           </div>
         )}

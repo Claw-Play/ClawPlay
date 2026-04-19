@@ -2,6 +2,7 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { useT } from "@/lib/i18n/context";
+import { CheckIcon, CloseIcon, ChevronLeftIcon, ChevronRightIcon, SearchIcon } from "@/components/icons";
 
 interface Skill {
   id: string;
@@ -56,21 +57,21 @@ function SkillRow({
   const isLoading = actioningId === skill.id;
 
   return (
-    <div className="bg-[#f8f4db] flex gap-6 items-center px-6 py-6 rounded-[32px] transition-all">
+    <div className="bg-[#f8f4db] flex flex-row items-start gap-3 px-3 py-3 rounded-[24px] md:rounded-[32px] transition-all md:gap-5 md:items-center md:px-5 md:py-5">
       {/* Info */}
-      <div className="flex-1 min-w-0 space-y-1">
-        <div className="flex items-center gap-3 flex-wrap">
+      <div className="flex-1 min-w-0 space-y-0.5">
+        <div className="flex items-center gap-2 flex-wrap">
           <h3
-            className="font-bold text-[18px] text-[#1d1c0d] whitespace-nowrap"
+            className="font-bold text-[16px] md:text-[18px] text-[#1d1c0d] whitespace-nowrap"
             style={{ fontFamily: "var(--font-jakarta)" }}
           >
             {skill.name}
           </h3>
-          <span className="px-3 py-1 rounded-full text-[10px] font-semibold tracking-wide uppercase bg-[#ffdbcd] text-[#351000]">
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wide uppercase bg-[#ffdbcd] text-[#351000]">
             {t("status_new")}
           </span>
         </div>
-        <p className="text-[14px] text-[#564337]" style={{ fontFamily: "var(--font-vietnam)" }}>
+        <p className="text-[13px] md:text-[14px] text-[#564337] leading-snug" style={{ fontFamily: "var(--font-vietnam)" }}>
           {t("submitted_by")}{" "}
           <span className="font-semibold">
             {skill.authorName || skill.authorEmail?.split("@")[0] || t("unknown")}
@@ -78,34 +79,34 @@ function SkillRow({
           • {timeAgo(skill.createdAt, t)}
         </p>
         {skill.summary && (
-          <p className="text-[12px] text-[#586330] font-medium italic line-clamp-1 max-w-xs">
+          <p className="text-[12px] md:text-[12px] text-[#586330] font-medium italic leading-relaxed line-clamp-2 md:line-clamp-1 max-w-none md:max-w-xs">
             {skill.summary}
           </p>
         )}
       </div>
 
       {/* Actions */}
-      <div className="flex items-center gap-3 shrink-0">
+      <div className="w-[102px] shrink-0 flex flex-col items-end gap-1.5 sm:w-[116px] md:w-auto md:flex-row md:flex-wrap md:items-center md:justify-end">
         {rejectId === skill.id ? (
-          <div className="flex items-center gap-2">
+          <div className="flex w-full flex-col items-end gap-1.5 md:w-auto md:flex-row md:flex-wrap md:items-center md:justify-end">
             <textarea
               placeholder={t("reject_reason_placeholder")}
               value={rejectReason}
               onChange={(e) => onReasonChange(e.target.value)}
               rows={1}
-              className="w-48 px-4 py-2 rounded-full border border-[#e8dfc8] text-sm text-[#564337] focus:outline-none focus:ring-2 focus:ring-[#a23f00]/30 resize-none bg-white"
+              className="w-full px-3 py-2 rounded-full border border-[#e8dfc8] text-sm text-[#564337] focus:outline-none focus:ring-2 focus:ring-[#a23f00]/30 resize-none bg-white md:w-44"
               style={{ fontFamily: "var(--font-vietnam)" }}
             />
             <button
               onClick={onConfirmReject}
               disabled={isLoading}
-              className="px-4 py-2 bg-[#DC2626] hover:bg-[#b91c1c] text-white text-xs font-semibold rounded-full transition-colors disabled:opacity-50"
+              className="min-h-10 px-3.5 py-2 bg-[#DC2626] hover:bg-[#b91c1c] text-white text-xs font-semibold rounded-full transition-colors disabled:opacity-50 whitespace-nowrap"
             >
               {isLoading ? "..." : t("confirm")}
             </button>
             <button
               onClick={onCancelReject}
-              className="px-4 py-2 bg-[#f8f4db] text-[#7a6a5a] text-xs font-semibold rounded-full hover:bg-[#ede9cf] transition-colors"
+              className="min-h-10 px-3.5 py-2 bg-[#f8f4db] text-[#7a6a5a] text-xs font-semibold rounded-full hover:bg-[#ede9cf] transition-colors whitespace-nowrap"
             >
               {t("cancel")}
             </button>
@@ -114,31 +115,29 @@ function SkillRow({
           <>
             <Link
               href={`/admin/review/${skill.id}`}
-              className="bg-white border border-[rgba(220,193,177,0.1)] px-5 py-2.5 rounded-full text-[#a23f00] text-[14px] font-semibold hover:shadow-md transition-all whitespace-nowrap"
+              className="inline-flex min-h-9 w-[80px] items-center justify-center self-end bg-white border border-[rgba(220,193,177,0.1)] px-2 py-2 rounded-full text-[#a23f00] text-[12px] md:w-auto md:px-3 md:text-[14px] font-semibold hover:shadow-md transition-all whitespace-nowrap"
               style={{ fontFamily: "var(--font-vietnam)" }}
             >
               {t("view_details")}
             </Link>
-            <button
-              onClick={() => onReject(skill.id)}
-              disabled={isLoading}
-              className="w-10 h-10 flex items-center justify-center bg-[rgba(186,26,26,0.1)] rounded-full hover:bg-[rgba(186,26,26,0.2)] transition-colors disabled:opacity-50"
-              title={t("reject")}
-            >
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                <path d="M1 1L13 13M13 1L1 13" stroke="#DC2626" strokeWidth="2" strokeLinecap="round"/>
-              </svg>
-            </button>
-            <button
-              onClick={() => onApprove(skill.id)}
-              disabled={isLoading}
-              className="w-10 h-10 flex items-center justify-center bg-[rgba(88,99,48,0.1)] rounded-full hover:bg-[rgba(88,99,48,0.2)] transition-colors disabled:opacity-50"
-              title={t("approve")}
-            >
-              <svg width="16" height="12" viewBox="0 0 16 12" fill="none">
-                <path d="M1 6L5.5 10.5L15 1" stroke="#586330" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </button>
+            <div className="flex w-full items-center justify-end gap-1.5">
+              <button
+                onClick={() => onReject(skill.id)}
+                disabled={isLoading}
+                className="w-9 h-9 flex items-center justify-center bg-[rgba(186,26,26,0.1)] rounded-full hover:bg-[rgba(186,26,26,0.2)] transition-colors disabled:opacity-50"
+                title={t("reject")}
+              >
+                <CloseIcon className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={() => onApprove(skill.id)}
+                disabled={isLoading}
+                className="w-9 h-9 flex items-center justify-center bg-[rgba(88,99,48,0.1)] rounded-full hover:bg-[rgba(88,99,48,0.2)] transition-colors disabled:opacity-50"
+                title={t("approve")}
+              >
+                <CheckIcon className="w-4 h-4" />
+              </button>
+            </div>
           </>
         )}
       </div>
@@ -229,14 +228,11 @@ export default function AdminReviewPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6 px-4">
+    <div className="max-w-6xl mx-auto space-y-6 px-4 sm:px-6">
       {/* Search bar */}
       <div className="relative">
         <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[#6b7280]">
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" className="shrink-0">
-            <circle cx="8" cy="8" r="5.5" stroke="currentColor" strokeWidth="1.5"/>
-            <path d="M12.5 12.5L16 16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-          </svg>
+          <SearchIcon className="w-4 h-4 shrink-0" />
         </div>
         <input
           type="text"
@@ -250,7 +246,7 @@ export default function AdminReviewPage() {
 
       {/* Skills List */}
       {paginated.length === 0 ? (
-        <div className="bg-[#f8f4db] rounded-[48px] p-16 text-center space-y-4">
+        <div className="bg-[#f8f4db] rounded-[32px] md:rounded-[48px] p-7 md:p-14 text-center space-y-4">
           <div className="text-5xl">🌿</div>
           <h3 className="text-xl font-bold text-[#564337]" style={{ fontFamily: "var(--font-jakarta)" }}>
             {t("all_clear")}
@@ -258,7 +254,7 @@ export default function AdminReviewPage() {
           <p className="text-sm text-[#7a6a5a] font-body">{t("no_pending")}</p>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {paginated.map((skill) => (
             <SkillRow
               key={skill.id}
@@ -279,7 +275,7 @@ export default function AdminReviewPage() {
 
       {/* Pagination Footer */}
       {filtered.length > PAGE_SIZE && (
-        <div className="flex items-center justify-between pt-4">
+        <div className="flex flex-col gap-3 pt-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-[14px] text-[#564337]" style={{ fontFamily: "var(--font-vietnam)" }}>
             {t("paginate_showing", {
               start: String((page - 1) * PAGE_SIZE + 1),
@@ -287,15 +283,13 @@ export default function AdminReviewPage() {
               total: String(filtered.length),
             })}
           </p>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page === 1}
               className="w-10 h-10 flex items-center justify-center bg-[#ede9cf] rounded-[32px] disabled:opacity-40 transition-colors"
             >
-              <svg width="7.4" height="12" viewBox="0 0 7.4 12" fill="none">
-                <path d="M6 1L1 6L6 11" stroke="#586330" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
+              <ChevronLeftIcon className="w-3 h-3" />
             </button>
             {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
               <button
@@ -316,9 +310,7 @@ export default function AdminReviewPage() {
               disabled={page === totalPages}
               className="w-10 h-10 flex items-center justify-center bg-[#ede9cf] rounded-[32px] disabled:opacity-40 transition-colors"
             >
-              <svg width="7.4" height="12" viewBox="0 0 7.4 12" fill="none">
-                <path d="M1.4 1L6.4 6L1.4 11" stroke="#586330" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
+              <ChevronRightIcon className="w-3 h-3" />
             </button>
           </div>
         </div>

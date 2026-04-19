@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useT } from "@/lib/i18n/context";
+import { ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, CheckIcon } from "@/components/icons";
 import { formatTs } from "@/lib/timestamp";
 
 const panelClassName =
@@ -151,21 +152,19 @@ export default function EventsClient() {
     <div className="space-y-5">
       {/* Filters */}
       <div className={panelClassName}>
-        <div className="flex flex-wrap items-center gap-3 px-4 py-3">
+        <div className="flex flex-col items-stretch gap-3 px-4 py-3 md:flex-row md:flex-wrap md:items-center">
           <div ref={eventMenuRef} className="relative">
             <button
               type="button"
               onClick={() => { setIsEventMenuOpen((prev) => !prev); setIsTargetTypeMenuOpen(false); }}
-              className={`${filterControlClassName} inline-flex min-w-[140px] items-center justify-between gap-3`}
+              className={`${filterControlClassName} inline-flex w-full min-w-0 items-center justify-between gap-3 md:min-w-[140px]`}
               style={{ fontFamily: "var(--font-vietnam)" }}
               aria-haspopup="menu"
               aria-expanded={isEventMenuOpen}
             >
               <span className="truncate">{currentEventLabel}</span>
               <span className={`inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#f3e6d0] text-[#a23f00] transition-transform ${isEventMenuOpen ? "rotate-180" : ""}`}>
-                <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
-                  <path d="M2.5 4L6 7.5L9.5 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
+                <ChevronDownIcon className="w-3 h-3" />
               </span>
             </button>
             {isEventMenuOpen && (
@@ -184,9 +183,7 @@ export default function EventsClient() {
                     >
                       <span className="truncate">{t(option.label)}</span>
                       <span className={`ml-3 inline-flex h-4 w-4 items-center justify-center ${selected ? "text-[#a23f00]" : "text-transparent"}`}>
-                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                          <path d="M2.25 6.25L4.75 8.75L9.75 3.25" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
+                        <CheckIcon className="w-3 h-3" />
                       </span>
                     </button>
                   );
@@ -201,30 +198,30 @@ export default function EventsClient() {
             placeholder={t("user_id")}
             value={userIdFilter}
             onChange={(e) => { setUserIdFilter(e.target.value); setOffset(0); }}
-            className={`${filterControlClassName} w-28`}
+            className={`${filterControlClassName} w-full md:w-28`}
             style={{ fontFamily: "var(--font-vietnam)" }}
           />
 
-          <label className="flex items-center gap-1.5 text-xs font-semibold text-[#ae9a7d]">
+          <label className="flex flex-col gap-1.5 text-xs font-semibold text-[#ae9a7d] sm:flex-row sm:items-center">
             {t("col_time_from")}
             <input
               type="datetime-local"
               value={fromFilter}
               onChange={(e) => { setFromFilter(e.target.value); setOffset(0); }}
               max={toFilter || undefined}
-              className={`${filterControlClassName} w-[180px]`}
+              className={`${filterControlClassName} w-full sm:w-[180px]`}
               style={{ fontFamily: "var(--font-vietnam)" }}
               aria-label="From date and time"
             />
           </label>
-          <label className="flex items-center gap-1.5 text-xs font-semibold text-[#ae9a7d]">
+          <label className="flex flex-col gap-1.5 text-xs font-semibold text-[#ae9a7d] sm:flex-row sm:items-center">
             {t("col_time_to")}
             <input
               type="datetime-local"
               value={toFilter}
               onChange={(e) => { setToFilter(e.target.value); setOffset(0); }}
               min={fromFilter || undefined}
-              className={`${filterControlClassName} w-[180px]`}
+              className={`${filterControlClassName} w-full sm:w-[180px]`}
               style={{ fontFamily: "var(--font-vietnam)" }}
               aria-label="To date and time"
             />
@@ -234,16 +231,14 @@ export default function EventsClient() {
             <button
               type="button"
               onClick={() => { setIsTargetTypeMenuOpen((prev) => !prev); setIsEventMenuOpen(false); }}
-              className={`${filterControlClassName} inline-flex min-w-[120px] items-center justify-between gap-3`}
+              className={`${filterControlClassName} inline-flex w-full min-w-0 items-center justify-between gap-3 md:min-w-[120px]`}
               style={{ fontFamily: "var(--font-vietnam)" }}
               aria-haspopup="menu"
               aria-expanded={isTargetTypeMenuOpen}
             >
               <span className="truncate">{currentTargetTypeLabel}</span>
               <span className={`inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#f3e6d0] text-[#a23f00] transition-transform ${isTargetTypeMenuOpen ? "rotate-180" : ""}`}>
-                <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
-                  <path d="M2.5 4L6 7.5L9.5 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
+                <ChevronDownIcon className="w-3 h-3" />
               </span>
             </button>
             {isTargetTypeMenuOpen && (
@@ -262,9 +257,7 @@ export default function EventsClient() {
                     >
                       <span className="truncate">{t(option.label)}</span>
                       <span className={`ml-3 inline-flex h-4 w-4 items-center justify-center ${selected ? "text-[#a23f00]" : "text-transparent"}`}>
-                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                          <path d="M2.25 6.25L4.75 8.75L9.75 3.25" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
+                        <CheckIcon className="w-3 h-3" />
                       </span>
                     </button>
                   );
@@ -279,13 +272,13 @@ export default function EventsClient() {
             placeholder={t("filter_target_id")}
             value={targetIdFilter}
             onChange={(e) => { setTargetIdFilter(e.target.value); setOffset(0); }}
-            className={`${filterControlClassName} w-28`}
+            className={`${filterControlClassName} w-full md:w-28`}
             style={{ fontFamily: "var(--font-vietnam)" }}
           />
 
           <button
             onClick={resetFilters}
-            className="rounded-full border border-[#eadfc8] bg-[#fffdf8] px-4 py-2.5 text-sm text-[#8c745e] shadow-[0_8px_20px_rgba(86,67,55,0.05)] transition-colors hover:bg-[#f7f0e3]"
+            className="rounded-full border border-[#eadfc8] bg-[#fffdf8] px-4 py-2.5 text-sm text-[#8c745e] shadow-[0_8px_20px_rgba(86,67,55,0.05)] transition-colors hover:bg-[#f7f0e3] sm:self-start"
             style={{ fontFamily: "var(--font-vietnam)" }}
           >
             {t("pagination_reset")}
@@ -306,7 +299,55 @@ export default function EventsClient() {
         ) : events.length === 0 ? (
           <div className="p-10 text-center font-body text-black/40">{t("no_events")}</div>
         ) : (
-          <div className="relative overflow-x-auto">
+          <>
+            <div className="grid gap-3 px-4 py-4 md:hidden">
+              {events.map((e, i) => (
+                <article key={e.id} className="rounded-[24px] border border-[#eadfc8] bg-white/90 p-4 shadow-[0_8px_20px_rgba(86,67,55,0.05)]">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-black/35">
+                        {(offset + i + 1).toLocaleString()}
+                      </p>
+                      <p className="mt-1 text-sm font-semibold text-black [font-variant-numeric:tabular-nums]">
+                        {formatTs(e.created_at)}
+                      </p>
+                    </div>
+                    <span className="inline-flex items-center rounded-full border border-black/10 bg-black/5 px-2.5 py-1 text-[11px] font-semibold text-black">
+                      {e.event}
+                    </span>
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
+                    <div className="rounded-2xl bg-[#faf3d0] px-3 py-2">
+                      <p className="text-black/40">{t("col_user")}</p>
+                      <p className="mt-1 font-semibold text-black [font-variant-numeric:tabular-nums]">
+                        {e.user_id ?? "—"}
+                      </p>
+                    </div>
+                    <div className="rounded-2xl bg-[#faf3d0] px-3 py-2">
+                      <p className="text-black/40">{t("col_type")}</p>
+                      <p className="mt-1 font-semibold text-black">
+                        {e.target_type ?? "—"}
+                      </p>
+                    </div>
+                    <div className="rounded-2xl bg-[#faf3d0] px-3 py-2">
+                      <p className="text-black/40">{t("col_target")}</p>
+                      <p className="mt-1 truncate font-semibold text-black">
+                        {e.target_id ?? "—"}
+                      </p>
+                    </div>
+                    <div className="rounded-2xl bg-[#faf3d0] px-3 py-2">
+                      <p className="text-black/40">{t("col_metadata")}</p>
+                      <p className="mt-1 truncate font-semibold text-black/70">
+                        {JSON.stringify(e.metadata).slice(0, 24)}
+                      </p>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+
+            <div className="relative hidden overflow-x-auto md:block">
             <table className="w-full min-w-[980px] table-fixed text-sm font-body">
               <colgroup>
                 <col className="w-[72px]" />
@@ -367,18 +408,19 @@ export default function EventsClient() {
               </div>
             )}
           </div>
+          </>
         )}
       </div>
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2">
+        <div className="flex flex-wrap items-center justify-center gap-2">
           <button
             disabled={offset === 0}
             onClick={() => setOffset(Math.max(0, offset - limit))}
             className="rounded-lg border border-black/10 bg-white px-4 py-2 text-sm font-body text-black shadow-[0_8px_20px_rgba(86,67,55,0.06)] transition-colors hover:bg-black/5 disabled:opacity-40"
           >
-            ← {t("pagination_prev")}
+            <ChevronLeftIcon className="w-3 h-3" /> {t("pagination_prev")}
           </button>
           <span className="px-4 text-[11px] font-semibold uppercase text-black/40">
             {t("pagination_status", { current: String(currentPage), total: String(totalPages) })}
@@ -388,7 +430,7 @@ export default function EventsClient() {
             onClick={() => setOffset(offset + limit)}
             className="rounded-lg border border-black/10 bg-white px-4 py-2 text-sm font-body text-black shadow-[0_8px_20px_rgba(86,67,55,0.06)] transition-colors hover:bg-black/5 disabled:opacity-40"
           >
-            {t("pagination_next")} →
+            {t("pagination_next")} <ChevronRightIcon className="w-3 h-3" />
           </button>
         </div>
       )}

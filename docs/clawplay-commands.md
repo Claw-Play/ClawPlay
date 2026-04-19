@@ -2,6 +2,7 @@
 
 本文档面向 Skill 开发者，介绍如何在 SKILL.md 中使用 `clawplay` 命令调用多模态能力。
 所有命令均无需配置 Provider API Key，`CLAWPLAY_TOKEN` 环境变量配置一次即可。
+如果 Agent 不能直接使用交互式向导，请改用 `clawplay setup --agent` 获取需要转述给用户的步骤。
 
 ---
 

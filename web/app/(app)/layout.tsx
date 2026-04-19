@@ -4,13 +4,27 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useT } from "@/lib/i18n/context";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import {
+  AdminShieldIcon,
+  BookmarkIcon,
+  ChevronRightIcon,
+  DashboardIcon,
+  GridIcon,
+  MenuIcon,
+  NewSparkleIcon,
+  ReviewIcon,
+  ShrimpLogoIcon,
+  SettingsIcon,
+  SubmitIcon,
+  TrendingIcon,
+} from "@/components/icons";
 
 function NavIcon({ name }: { name: string }) {
-  if (name === "grid") return <span className="inline-block w-4 text-center text-base">⊞</span>;
-  if (name === "trending") return <span className="inline-block w-4 text-center text-base">↗</span>;
-  if (name === "new") return <span className="inline-block w-4 text-center text-base">✦</span>;
-  if (name === "bookmark") return <span className="inline-block w-4 text-center text-base">▦</span>;
-  if (name === "settings") return <span className="inline-block w-4 text-center text-base">⚙</span>;
+  if (name === "grid") return <GridIcon className="w-4 h-4 shrink-0" />;
+  if (name === "trending") return <TrendingIcon className="w-4 h-4 shrink-0" />;
+  if (name === "new") return <NewSparkleIcon className="w-4 h-4 shrink-0" />;
+  if (name === "bookmark") return <BookmarkIcon className="w-4 h-4 shrink-0" />;
+  if (name === "settings") return <SettingsIcon className="w-4 h-4 shrink-0" />;
   return null;
 }
 
@@ -22,6 +36,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const tCommon = useT("common");
   const isSkillsRoute = pathname.startsWith("/skills");
   const currentSort = searchParams.get("sort") ?? "";
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [user, setUser] = useState<{
     id?: number;
     name?: string;
@@ -33,6 +48,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const mobileNavRef = useRef<HTMLDivElement>(null);
   const userCache = useRef<{ user: typeof user; loaded: boolean }>({ user: null, loaded: false });
 
   // Fetch user on mount (only once due to cache)
@@ -78,6 +94,32 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     return () => document.removeEventListener("mousedown", handleClick);
   }, [dropdownOpen]);
 
+  useEffect(() => {
+    setMobileNavOpen(false);
+    setDropdownOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!mobileNavOpen) return;
+
+    function handlePointerDown(e: MouseEvent) {
+      if (mobileNavRef.current && !mobileNavRef.current.contains(e.target as Node)) {
+        setMobileNavOpen(false);
+      }
+    }
+
+    function handleEscape(e: KeyboardEvent) {
+      if (e.key === "Escape") setMobileNavOpen(false);
+    }
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [mobileNavOpen]);
+
   const navTop = [
     { label: t("home"), href: "/" },
     { label: t("skill_lib"), href: "/skills" },
@@ -104,17 +146,35 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     : null;
 
   return (
-    <div className="min-h-screen bg-[#fefae0]">
-      <header className="bg-[#fefae0] border-b border-[#e8dfc8] sticky top-0 z-50">
-        <div className="max-w-[1536px] mx-auto px-8 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 group">
-            <span className="text-2xl">🦐</span>
-            <span className="text-xl font-bold font-heading text-[#a23f00] group-hover:text-[#c45000] transition-colors">
-              ClawPlay
-            </span>
-          </Link>
+    <div className="min-h-screen bg-[#fefae0] overflow-x-hidden">
+      {mobileNavOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/25 backdrop-blur-[2px] md:hidden"
+          onClick={() => setMobileNavOpen(false)}
+        />
+      )}
+      <header className="bg-[#fefae0] border-b border-[#e8dfc8] sticky top-0 z-50 shadow-[0px_8px_24px_0px_rgba(86,67,55,0.06)]">
+        <div className="max-w-[1536px] mx-auto px-4 py-3 flex items-center justify-between gap-3 md:px-8 md:py-4">
+          <div className="flex items-center gap-2 min-w-0">
+            <button
+              type="button"
+              onClick={() => setMobileNavOpen((prev) => !prev)}
+              className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#e8dfc8] bg-white text-[#564337] shadow-[0_4px_12px_rgba(86,67,55,0.06)] transition-colors hover:bg-[#faf3d0] md:hidden"
+              aria-label={mobileNavOpen ? "Close navigation menu" : "Open navigation menu"}
+            >
+              <span className="inline-flex h-5 w-5 items-center justify-center" aria-hidden="true">
+                <MenuIcon className="w-5 h-5" />
+              </span>
+            </button>
+            <Link href="/" className="flex items-center gap-2 group min-w-0">
+              <ShrimpLogoIcon className="w-6 h-6 md:w-[26px] md:h-[26px] text-[#a23f00]" />
+              <span className="truncate text-lg md:text-xl font-bold font-heading text-[#a23f00] group-hover:text-[#c45000] transition-colors">
+                ClawPlay
+              </span>
+            </Link>
+          </div>
 
-          <nav className="flex items-center gap-8">
+          <nav className="hidden items-center gap-8 md:flex">
             {navTop.map(({ label, href }) => {
               const active =
                 label === t("skill_lib")
@@ -136,10 +196,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             })}
           </nav>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 md:gap-3">
             {/* Language switcher */}
             <LanguageSwitcher />
-            <div className="h-6 w-px bg-[#e8dfc8]" />
+            <div className="hidden h-6 w-px bg-[#e8dfc8] md:block" />
 
             {/* Loading skeleton */}
             {loading && (
@@ -172,14 +232,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                       className="flex items-center gap-3 px-4 py-2.5 text-sm text-[#564337] hover:bg-[#faf3d0] font-body transition-colors"
                       onClick={() => setDropdownOpen(false)}
                     >
-                      <span className="text-base">⚙</span> {tCommon("dashboard")}
+                      <DashboardIcon className="w-4 h-4" /> {tCommon("dashboard")}
                     </Link>
                     <Link
                       href="/submit"
                       className="flex items-center gap-3 px-4 py-2.5 text-sm text-[#564337] hover:bg-[#faf3d0] font-body transition-colors"
                       onClick={() => setDropdownOpen(false)}
                     >
-                      <span className="text-base">✦</span> {tCommon("submit")}
+                      <SubmitIcon className="w-4 h-4" /> {tCommon("submit")}
                     </Link>
                     {(user && user.role === "admin") && (
                       <Link
@@ -187,7 +247,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                         className="flex items-center gap-3 px-4 py-2.5 text-sm text-[#a23f00] hover:bg-[#faf3d0] font-body transition-colors font-semibold"
                         onClick={() => setDropdownOpen(false)}
                       >
-                        <span className="text-base">🛡</span> {tCommon("admin_panel")}
+                        <AdminShieldIcon className="w-4 h-4" /> {tCommon("admin_panel")}
                       </Link>
                     )}
                     {(user && user.role === "reviewer") && (
@@ -196,7 +256,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                         className="flex items-center gap-3 px-4 py-2.5 text-sm text-[#a23f00] hover:bg-[#faf3d0] font-body transition-colors font-semibold"
                         onClick={() => setDropdownOpen(false)}
                       >
-                        <span className="text-base">📝</span> {tCommon("pending_reviews")}
+                        <ReviewIcon className="w-4 h-4" /> {tCommon("pending_reviews")}
                       </Link>
                     )}
                   </div>
@@ -212,7 +272,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                       }}
                       className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 font-body transition-colors text-left"
                     >
-                      <span className="text-base">⊘</span> {t("logout")}
+                      <SubmitIcon className="w-4 h-4 rotate-180" /> {t("logout")}
                     </button>
                   </div>
                 </div>
@@ -223,9 +283,76 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
       </header>
 
+      <aside
+        ref={mobileNavRef}
+        className={`fixed inset-y-0 left-0 z-50 w-[160px] max-w-[58vw] bg-[#f8f4db] px-2 py-3 shadow-[8px_0px_24px_0px_rgba(86,67,55,0.08)] transition-transform duration-200 md:hidden ${
+          mobileNavOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        <div className="flex items-center gap-1.5 px-1 pb-4 border-b border-[#e8dfc8]">
+            <ShrimpLogoIcon className="w-5 h-5 text-[#a23f00]" />
+          <div>
+            <p className="text-sm font-bold font-heading text-[#a23f00]">{tCommon("dashboard")}</p>
+            <p className="text-xs text-[#7a6a5a] font-body">{t("skill_lib")}</p>
+          </div>
+        </div>
+        <div className="pt-3 space-y-1.5">
+          {navTop.map(({ label, href }) => {
+            const active =
+              label === t("skill_lib")
+                ? pathname.startsWith("/skills")
+                : pathname === href;
+            return (
+              <Link
+                key={label}
+                href={href}
+                className={`flex items-center justify-between rounded-full px-2.5 py-2 text-[12px] font-semibold font-body transition-colors ${
+                  active
+                    ? "bg-gradient-to-r from-[#a23f00] to-[#fa7025] text-white"
+                    : "text-[#586330] hover:bg-[#ede9cf]"
+                }`}
+              >
+                <span>{label}</span>
+                <ChevronRightIcon className="w-3 h-3" />
+              </Link>
+            );
+          })}
+        </div>
+
+        {isSkillsRoute && (
+          <div className="mt-4 border-t border-[#e8dfc8] pt-3.5">
+            <p className="px-1 pb-2.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#897365] font-body">
+              {t("skill_lib")}
+            </p>
+            <div className="space-y-1.5">
+              {sidebarItems.map(({ label, href, active }) => (
+                <Link
+                  key={label}
+                  href={href}
+                  className={`flex items-center justify-between rounded-full px-2.5 py-2 text-[12px] font-medium font-body transition-colors ${
+                    active
+                      ? "bg-[#a23f00] text-white"
+                      : "text-[#586330] hover:bg-[#ede9cf]"
+                  }`}
+                >
+                  <span>{label}</span>
+                  <ChevronRightIcon className="w-3 h-3" />
+                </Link>
+              ))}
+            </div>
+            <Link
+              href="/submit"
+              className="mt-3 block w-full rounded-full bg-[#d8e6a6] px-2.5 py-2 text-center text-[12px] font-bold font-heading text-[#5c6834] transition-colors hover:bg-[#c8d896]"
+            >
+              {t("join_workshop")}
+            </Link>
+          </div>
+        )}
+      </aside>
+
       <div className="flex">
         {isSkillsRoute && (
-          <aside className="w-[256px] shrink-0 sticky top-[73px] h-[calc(100vh-73px)] overflow-y-auto">
+          <aside className="hidden w-[256px] shrink-0 sticky top-[73px] h-[calc(100vh-73px)] overflow-y-auto md:block">
             <div className="bg-[#fefae0] p-4 flex flex-col gap-1">
               <div className="px-3 pb-4 border-b border-[#e8dfc8]">
                 <p className="text-base font-bold text-[#a23f00] font-heading">{t("skill_lib")}</p>

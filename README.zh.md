@@ -67,6 +67,7 @@ clawplay install my-skill
 # 其他
 clawplay whoami
 clawplay setup
+clawplay setup --agent   # 输出给 Agent 转述的配置步骤
 ```
 
 ---

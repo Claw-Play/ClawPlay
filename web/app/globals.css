@@ -48,6 +48,7 @@ body {
   background: var(--background);
   font-family: var(--font-body), system-ui, sans-serif;
   min-height: 100vh;
+  overflow-x: hidden;
 }
 
 /* Warm card shadows */

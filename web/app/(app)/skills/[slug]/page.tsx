@@ -7,6 +7,7 @@ import { getAuthFromCookies } from "@/lib/auth";
 import { getT } from "@/lib/i18n";
 import { QuickInstallCard } from "@/components/QuickInstallCard";
 import { ReviewsSection } from "@/components/ReviewsSection";
+import { CheckIcon, SettingsIcon, AdminShieldIcon, StarIcon } from "@/components/icons";
 
 export async function generateMetadata({ params }: { params: { slug: string } }) {
   const skill = await db.query.skills.findFirst({
@@ -82,11 +83,11 @@ export default async function SkillDetailPage({
               {/* Status badge */}
               <div className="flex items-center gap-2">
                 <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#586330]/10 text-[#586330] text-xs font-semibold rounded-full font-body">
-                  ✅ {tCommon("approved")}
+                  <CheckIcon className="w-3.5 h-3.5" /> {tCommon("approved")}
                 </span>
                 {skill.statsRatingsCount > 0 && (
                   <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#faf3d0] text-[#7a6a5a] text-xs font-medium rounded-full font-body">
-                    ⭐ {(skill.statsStars / skill.statsRatingsCount).toFixed(1)} ({skill.statsRatingsCount})
+                    <StarIcon className="w-3 h-3" /> {(skill.statsStars / skill.statsRatingsCount).toFixed(1)} ({skill.statsRatingsCount})
                   </span>
                 )}
               </div>
@@ -104,12 +105,12 @@ export default async function SkillDetailPage({
                     const reqs = parsedMetadata?.metadata?.clawdbot?.requires ?? parsedMetadata?.requires ?? {};
                     const deps = [
                       ...(reqs.env ?? []).map((e: string) => ({
-                        icon: "⚙️",
+                        icon: SettingsIcon,
                         label: e,
                         type: "env",
                       })),
                       ...(reqs.bins ?? []).map((b: string) => ({
-                        icon: "🔧",
+                        icon: AdminShieldIcon,
                         label: b,
                         type: "bin",
                       })),
@@ -117,8 +118,8 @@ export default async function SkillDetailPage({
                     if (!deps.length) return null;
                     return deps.map((dep, i) => (
                       <div key={i} className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-[12px] bg-[#faf3d0] flex items-center justify-center text-sm flex-shrink-0">
-                          {dep.icon}
+                        <div className="w-8 h-8 rounded-[12px] bg-[#faf3d0] flex items-center justify-center flex-shrink-0">
+                          <dep.icon className="w-4 h-4 text-[#a23f00]" />
                         </div>
                         <div>
                           <p className="text-sm font-semibold text-[#564337] font-heading">{dep.label}</p>

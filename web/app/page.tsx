@@ -8,6 +8,7 @@ import { FeaturedGrid } from "@/components/FeaturedGrid";
 import { StatsSection } from "./components/StatsSection";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { HomeClient } from "./HomeClient";
+import { AdminShieldIcon, BoltIcon, GiftIcon, GlobeIcon, ImageIcon, RobotIcon, ShrimpLogoIcon } from "@/components/icons";
 
 export const dynamic = "force-dynamic";
 
@@ -53,14 +54,14 @@ export default async function HomePage() {
     <div className="min-h-screen">
       {/* Nav */}
       <nav className="sticky top-0 z-50 bg-[#fefae0]/90 backdrop-blur-md border-b border-[#e8dfc8]">
-        <div className="max-w-6xl mx-auto px-6 md:px-8 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 group">
-            <span className="text-2xl">🦐</span>
-            <span className="text-xl font-bold font-heading text-[#564337] group-hover:text-[#a23f00] transition-colors">
+        <div className="max-w-6xl mx-auto px-4 py-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between md:px-8 md:py-4">
+          <Link href="/" className="flex items-center gap-2 group min-w-0">
+            <ShrimpLogoIcon className="w-6 h-6 text-[#a23f00]" />
+            <span className="truncate text-lg sm:text-xl font-bold font-heading text-[#564337] group-hover:text-[#a23f00] transition-colors">
               ClawPlay
             </span>
           </Link>
-          <div className="flex items-center gap-4 md:gap-6">
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4 md:gap-6">
             <Link
               href="/skills"
               className="text-sm font-medium text-[#7a6a5a] hover:text-[#a23f00] transition-colors font-body"
@@ -91,7 +92,7 @@ export default async function HomePage() {
       </nav>
 
       {/* Hero — compact single slogan */}
-      <section className="relative py-12 md:py-16 px-6 overflow-hidden" style={{ background: "#fefae0" }}>
+      <section className="relative py-12 md:py-16 px-4 sm:px-6 overflow-hidden" style={{ background: "#fefae0" }}>
         {/* Subtle grain texture */}
         <div className="absolute inset-0 opacity-[0.035] pointer-events-none"
           style={{
@@ -121,25 +122,25 @@ export default async function HomePage() {
       )}
 
       {/* Features */}
-      <section className="py-16 md:py-20 px-6" style={{ background: "#fefae0" }}>
+      <section className="py-16 md:py-20 px-4 sm:px-6" style={{ background: "#fefae0" }}>
         <div className="max-w-6xl mx-auto">
           <h2 className="text-2xl md:text-3xl font-bold font-heading text-[#564337] mb-8 text-center">
             {t("features_title")}
           </h2>
           <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-5">
             {[
-              { icon: "🖼️", title: t("feature_1_title"), desc: t("feature_1_desc") },
-              { icon: "🛡️", title: t("feature_2_title"), desc: t("feature_2_desc") },
-              { icon: "🎁", title: t("feature_3_title"), desc: t("feature_3_desc") },
-              { icon: "🤖", title: t("feature_4_title"), desc: t("feature_4_desc") },
-              { icon: "⚡", title: t("feature_5_title"), desc: t("feature_5_desc") },
-              { icon: "🌍", title: t("feature_6_title"), desc: t("feature_6_desc") },
+              { icon: ImageIcon, title: t("feature_1_title"), desc: t("feature_1_desc") },
+              { icon: AdminShieldIcon, title: t("feature_2_title"), desc: t("feature_2_desc") },
+              { icon: GiftIcon, title: t("feature_3_title"), desc: t("feature_3_desc") },
+              { icon: RobotIcon, title: t("feature_4_title"), desc: t("feature_4_desc") },
+              { icon: BoltIcon, title: t("feature_5_title"), desc: t("feature_5_desc") },
+              { icon: GlobeIcon, title: t("feature_6_title"), desc: t("feature_6_desc") },
             ].map((f) => (
               <div
                 key={f.title}
                 className="bg-[#fffdf7] rounded-2xl p-5 md:p-6 border border-[#e8dfc8] space-y-2"
               >
-                <div className="text-2xl">{f.icon}</div>
+                <f.icon className="w-6 h-6 text-[#a23f00]" />
                 <h3 className="font-semibold font-heading text-[#564337] text-base">{f.title}</h3>
                 <p className="text-sm text-[#7a6a5a] leading-relaxed font-body">{f.desc}</p>
               </div>
@@ -149,7 +150,7 @@ export default async function HomePage() {
       </section>
 
       {/* CTA */}
-      <section className="py-12 px-6" style={{ background: "#fefae0" }}>
+      <section className="py-12 px-4 sm:px-6" style={{ background: "#fefae0" }}>
         <div className="max-w-3xl mx-auto text-center space-y-4">
           <h2 className="text-2xl md:text-3xl font-bold font-heading text-[#564337]">
             {t("cta_ready")}
@@ -167,13 +168,13 @@ export default async function HomePage() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-[#e8dfc8] py-12 px-6" style={{ background: "#fefae0" }}>
+      <footer className="border-t border-[#e8dfc8] py-12 px-4 sm:px-6" style={{ background: "#fefae0" }}>
         <div className="max-w-6xl mx-auto">
           <div className="grid sm:grid-cols-2 md:grid-cols-5 gap-4 md:gap-6 mb-10">
             {/* Brand — left column */}
             <div className="md:col-span-2 space-y-3">
               <div className="flex items-center gap-2">
-                <span className="text-xl">🦐</span>
+                <ShrimpLogoIcon className="w-5 h-5 text-[#a23f00]" />
                 <span className="text-base font-bold font-heading text-[#564337]">ClawPlay</span>
               </div>
               <p className="text-sm text-[#7a6a5a] font-body leading-relaxed max-w-md">

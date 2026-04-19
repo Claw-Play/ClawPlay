@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useT } from "@/lib/i18n/context";
+import { CloseIcon } from "@/components/icons";
 
 const MAX_AVATAR_SIZE = 500 * 1024; // 500KB
 
@@ -153,7 +154,7 @@ export function ProfileEditModal({
             className="w-8 h-8 rounded-full bg-[#f0e8d0] flex items-center justify-center text-[#564337] hover:bg-[#e8dfc8] transition-colors"
             aria-label={t("close")}
           >
-            ✕
+            <CloseIcon className="w-4 h-4" />
           </button>
         </div>
 

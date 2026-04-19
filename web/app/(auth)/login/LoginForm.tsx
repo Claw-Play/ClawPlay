@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useT } from "@/lib/i18n/context";
 import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
+import { ShrimpLogoIcon } from "@/components/icons";
 
 type Tab = "account" | "more";
 
@@ -45,14 +46,14 @@ export function LoginForm() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="w-full max-w-md space-y-6">
       {/* Mobile logo */}
       <div className="md:hidden flex items-center gap-2 justify-center mb-2">
-        <span className="text-3xl">🦐</span>
+        <ShrimpLogoIcon className="w-7 h-7 text-[#a23f00]" />
         <span className="text-2xl font-bold font-heading text-[#564337]">ClawPlay</span>
       </div>
 
-      <div className="bg-[#fffdf7] card-radius p-8 md:p-10 border border-[#e8dfc8] card-shadow space-y-6 w-full max-w-sm md:w-96 md:max-w-none">
+      <div className="bg-[#fffdf7] card-radius p-6 md:p-10 border border-[#e8dfc8] card-shadow space-y-6 w-full md:w-96 md:max-w-none">
         <div className="text-center space-y-1">
           <h1 className="text-2xl md:text-3xl font-bold font-heading text-[#564337]">{t("login")}</h1>
           <p className="text-[#7a6a5a] text-sm font-body">{t("login_subtitle")}</p>
@@ -122,7 +123,7 @@ export function LoginForm() {
               {t("other_login_methods")}
             </p>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               {/* Google */}
               <a
                 href="/api/auth/google?redirect=/dashboard"

@@ -7,7 +7,7 @@ export default async function NotFound() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#fefae0] via-[#faf3d0] to-[#f5ecb8] flex items-center justify-center px-4">
       <div className="text-center space-y-6 max-w-md">
-        <div className="text-8xl">🦐</div>
+        <ShrimpLogoIcon className="w-20 h-20 text-[#a23f00] mx-auto" />
         <h1 className="text-4xl font-bold font-heading text-[#564337]">{t("code")}</h1>
         <h2 className="text-xl font-semibold font-heading text-[#564337]">{t("title")}</h2>
         <p className="text-[#7a6a5a] font-body">
@@ -31,3 +31,4 @@ export default async function NotFound() {
     </div>
   );
 }
+import { ShrimpLogoIcon } from "@/components/icons";

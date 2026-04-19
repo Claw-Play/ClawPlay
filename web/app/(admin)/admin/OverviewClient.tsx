@@ -3,6 +3,14 @@ import { useState, useEffect, useRef } from "react";
 import { useT } from "@/lib/i18n/context";
 import PieChart from "@/components/charts/PieChart";
 import EventTrendCard from "./EventTrendCard";
+import {
+  ArrowRightIcon,
+  BoltIcon,
+  ChevronDownIcon,
+  DashboardIcon,
+  TargetIcon,
+  UsersIcon,
+} from "@/components/icons";
 
 type Period = "7d" | "30d" | "3m" | "1y";
 
@@ -94,17 +102,17 @@ export default function OverviewClient() {
   if (loading && !data) {
     return (
       <div className="space-y-6">
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="bg-white rounded-[32px] p-6 shadow-[0_8px_24px_rgba(86,67,55,0.06)] animate-pulse">
+            <div key={i} className="bg-white rounded-[24px] md:rounded-[32px] p-5 md:p-6 shadow-[0_8px_24px_rgba(86,67,55,0.06)] animate-pulse">
               <div className="h-4 bg-[#e8dfc8] rounded w-1/2 mb-3" />
               <div className="h-8 bg-[#e8dfc8] rounded w-2/3" />
             </div>
           ))}
         </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="bg-white rounded-[32px] p-6 shadow-[0_8px_24px_rgba(86,67,55,0.06)] h-48 animate-pulse" />
-          <div className="bg-white rounded-[32px] p-6 shadow-[0_8px_24px_rgba(86,67,55,0.06)] h-48 animate-pulse" />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="bg-white rounded-[24px] md:rounded-[32px] p-5 md:p-6 shadow-[0_8px_24px_rgba(86,67,55,0.06)] h-48 animate-pulse" />
+          <div className="bg-white rounded-[24px] md:rounded-[32px] p-5 md:p-6 shadow-[0_8px_24px_rgba(86,67,55,0.06)] h-48 animate-pulse" />
         </div>
       </div>
     );
@@ -121,10 +129,10 @@ export default function OverviewClient() {
   const { totals, trend, errors } = data;
 
   const statCards = [
-    { label: t("active_users"), value: totals.activeUsers, icon: "👥" },
-    { label: t("total_events"), value: totals.totalEvents.toLocaleString(), icon: "📊" },
-    { label: t("quota_used"), value: totals.totalQuotaUsed.toLocaleString(), icon: "⚡" },
-    { label: t("total_skills"), value: totals.totalSkills, icon: "🎯" },
+    { label: t("active_users"), value: totals.activeUsers, icon: UsersIcon },
+    { label: t("total_events"), value: totals.totalEvents.toLocaleString(), icon: DashboardIcon },
+    { label: t("quota_used"), value: totals.totalQuotaUsed.toLocaleString(), icon: BoltIcon },
+    { label: t("total_skills"), value: totals.totalSkills, icon: TargetIcon },
   ];
 
   const abilityData = trend.abilityBreakdown.map((a) => ({
@@ -142,22 +150,20 @@ export default function OverviewClient() {
   return (
     <div className="space-y-6">
       {/* Period selector */}
-      <div className="flex justify-end">
+      <div className="flex justify-start sm:justify-end">
         <div ref={menuRef} className="relative">
           <button
             type="button"
             onClick={() => setIsMenuOpen((prev) => !prev)}
-            className={`${filterControlClassName} inline-flex min-w-[120px] items-center justify-between gap-3`}
+            className={`${filterControlClassName} inline-flex w-full min-w-0 items-center justify-between gap-3 sm:min-w-[120px]`}
             style={{ fontFamily: "var(--font-vietnam)" }}
             aria-haspopup="menu"
             aria-expanded={isMenuOpen}
           >
             <span>{t(currentOption.labelKey)}</span>
-            <span className={`inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#f3e6d0] text-[#a23f00] transition-transform ${isMenuOpen ? "rotate-180" : ""}`}>
-              <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
-                <path d="M2.5 4L6 7.5L9.5 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </span>
+              <span className={`inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#f3e6d0] text-[#a23f00] transition-transform ${isMenuOpen ? "rotate-180" : ""}`}>
+                <ChevronDownIcon className="w-3 h-3" />
+              </span>
           </button>
           {isMenuOpen && (
             <div className={menuClassName}>
@@ -175,9 +181,7 @@ export default function OverviewClient() {
                   >
                     <span className="truncate">{t(option.labelKey)}</span>
                     <span className={`ml-3 inline-flex h-4 w-4 items-center justify-center ${selected ? "text-[#a23f00]" : "text-transparent"}`}>
-                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                        <path d="M2.25 6.25L4.75 8.75L9.75 3.25" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
+                      <ArrowRightIcon className="w-3 h-3" />
                     </span>
                   </button>
                 );
@@ -188,17 +192,17 @@ export default function OverviewClient() {
       </div>
 
       {/* Stat cards */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         {statCards.map((card) => (
           <div
             key={card.label}
-            className="bg-white rounded-[32px] p-6 shadow-[0_8px_24px_rgba(86,67,55,0.06)]"
+            className="bg-white rounded-[24px] md:rounded-[32px] p-5 md:p-6 shadow-[0_8px_24px_rgba(86,67,55,0.06)]"
           >
             <div className="flex items-center gap-2 mb-3">
-              <span className="text-lg">{card.icon}</span>
+              <card.icon className="w-4 h-4 text-[#a23f00]" />
               <span className="text-xs text-[#a89070] font-body">{card.label}</span>
             </div>
-            <p className="text-3xl font-bold text-[#564337] font-heading">
+            <p className="text-2xl md:text-3xl font-bold text-[#564337] font-heading">
               {typeof card.value === "number" ? card.value.toLocaleString() : card.value}
             </p>
           </div>
@@ -206,9 +210,9 @@ export default function OverviewClient() {
       </div>
 
       {/* Charts row */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
         {/* Top skills */}
-        <div className="bg-white rounded-[32px] p-6 shadow-[0_8px_24px_rgba(86,67,55,0.06)]">
+        <div className="bg-white rounded-[24px] md:rounded-[32px] p-5 md:p-6 shadow-[0_8px_24px_rgba(86,67,55,0.06)]">
           <h3 className="text-sm font-semibold text-[#a23f00] font-heading mb-4">{t("top_skills")}</h3>
           {trend.topSkills.length === 0 ? (
             <p className="text-sm text-[#a89070] font-body">{t("no_data")}</p>
@@ -235,9 +239,9 @@ export default function OverviewClient() {
       </div>
 
       {/* Bottom row */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Ability breakdown */}
-        <div className="bg-white rounded-[32px] p-6 shadow-[0_8px_24px_rgba(86,67,55,0.06)]">
+        <div className="bg-white rounded-[24px] md:rounded-[32px] p-5 md:p-6 shadow-[0_8px_24px_rgba(86,67,55,0.06)]">
           <h3 className="text-sm font-semibold text-[#a23f00] font-heading mb-4">{t("ability_breakdown")}</h3>
           <div className="flex items-center justify-center">
             <PieChart data={abilityData} size={120} totalLabel={t("total_count")} />
@@ -245,7 +249,7 @@ export default function OverviewClient() {
         </div>
 
         {/* Provider breakdown */}
-        <div className="bg-white rounded-[32px] p-6 shadow-[0_8px_24px_rgba(86,67,55,0.06)]">
+        <div className="bg-white rounded-[24px] md:rounded-[32px] p-5 md:p-6 shadow-[0_8px_24px_rgba(86,67,55,0.06)]">
           <h3 className="text-sm font-semibold text-[#a23f00] font-heading mb-4">{t("provider_breakdown")}</h3>
           <div className="flex items-center justify-center">
             <PieChart data={providerData} size={120} totalLabel={t("total_count")} />
@@ -253,7 +257,7 @@ export default function OverviewClient() {
         </div>
 
         {/* Error tracking */}
-        <div className="bg-white rounded-[32px] p-6 shadow-[0_8px_24px_rgba(86,67,55,0.06)]">
+        <div className="bg-white rounded-[24px] md:rounded-[32px] p-5 md:p-6 shadow-[0_8px_24px_rgba(86,67,55,0.06)]">
           <h3 className="text-sm font-semibold text-[#a23f00] font-heading mb-4">{t("error_tracking")}</h3>
           <p className="text-3xl font-bold text-[#564337] font-heading mb-4">{errors.total}</p>
           {errors.byProvider.length === 0 ? (
