@@ -39,7 +39,7 @@ export const ALL_PROVIDER_ABILITIES: Array<{ provider: string; ability: string; 
  * Get the default model name for a provider + ability from env vars.
  * Only LLM has a single env var; image/vision use hard-coded defaults.
  */
-export function getModelName(provider: string, ability: string): string {
+export function getModelName(provider: string, _ability: string): string {
   return MODEL_ENV_MAP[provider] ?? "unknown";
 }
 
