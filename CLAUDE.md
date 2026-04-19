@@ -58,9 +58,24 @@ make test   # web unit tests + CLI bash tests 顺序执行
 
 `dev` 是开发分支，`main` 是生产分支。所有改动从 `dev` 起，PR 合并到 `main`（Squash merge）。
 
-不要做的事：
+### 基础规范
+
 - 不要直接 push 到 main
 - 不要在 main 上开发
 - 不要选 "Create a merge commit"
 - 不要用 `git stash`（用 `git diff` 或 Checkpoint skill 替代）
 - 不要用 `git reset --hard`、`git push --force`、`git clean -f`
+
+### 避免冲突
+
+`dev` 落后 `main` 越久，冲突越多。核心原则：保持 dev 始终与 main 同步。
+
+| 场景 | 操作 |
+|------|------|
+| 每次开发前 | `git checkout dev && git pull origin dev` |
+| main 有 PR 合并时 | `git fetch origin && git rebase origin/main` |
+| dev 已 push 过 | `git rebase origin/main && git push --force-with-lease origin dev` |
+| 提 PR 前 | rebase 到最新 main，确认无冲突 |
+| 大改动、耗时长 | 开独立 feature 分支，完成后合并到 dev |
+
+高冲突文件（多人修改时优先关注）：`messages/*.json`、`admin/` UI 组件、`key-pool.ts`、`timestamp.ts`

@@ -37,7 +37,7 @@ function SearchIcon() {
   );
 }
 
-export function SkillsClient({ initialSkills, initialSort = "" }: SkillsClientProps) {
+export function SkillsClient({ initialSkills, initialSort: _initialSort }: SkillsClientProps) {
   const t = useT("skills");
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState("");

@@ -183,7 +183,7 @@ export default function UsersClient() {
   const totalPages = Math.ceil(total / limit);
   const currentPage = Math.floor(offset / limit) + 1;
   const hasUsers = users.length > 0;
-  const fillerRowCount = hasUsers ? Math.max(limit - users.length, 0) : Math.max(limit - 1, 0);
+  const _fillerRowCount = hasUsers ? Math.max(limit - users.length, 0) : Math.max(limit - 1, 0);
 
   const getDisplayRole = (u: UserRecord): RoleValue =>
     pendingRole[u.userId] ?? u.role;
@@ -515,7 +515,7 @@ export default function UsersClient() {
                 </tr>
               </thead>
               <tbody>
-                {users.map((u, i) => {
+                {users.map((u, _i) => {
                   const displayRole = getDisplayRole(u);
                   return (
                     <tr key={u.userId} className="border-b border-[#efe4cf] transition-colors hover:bg-[linear-gradient(90deg,rgba(248,241,226,0.75),rgba(255,252,246,0.15))]">
