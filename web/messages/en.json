@@ -483,6 +483,8 @@
     "diagram_preview_label": "Diagram Preview"
   },
   "admin_audit": {
+    "title": "Audit Logs",
+    "subtitle": "View all administrative actions",
     "action": "Action",
     "actor": "Actor",
     "target": "Target",
@@ -514,6 +516,8 @@
     "system": "SYSTEM",
     "details": "Details →",
     "showing_range": "Showing {startItem} to {endItem} of {total} logs",
+    "metadata_insight": "Metadata Insight",
+    "click_row_hint": "Click any row above to view detailed JSON payload",
     "no_results": "No entries found"
   },
   "admin": {
@@ -588,7 +592,8 @@
     "col_type": "Type",
     "col_target": "Target",
     "col_metadata": "Metadata",
-    "user_id": "User ID"
+    "user_id": "User ID",
+    "role_update_err": "Failed to update role"
   },
   "admin_settings": {
     "title": "Provider Configuration",

@@ -483,6 +483,8 @@
     "diagram_preview_label": "流程图预览"
   },
   "admin_audit": {
+    "title": "审核详情",
+    "subtitle": "查看所有管理操作",
     "action": "操作",
     "actor": "操作人",
     "target": "目标",
@@ -514,6 +516,8 @@
     "system": "系统",
     "details": "详情 →",
     "showing_range": "显示第 {startItem} 至 {endItem} 条，共 {total} 条",
+    "metadata_insight": "元数据洞察",
+    "click_row_hint": "点击任意行查看详细 JSON 数据",
     "no_results": "暂无记录"
   },
   "admin": {
@@ -588,7 +592,8 @@
     "col_type": "类型",
     "col_target": "对象",
     "col_metadata": "元数据",
-    "user_id": "用户 ID"
+    "user_id": "用户 ID",
+    "role_update_err": "更新角色失败"
   },
   "admin_settings": {
     "title": "供应商配置",
