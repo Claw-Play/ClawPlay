@@ -58,49 +58,36 @@ make test   # web unit tests + CLI bash tests 顺序执行
 
 ### 分支结构
 
-主仓（`Claw-Play/ClawPlay`）只有一条稳定分支：
-- `main` — 始终可发布，所有 PR 的目标
-
-开发在个人 fork 中进行，团队内部用 `dev` 分支（仅存在于各人 fork）。
-
 ```
-Claw-Play/ClawPlay
-  └── main ← PR 目标，唯一受保护分支
+Claw-Play/ClawPlay     ← 主仓（只有 main）
+  └── main
 
-你的 fork (your-name/ClawPlay)
-  └── main   (sync from upstream)
-  └── dev    ← 团队内部开发分支
-  └── feature/xxx
+your-fork/ClawPlay    ← 你的 fork
+  ├── main             ← 与 upstream 同步
+  └── dev              ← 开发分支
 ```
 
-### 协作流程
+### 开发流程
 
-**团队成员：**
-1. Clone 你的 fork 到本地
-2. `git remote add upstream https://github.com/Claw-Play/ClawPlay.git`
-3. 在 `dev` 上开发，完成后 PR → `upstream main`
-4. `main` 合入后：`git checkout main && git pull upstream main`
+1. `git checkout dev && git pull` — 开始前同步
+2. 开发、commit
+3. `git push origin dev` — 推到你的 fork
+4. GitHub 上 PR：`dev` → `upstream main`
 
-**外部贡献者：**
-1. Fork 仓库
-2. 开 `feature/xxx` 分支开发
-3. PR → `upstream main`
+### 常用命令
 
-### 基础规范
+```bash
+# 同步 upstream 到你的 main
+git fetch upstream && git rebase upstream/main
 
-- 不要直接 push 到 upstream/main（需要 PR）
+# 同步 upstream 到你的 dev
+git fetch upstream && git rebase upstream/main  # 先同步 main
+git checkout dev && git merge main              # 再合到 dev
+```
+
+### 规范
+
+- 不要直接 push 到 upstream
 - 不要在 main 上开发
 - 不要选 "Create a merge commit"
-- 不要用 `git stash`（用 `git diff` 或 Checkpoint skill 替代）
 - 不要用 `git reset --hard`、`git push --force`、`git clean -f`
-
-### 保持同步
-
-| 场景 | 操作 |
-|------|------|
-| 每次开发前 | `git checkout dev && git pull origin dev` |
-| main 合入后同步 fork | `git fetch upstream && git rebase upstream/main` |
-| 提 PR 前 | rebase 到最新 upstream/main，确认无冲突 |
-| 大改动、耗时长 | 开独立 feature 分支，完成后合并到 dev |
-
-高冲突文件（多人修改时优先关注）：`messages/*.json`、`admin/` UI 组件、`key-pool.ts`、`timestamp.ts`
