@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthFromCookies } from "@/lib/auth";
-import { decryptToken, type TokenPayload } from "@/lib/token";
+import { authenticateClawplayToken } from "@/lib/token-auth";
 import { db } from "@/lib/db";
 import { users, userIdentities, userTokens } from "@/lib/db/schema";
 import { eq, and, isNull } from "drizzle-orm";
@@ -14,14 +14,9 @@ export async function GET(request: NextRequest) {
 
   // Fallback: try Bearer token (CLAWPLAY_TOKEN = AES-256-GCM encrypted)
   if (!auth) {
-    const bearer = request.headers.get("Authorization")?.replace("Bearer ", "");
-    if (bearer) {
-      try {
-        const payload = decryptToken<TokenPayload>(bearer);
-        auth = { userId: payload.userId, role: "user" };
-      } catch {
-        // Token invalid — fall through to unauthorized
-      }
+    const tokenAuth = await authenticateClawplayToken(request);
+    if (tokenAuth) {
+      auth = { userId: tokenAuth.userId, role: tokenAuth.userRole };
     }
   }
 

@@ -27,6 +27,7 @@ vi.mock("@/lib/redis", () => ({
   checkQuota: checkQuotaMock,
   incrementQuota: incrementQuotaMock,
   getQuota: getQuotaMock,
+  ensureQuota: vi.fn().mockResolvedValue(undefined),
   initQuota: vi.fn(),
   getRedis: vi.fn().mockReturnValue(null),
 }));

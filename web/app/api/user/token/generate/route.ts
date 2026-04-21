@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { users, userTokens } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { encryptToken, hashToken, type TokenPayload } from "@/lib/token";
-import { initQuota } from "@/lib/redis";
+import { ensureQuota } from "@/lib/redis";
 import { analytics } from "@/lib/analytics";
 import { getT } from "@/lib/i18n";
 // Simple uuid-like generator (no external dep needed)
@@ -47,8 +47,8 @@ export async function POST() {
     encryptedPayload: encrypted,
   });
 
-  // Initialize Redis quota — fire-and-forget, never blocks token generation
-  initQuota(user.id, user.quotaFree).catch(() => {});
+  // Ensure Redis quota exists without overwriting any existing usage.
+  ensureQuota(user.id, user.quotaFree).catch(() => {});
   analytics.token.generate(user.id);
 
   return NextResponse.json({

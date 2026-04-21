@@ -1,4 +1,4 @@
-import { db, raw } from "@/lib/db";
+import { db } from "@/lib/db";
 import { userIdentities, users, userTokens } from "@/lib/db/schema";
 import { eq, and, isNull } from "drizzle-orm";
 import { getAuthFromCookies } from "@/lib/auth";
@@ -23,21 +23,10 @@ async function getDashboardData(userId: number) {
   const phone = identities.find((i) => i.provider === "phone")?.providerAccountId ?? null;
   const wechat = identities.find((i) => i.provider === "wechat")?.providerAccountId ?? null;
 
-  // Get quota from Redis; fall back to event_logs total if Redis has no entry
-  // or if Redis shows zero (user may have used tokens before Redis was initialized)
+  // Get quota from Redis only. event_logs remains audit-only and no longer
+  // participates in real-time quota display.
   const quotaFromRedis = await getQuota(userId);
-  let quota;
-  if (!quotaFromRedis || quotaFromRedis.used === 0) {
-    const rows = raw(
-      `SELECT COALESCE(SUM(CAST(json_extract(metadata, '$.totalTokens') AS INTEGER)), 0) as total
-       FROM event_logs WHERE user_id = ? AND event = 'quota.use'`,
-      [userId]
-    ) as { total: number }[];
-    const totalUsed = Number(rows[0]?.total ?? 0);
-    quota = { used: totalUsed, limit: DEFAULT_QUOTA_FREE, remaining: Math.max(0, DEFAULT_QUOTA_FREE - totalUsed) };
-  } else {
-    quota = quotaFromRedis;
-  }
+  const quota = quotaFromRedis ?? { used: 0, limit: DEFAULT_QUOTA_FREE, remaining: DEFAULT_QUOTA_FREE };
 
   const tokenRows = await db
     .select({ id: userTokens.id, createdAt: userTokens.createdAt, encryptedPayload: userTokens.encryptedPayload })

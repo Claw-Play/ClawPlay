@@ -103,7 +103,7 @@ export default function EventsClient() {
       })
       .catch(() => setError(t("events_load_err")))
       .finally(() => setLoading(false));
-  }, [eventFilter, userIdFilter, targetTypeFilter, targetIdFilter, fromFilter, toFilter, offset]);
+  }, [eventFilter, userIdFilter, targetTypeFilter, targetIdFilter, fromFilter, toFilter, offset, t]);
 
   useEffect(() => { fetchEvents(); }, [fetchEvents]);
 

@@ -5,7 +5,7 @@ import { eq, and } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { signJWT, buildSetCookieHeader } from "@/lib/auth";
 import { analytics } from "@/lib/analytics";
-import { DEFAULT_QUOTA_FREE } from "@/lib/redis";
+import { DEFAULT_QUOTA_FREE, ensureQuota } from "@/lib/redis";
 import { getT } from "@/lib/i18n";
 
 const AVATAR_COLORS = [
@@ -80,6 +80,8 @@ export async function POST(request: NextRequest) {
       providerAccountId: email.toLowerCase(),
       credential,
     });
+
+    ensureQuota(user.id, DEFAULT_QUOTA_FREE).catch(() => {});
 
     const token = await signJWT({ userId: user.id, role: user.role as "user" | "admin" });
     analytics.user.register(user.id, "email");

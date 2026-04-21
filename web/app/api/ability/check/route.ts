@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { decryptToken, type TokenPayload } from "@/lib/token";
+import { authenticateClawplayToken } from "@/lib/token-auth";
 import { getQuota, DEFAULT_QUOTA_FREE } from "@/lib/redis";
 import { analytics } from "@/lib/analytics";
 import { getT } from "@/lib/i18n";
@@ -7,27 +7,17 @@ import { getT } from "@/lib/i18n";
 /** Check quota status for the authenticated user */
 export async function GET(request: NextRequest) {
   const t = await getT("errors");
-
-  const token = request.headers.get("Authorization")?.replace("Bearer ", "") ??
-                request.cookies.get("clawplay_token")?.value;
-
-  if (!token) {
-    return NextResponse.json({ error: t("authorization_required") }, { status: 401 });
-  }
-
-  let payload: TokenPayload;
-  try {
-    payload = decryptToken(token);
-  } catch {
+  const auth = await authenticateClawplayToken(request);
+  if (!auth) {
     return NextResponse.json({ error: t("invalid_auth_token") }, { status: 401 });
   }
 
   try {
-    const quota = await getQuota(payload.userId);
+    const quota = await getQuota(auth.userId);
     if (quota) {
-      analytics.quota.check(payload.userId, quota.used, quota.limit);
+      analytics.quota.check(auth.userId, quota.used, quota.limit);
       return NextResponse.json({
-        userId: payload.userId,
+        userId: auth.userId,
         used: quota.used,
         limit: quota.limit,
         remaining: quota.remaining,
@@ -40,7 +30,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: t("quota_service_unavailable") }, { status: 503 });
     }
     return NextResponse.json({
-      userId: payload.userId,
+      userId: auth.userId,
       used: 0,
       limit: DEFAULT_QUOTA_FREE,
       remaining: DEFAULT_QUOTA_FREE,
