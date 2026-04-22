@@ -42,6 +42,7 @@ process.env.JWT_SECRET = "test-jwt-secret-32-bytes-long!!!";
 process.env.CLAWPLAY_SECRET_KEY = "a".repeat(64);
 process.env.UPSTASH_REDIS_REST_URL = "https://mock.upstash.io";
 process.env.UPSTASH_REDIS_REST_TOKEN = "mock-token";
+process.env.GITHUB_CLIENT_ID = "mock-github-client-id";
 
 let dbPath: string;
 let db: any;
@@ -50,6 +51,7 @@ let POST_login: (req: any) => Promise<Response>;
 let POST_logout: (req: any) => Promise<Response>;
 let POST_smsSend: (req: any) => Promise<Response>;
 let POST_smsVerify: (req: any) => Promise<Response>;
+let GET_github: (req: any) => Promise<Response>;
 
 beforeAll(async () => {
   dbPath = tempDbPath();
@@ -62,12 +64,14 @@ beforeAll(async () => {
   const registerMod = await import("@/app/api/auth/register/route");
   const loginMod = await import("@/app/api/auth/login/route");
   const logoutMod = await import("@/app/api/auth/logout/route");
+  const githubMod = await import("@/app/api/auth/github/route");
   const smsSendMod = await import("@/app/api/auth/sms/send/route");
   const smsVerifyMod = await import("@/app/api/auth/sms/verify/route");
 
   POST_register = registerMod.POST;
   POST_login = loginMod.POST;
   POST_logout = logoutMod.POST;
+  GET_github = githubMod.GET;
   POST_smsSend = smsSendMod.POST;
   POST_smsVerify = smsVerifyMod.POST;
 });
@@ -205,6 +209,50 @@ describe("POST /api/auth/logout", () => {
     expect(cookie).toContain("Max-Age=0");
     const location = res.headers.get("location") ?? "";
     expect(location).toContain("/login");
+  });
+
+  it("redirects to the external proxy host, not the internal one", async () => {
+    // Simulate nginx proxy: internal Host=localhost:3000, external host=clawplay.shop
+    const req = makeRequest("POST", "/api/auth/logout", {
+      proxyHost: "clawplay.shop",
+      proxyProto: "https",
+    });
+    const res = await POST_logout(req);
+
+    const location = res.headers.get("location") ?? "";
+    // Must NOT redirect to internal proxy host
+    expect(location).not.toContain("localhost");
+    // Must redirect to external host
+    expect(location).toContain("clawplay.shop");
+    expect(location).toContain("/login");
+  });
+});
+
+describe("GET /api/auth/github", () => {
+  // Unset BASE_URL so getPublicOrigin uses forwarded headers (simulates production without BASE_URL set)
+  const origBaseUrl = process.env.BASE_URL;
+  afterEach(() => {
+    if (origBaseUrl !== undefined) {
+      process.env.BASE_URL = origBaseUrl;
+    } else {
+      delete process.env.BASE_URL;
+    }
+  });
+
+  it("constructs redirect_uri with external proxy host", async () => {
+    delete process.env.BASE_URL;
+    const req = makeRequest("GET", "/api/auth/github", {
+      proxyHost: "clawplay.shop",
+      proxyProto: "https",
+    });
+    const res = await GET_github(req);
+
+    expect(res.status).toBe(307);
+    const location = res.headers.get("location") ?? "";
+    expect(location).toContain("github.com/login/oauth/authorize");
+    // redirect_uri must use external host, not localhost
+    expect(location).toContain("redirect_uri=https%3A%2F%2Fclawplay.shop%2Fapi%2Fauth%2Fgithub%2Fcallback");
+    expect(location).not.toContain("localhost");
   });
 });
 

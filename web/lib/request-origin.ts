@@ -25,11 +25,19 @@ export function getPublicOrigin(request: NextRequest): string {
   const host = forwardedHost ?? request.headers.get("host");
   if (host) {
     const forwardedProto = request.headers.get("x-forwarded-proto");
-    const proto =
-      forwardedProto?.split(",")[0].trim() ||
-      (normalizeHost(host).startsWith("localhost") || normalizeHost(host).startsWith("127.0.0.1")
-        ? "http"
-        : "https");
+    const normalizedHost = normalizeHost(host);
+    const isPrivateHost =
+      normalizedHost === "localhost" ||
+      normalizedHost.startsWith("localhost:") ||
+      normalizedHost.startsWith("localhost/") ||
+      /^127\./.test(normalizedHost) ||
+      normalizedHost === "::1" ||
+      normalizedHost.endsWith(".local");
+    const forwardedProtoValue = forwardedProto?.split(",")[0].trim().toLowerCase();
+    // Only trust forwarded proto for localhost/private hosts; default to https for public hosts
+    const proto = isPrivateHost
+      ? (forwardedProtoValue ?? "http")
+      : "https";
     return `${proto}://${normalizeHost(host)}`;
   }
 

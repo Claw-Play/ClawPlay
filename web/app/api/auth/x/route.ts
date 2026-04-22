@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
     // Store code_verifier in a short-lived cookie (5 min)
     response.cookies.set("x_code_verifier", codeVerifier, {
       httpOnly: true,
-      secure: true,
+      secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       maxAge: 300,
       path: "/",

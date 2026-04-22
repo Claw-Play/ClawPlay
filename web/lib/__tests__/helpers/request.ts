@@ -4,6 +4,10 @@ interface RequestOpts {
   body?: unknown;
   cookie?: string;
   headers?: Record<string, string>;
+  /** Simulate nginx reverse proxy: Host=internal, X-Forwarded-Host=external */
+  proxyHost?: string;
+  /** Explicit X-Forwarded-Proto override (e.g. "https" behind HTTPS proxy) */
+  proxyProto?: string;
 }
 
 export function makeRequest(
@@ -16,8 +20,8 @@ export function makeRequest(
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     Host: parsedUrl.host,
-    "X-Forwarded-Host": parsedUrl.host,
-    "X-Forwarded-Proto": parsedUrl.protocol.replace(":", ""),
+    "X-Forwarded-Host": opts.proxyHost ?? parsedUrl.host,
+    "X-Forwarded-Proto": opts.proxyProto ?? parsedUrl.protocol.replace(":", ""),
     ...opts.headers,
   };
   if (opts.cookie) {
