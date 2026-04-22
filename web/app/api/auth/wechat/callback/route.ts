@@ -4,7 +4,7 @@ import { users, userIdentities } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { exchangeCode, getWechatUserInfo } from "@/lib/wechat";
 import { signJWT, buildSetCookieHeader } from "@/lib/auth";
-import { DEFAULT_QUOTA_FREE } from "@/lib/redis";
+import { DEFAULT_QUOTA_FREE, ensureQuota } from "@/lib/redis";
 
 const AVATAR_COLORS = [
   "#586330", "#a23f00", "#fa7025", "#8a6040",
@@ -68,6 +68,8 @@ export async function GET(request: NextRequest) {
         providerAccountId: openid,
         credential: null,
       });
+
+      ensureQuota(user.id, DEFAULT_QUOTA_FREE).catch(() => {});
 
       userId = user.id;
       role = user.role as "user" | "admin" | "reviewer";

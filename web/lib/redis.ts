@@ -178,18 +178,28 @@ export async function checkAndIncrementQuota(
 }
 
 /**
- * Initialize quota for a new user (called on token generation).
- * Fire-and-forget — errors are silently ignored; quota can be set on first use.
+ * Initialize quota for a user if missing.
+ * Uses NX so existing quota is never overwritten.
  */
-export async function initQuota(
+export async function ensureQuota(
   userId: number,
   limit: number = DEFAULT_QUOTA_FREE
 ): Promise<void> {
   try {
     const r = getRedis();
     if (!r) return;
-    await r.set(`clawplay:quota:${userId}`, { used: 0, limit }, { ex: 86400 });
+    await r.set(`clawplay:quota:${userId}`, { used: 0, limit }, { ex: 86400, nx: true });
   } catch {
     // Redis not configured or unreachable — skip silently
   }
+}
+
+/**
+ * @deprecated Use ensureQuota. Kept for older imports/tests.
+ */
+export async function initQuota(
+  userId: number,
+  limit: number = DEFAULT_QUOTA_FREE
+): Promise<void> {
+  return ensureQuota(userId, limit);
 }

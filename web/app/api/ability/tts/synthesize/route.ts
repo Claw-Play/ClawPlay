@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { decryptToken, type TokenPayload } from "@/lib/token";
-import { checkAndIncrementQuota, ABILITY_COSTS } from "@/lib/redis";
+import { authenticateClawplayToken } from "@/lib/token-auth";
+import { checkQuota, incrementQuota, ABILITY_COSTS } from "@/lib/redis";
 import { analytics } from "@/lib/analytics";
 import { getT } from "@/lib/i18n";
 
@@ -13,25 +13,16 @@ const COST = ABILITY_COSTS[ABILITY] ?? 5;
 export async function POST(request: NextRequest) {
   const t = await getT("errors");
 
-  const token = request.headers.get("Authorization")?.replace("Bearer ", "") ??
-                request.cookies.get("clawplay_token")?.value;
-
-  if (!token) {
+  const auth = await authenticateClawplayToken(request);
+  if (!auth) {
     return NextResponse.json({ error: t("authorization_required") }, { status: 401 });
   }
 
-  let payload: TokenPayload;
-  try {
-    payload = decryptToken(token);
-  } catch {
-    return NextResponse.json({ error: t("invalid_auth_token") }, { status: 401 });
-  }
-
-  const quotaResult = await checkAndIncrementQuota(payload.userId, ABILITY);
-  if (!quotaResult.allowed) {
-    analytics.quota.exceeded(payload.userId, ABILITY, quotaResult.remaining ?? 0, (quotaResult.remaining ?? 0) + COST);
+  const quotaCheck = await checkQuota(auth.userId, ABILITY);
+  if (!quotaCheck.allowed) {
+    analytics.quota.exceeded(auth.userId, ABILITY, quotaCheck.remaining ?? 0, quotaCheck.remaining ?? 0);
     return NextResponse.json(
-      { error: t("quota_exceeded"), reason: quotaResult.reason, remaining: quotaResult.remaining },
+      { error: t("quota_exceeded"), reason: quotaCheck.reason, remaining: quotaCheck.remaining },
       { status: 429 }
     );
   }
@@ -75,13 +66,22 @@ export async function POST(request: NextRequest) {
     }
 
     const data = await providerRes.json();
-    analytics.quota.use(payload.userId, ABILITY, COST);
+    const incr = await incrementQuota(auth.userId, COST);
+    if (!incr.ok) {
+      analytics.quota.exceeded(auth.userId, ABILITY, quotaCheck.remaining ?? 0, quotaCheck.remaining ?? 0);
+      return NextResponse.json(
+        { error: t("quota_exceeded"), remaining: 0 },
+        { status: 429 }
+      );
+    }
+
+    analytics.quota.use(auth.userId, ABILITY, COST);
     return NextResponse.json({
       ...data,
-      _quota: { used: COST, remaining: quotaResult.remaining },
+      _quota: { used: COST, remaining: incr.remaining ?? 0 },
     });
   } catch (err) {
-    analytics.quota.error(payload.userId, ABILITY, "tts", (err as NodeJS.ErrnoException).code ?? "UNKNOWN");
+    analytics.quota.error(auth.userId, ABILITY, "tts", (err as NodeJS.ErrnoException).code ?? "UNKNOWN");
     console.error("[ability/tts/synthesize]", err);
     return NextResponse.json({ error: t("tts_failed") }, { status: 500 });
   }
