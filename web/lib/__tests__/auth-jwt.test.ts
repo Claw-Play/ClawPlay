@@ -58,7 +58,7 @@ describe("buildSetCookieHeader", () => {
     const header = buildSetCookieHeader("abc123token");
     expect(header).toContain("clawplay_token=abc123token");
     expect(header).toContain("HttpOnly");
-    expect(header).toContain("SameSite=Strict");
+    expect(header).toContain("SameSite=Lax");
     expect(header).toContain("Max-Age=");
     expect(header).toContain("Path=/");
     // In vitest NODE_ENV=test, Secure should NOT be present
@@ -77,7 +77,7 @@ describe("buildClearCookieHeader", () => {
     expect(header).toContain("clawplay_token=");
     expect(header).toContain("Max-Age=0");
     expect(header).toContain("HttpOnly");
-    expect(header).toContain("SameSite=Strict");
+    expect(header).toContain("SameSite=Lax");
     // In vitest NODE_ENV=test, Secure should NOT be present
     expect(header).not.toContain("Secure");
   });
