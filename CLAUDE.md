@@ -17,8 +17,8 @@
 - 认证只用 httpOnly cookie（不用 localStorage）
 
 ### Key Pool
-- `ARK_API_KEY` 同时用于 image 和 vision 池，各自独立 per-key quota
-- 多 key 模式下 `ARK_IMAGE_KEYS` / `ARK_VISION_KEYS` 优先于 `ARK_API_KEY`
+- Provider key 只从数据库中的 `provider_keys` 读取，不再从环境变量回退
+- 多 key 模式下各 provider/ability 的配额和路由都由后台管理页控制
 
 ### 数据库
 - 软删除：Skills 用 `deletedAt` 而非硬删除，查询必须过滤 `deletedAt IS NULL`
@@ -36,7 +36,6 @@
 - **日志禁止包含 secrets**：token、password、API key 一律不能打出来
 
 ### Provider & Relay
-- CLI 直连 `ARK_API_KEY` 会绕过 quota——这是 Pro 模式，不是 bug
 - 429 时 relay 不扣 quota，但仍返回错误给用户
 
 ### Middleware (`web/middleware.ts`)

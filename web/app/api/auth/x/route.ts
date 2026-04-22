@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getXAuthUrl } from "@/lib/oauth";
+import { getPublicOrigin } from "@/lib/request-origin";
 
 function generateCodeVerifier(): string {
   const array = new Uint8Array(32);
@@ -17,12 +18,13 @@ async function generateCodeChallenge(verifier: string): Promise<string> {
 export async function GET(request: NextRequest) {
   const redirect = request.nextUrl.searchParams.get("redirect") ?? "/dashboard";
   const state = Buffer.from(redirect).toString("base64url");
+  const publicOrigin = getPublicOrigin(request);
 
   try {
     const codeVerifier = generateCodeVerifier();
     const codeChallenge = await generateCodeChallenge(codeVerifier);
 
-    const url = getXAuthUrl(state, codeChallenge, request.nextUrl.origin);
+    const url = getXAuthUrl(state, codeChallenge, publicOrigin);
 
     const response = NextResponse.redirect(url);
     // Store code_verifier in a short-lived cookie (5 min)
@@ -37,7 +39,7 @@ export async function GET(request: NextRequest) {
   } catch (err) {
     console.error("[auth/x]", err);
     return NextResponse.redirect(
-      new URL("/login?error=x_config", request.nextUrl.origin)
+      new URL("/login?error=x_config", publicOrigin)
     );
   }
 }

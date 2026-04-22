@@ -5,6 +5,7 @@ import { eq, and } from "drizzle-orm";
 import { exchangeXCode, getXUserInfo } from "@/lib/oauth";
 import { signJWT, buildSetCookieHeader } from "@/lib/auth";
 import { DEFAULT_QUOTA_FREE, ensureQuota } from "@/lib/redis";
+import { getPublicOrigin } from "@/lib/request-origin";
 
 const AVATAR_COLORS = [
   "#586330", "#a23f00", "#fa7025", "#8a6040",
@@ -17,6 +18,7 @@ export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
   const code = searchParams.get("code");
   const state = searchParams.get("state") ?? "";
+  const publicOrigin = getPublicOrigin(request);
   // X uses PKCE, so we don't need a code_verifier stored — but we need to handle it
   // Twitter OAuth 2.0 requires code_challenge. We use S256, which means we need
   // the code_verifier to exchange the code. Since we can't pass it via callback,
@@ -33,12 +35,12 @@ export async function GET(request: NextRequest) {
 
   if (!code) {
     return NextResponse.redirect(
-      new URL("/login?error=x_denied", request.nextUrl.origin)
+      new URL("/login?error=x_denied", publicOrigin)
     );
   }
 
   try {
-    const accessToken = await exchangeXCode(code, codeVerifier, request.nextUrl.origin);
+    const accessToken = await exchangeXCode(code, codeVerifier, publicOrigin);
     const userInfo = await getXUserInfo(accessToken);
 
     const identity = await db.query.userIdentities.findFirst({
@@ -82,14 +84,14 @@ export async function GET(request: NextRequest) {
 
     const token = await signJWT({ userId, role });
     const response = NextResponse.redirect(
-      new URL(redirectPath, request.nextUrl.origin)
+      new URL(redirectPath, publicOrigin)
     );
     response.headers.set("Set-Cookie", buildSetCookieHeader(token));
     return response;
   } catch (err) {
     console.error("[auth/x/callback]", err);
     return NextResponse.redirect(
-      new URL("/login?error=x_failed", request.nextUrl.origin)
+      new URL("/login?error=x_failed", publicOrigin)
     );
   }
 }

@@ -11,7 +11,6 @@ jobs:
     env:
       DEPLOY_REGION: HK
       DEPLOY_PATH: /var/www/clawplay
-      CLAWPLAY_API_URL: https://clawplay.shop
 
     steps:
       - name: Checkout code
@@ -26,10 +25,6 @@ jobs:
           timeout: 10m
           envs: DEPLOY_REGION,DEPLOY_PATH
           script: |
-            echo "DEPLOY_REGION=$DEPLOY_REGION" >> /etc/environment
-            echo "CLAWPLAY_API_URL=$CLAWPLAY_API_URL" >> /etc/environment
-            echo "DATABASE_URL=/var/www/clawplay/data/clawplay.db" >> /etc/environment
-            source /etc/environment
             cd $DEPLOY_PATH
             git fetch origin
             git checkout ${{ secrets.DEPLOY_BRANCH_HK }}
@@ -38,5 +33,5 @@ jobs:
             npm ci --prefer-offline
             npm run db:migrate
             npm run build
-            pm2 restart clawplay || pm2 start npm --name clawplay -- start --prefix $(pwd)
+            pm2 startOrRestart /var/www/clawplay/ecosystem.config.cjs --env production
             pm2 save

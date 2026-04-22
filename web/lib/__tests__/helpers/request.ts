@@ -12,8 +12,12 @@ export function makeRequest(
   opts: RequestOpts = {}
 ): NextRequest {
   const fullUrl = url.startsWith("http") ? url : `http://localhost:3000${url}`;
+  const parsedUrl = new URL(fullUrl);
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
+    Host: parsedUrl.host,
+    "X-Forwarded-Host": parsedUrl.host,
+    "X-Forwarded-Proto": parsedUrl.protocol.replace(":", ""),
     ...opts.headers,
   };
   if (opts.cookie) {

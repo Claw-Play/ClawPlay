@@ -196,14 +196,6 @@ export async function pickKey(
     };
   }
 
-  // Fallback: use ARK_API_KEY env var directly
-  if (provider === "ark") {
-    const envKey = process.env.ARK_API_KEY;
-    if (envKey) {
-      return { id: 0, key: envKey, hash: "", quota: 999999, endpoint: "", apiFormat: "ark", modelName: "" };
-    }
-  }
-
   throw new Error(`No active keys for provider=${provider}, ability=${ability}`);
 }
 

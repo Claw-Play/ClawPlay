@@ -135,14 +135,14 @@ Tokens are AES-256-GCM encrypted on the server. The plaintext (userId, expiry) i
 - pnpm 8+
 - SQLite (via `better-sqlite3`, auto-initialized)
 - Upstash Redis (free tier at https://console.upstash.com)
-- Ark API key (for image generation)
+- Provider keys are managed in the admin Providers page
 
 ### Setup
 
 ```bash
 cd web
 cp .env.example .env.local
-# Fill in: JWT_SECRET, CLAWPLAY_SECRET_KEY, UPSTASH_REDIS_REST_URL/TOKEN, ARK_API_KEY
+# Fill in: JWT_SECRET, CLAWPLAY_SECRET_KEY, UPSTASH_REDIS_REST_URL/TOKEN, DATABASE_URL, BASE_URL
 pnpm install
 pnpm dev
 ```
@@ -159,12 +159,6 @@ Open [http://localhost:3000](http://localhost:3000).
 | `CLAWPLAY_SECRET_KEY` | 32-byte AES-256-GCM key (`openssl rand -hex 32`) |
 | `UPSTASH_REDIS_REST_URL` | Upstash Redis REST URL |
 | `UPSTASH_REDIS_REST_TOKEN` | Upstash Redis REST Token |
-| `ARK_API_KEY` | Fallback Ark key (used if `ARK_IMAGE_KEYS`/`ARK_VISION_KEYS` not set) |
-| `ARK_IMAGE_KEYS` | Comma-separated Ark image keys (takes precedence over `ARK_API_KEY`) |
-| `ARK_VISION_KEYS` | Comma-separated Ark vision keys |
-| `ARK_KEY_QUOTA` | Per-key RPM limit for image keys (default: 500) |
-| `ARK_VISION_KEY_QUOTA` | Per-key RPM limit for vision keys (default: 30000) |
-| `GEMINI_API_KEY` | Google Gemini API key (optional, multi-provider fallback) |
 | `DATABASE_URL` | SQLite path (default: `../data/clawplay.db`) |
 
 **CLI**
@@ -173,7 +167,6 @@ Open [http://localhost:3000](http://localhost:3000).
 |----------|-------------|
 | `CLAWPLAY_TOKEN` | Encrypted token exported from Dashboard |
 | `CLAWPLAY_API_URL` | ClawPlay server URL (default: production) |
-| `ARK_API_KEY` | Direct provider mode — bypasses quota (optional) |
 
 ### Project Structure
 

@@ -5,6 +5,7 @@ import { eq, and } from "drizzle-orm";
 import { exchangeCode, getWechatUserInfo } from "@/lib/wechat";
 import { signJWT, buildSetCookieHeader } from "@/lib/auth";
 import { DEFAULT_QUOTA_FREE, ensureQuota } from "@/lib/redis";
+import { getPublicOrigin } from "@/lib/request-origin";
 
 const AVATAR_COLORS = [
   "#586330", "#a23f00", "#fa7025", "#8a6040",
@@ -17,6 +18,7 @@ export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
   const code = searchParams.get("code");
   const state = searchParams.get("state") ?? "";
+  const publicOrigin = getPublicOrigin(request);
 
   // Decode redirect path from state
   let redirectPath = "/dashboard";
@@ -29,7 +31,7 @@ export async function GET(request: NextRequest) {
   }
 
   if (!code) {
-    return NextResponse.redirect(new URL("/login?error=wechat_denied", request.nextUrl.origin));
+    return NextResponse.redirect(new URL("/login?error=wechat_denied", publicOrigin));
   }
 
   try {
@@ -76,11 +78,11 @@ export async function GET(request: NextRequest) {
     }
 
     const token = await signJWT({ userId, role });
-    const response = NextResponse.redirect(new URL(redirectPath, request.nextUrl.origin));
+    const response = NextResponse.redirect(new URL(redirectPath, publicOrigin));
     response.headers.set("Set-Cookie", buildSetCookieHeader(token));
     return response;
   } catch (err) {
     console.error("[auth/wechat/callback]", err);
-    return NextResponse.redirect(new URL("/login?error=wechat_failed", request.nextUrl.origin));
+    return NextResponse.redirect(new URL("/login?error=wechat_failed", publicOrigin));
   }
 }
