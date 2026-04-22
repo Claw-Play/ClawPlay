@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
   }
 
   const redirectUrl = request.nextUrl.clone();
-  redirectUrl.pathname = "/";
+  redirectUrl.pathname = "/login";
   redirectUrl.search = "";
   const response = NextResponse.redirect(redirectUrl);
   response.headers.set("Set-Cookie", buildClearCookieHeader());

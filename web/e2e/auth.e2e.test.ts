@@ -30,7 +30,7 @@ test.describe("Auth flow", () => {
 
     // Logout
     await page.getByText(/退出|logout|sign out/i).click();
-    await expect(page).toHaveURL("/", { timeout: 5_000 });
+    await expect(page).toHaveURL("/login", { timeout: 5_000 });
   });
 
   test("login with valid email credentials", async ({ page }) => {
@@ -56,7 +56,7 @@ test.describe("Auth flow", () => {
 
     // Logout
     await page.getByText(/退出|logout|sign out/i).click();
-    await expect(page).toHaveURL("/", { timeout: 5_000 });
+    await expect(page).toHaveURL("/login", { timeout: 5_000 });
 
     // Log back in
     await page.goto("/login");

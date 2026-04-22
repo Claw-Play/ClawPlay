@@ -124,6 +124,17 @@ export default function AdminLayout({
     };
   }, [mobileNavOpen]);
 
+  // Listen for logout to clear user and redirect
+  useEffect(() => {
+    function onLogout() {
+      setUser(null);
+      setLoading(false);
+      router.push("/login");
+    }
+    window.addEventListener("clawplay:logout", onLogout);
+    return () => window.removeEventListener("clawplay:logout", onLogout);
+  }, [router]);
+
   const navItems = user?.role === "reviewer" ? NAV_ITEMS_REVIEWER : NAV_ITEMS_ADMIN;
 
   function isActive(href: string): boolean {
@@ -304,8 +315,9 @@ export default function AdminLayout({
                         <button
                           onClick={async () => {
                             setDropdownOpen(false);
+                            window.dispatchEvent(new Event("clawplay:logout"));
                             await fetch("/api/auth/logout", { method: "POST" });
-                            router.push("/");
+                            router.push("/login");
                             router.refresh();
                           }}
                           className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 font-body transition-colors text-left"

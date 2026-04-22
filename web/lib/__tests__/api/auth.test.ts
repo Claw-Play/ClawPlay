@@ -196,13 +196,15 @@ describe("POST /api/auth/login", () => {
 });
 
 describe("POST /api/auth/logout", () => {
-  it("logout → clears cookie (Max-Age=0) and redirects", async () => {
+  it("logout → clears cookie (Max-Age=0) and redirects to /login", async () => {
     const req = makeRequest("POST", "/api/auth/logout");
     const res = await POST_logout(req);
 
     expect(res.status).toBe(307);
     const cookie = res.headers.get("set-cookie") ?? "";
     expect(cookie).toContain("Max-Age=0");
+    const location = res.headers.get("location") ?? "";
+    expect(location).toContain("/login");
   });
 });
 
