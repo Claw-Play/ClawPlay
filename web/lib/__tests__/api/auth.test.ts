@@ -208,7 +208,7 @@ describe("POST /api/auth/logout", () => {
     const cookie = res.headers.get("set-cookie") ?? "";
     expect(cookie).toContain("Max-Age=0");
     const location = res.headers.get("location") ?? "";
-    expect(location).toContain("/login");
+    expect(location).toBe("http://localhost:3000/login");
   });
 
   it("preserves a safe from param when redirecting to login", async () => {
@@ -216,7 +216,7 @@ describe("POST /api/auth/logout", () => {
     const res = await POST_logout(req);
 
     const location = res.headers.get("location") ?? "";
-    expect(location).toContain("/login?from=%2Fdashboard");
+    expect(location).toBe("http://localhost:3000/login?from=%2Fdashboard");
   });
 
   it("falls back to referer path when from param is absent", async () => {
@@ -226,7 +226,7 @@ describe("POST /api/auth/logout", () => {
     const res = await POST_logout(req);
 
     const location = res.headers.get("location") ?? "";
-    expect(location).toContain("/login?from=%2Fdashboard%3Ftab%3Dprofile");
+    expect(location).toBe("http://localhost:3000/login?from=%2Fdashboard%3Ftab%3Dprofile");
   });
 
   it("redirects to the external proxy host, not the internal one", async () => {
@@ -238,11 +238,22 @@ describe("POST /api/auth/logout", () => {
     const res = await POST_logout(req);
 
     const location = res.headers.get("location") ?? "";
-    // Must NOT redirect to internal proxy host
+    expect(location).toBe("https://clawplay.shop/login");
     expect(location).not.toContain("localhost");
-    // Must redirect to external host
-    expect(location).toContain("clawplay.shop");
-    expect(location).toContain("/login");
+    expect(location).not.toContain(":3000");
+  });
+
+  it("ignores a misconfigured BASE_URL with :3000 when proxy headers are correct", async () => {
+    process.env.BASE_URL = "https://clawplay.shop:3000";
+    const req = makeRequest("POST", "/api/auth/logout?from=%2Fdashboard", {
+      proxyHost: "clawplay.shop",
+      proxyProto: "https",
+    });
+    const res = await POST_logout(req);
+
+    const location = res.headers.get("location") ?? "";
+    expect(location).toBe("https://clawplay.shop/login?from=%2Fdashboard");
+    expect(location).not.toContain(":3000");
   });
 });
 
@@ -271,6 +282,19 @@ describe("GET /api/auth/github", () => {
     // redirect_uri must use external host, not localhost
     expect(location).toContain("redirect_uri=https%3A%2F%2Fclawplay.shop%2Fapi%2Fauth%2Fgithub%2Fcallback");
     expect(location).not.toContain("localhost");
+  });
+
+  it("ignores a misconfigured BASE_URL with :3000 when proxy headers are correct", async () => {
+    process.env.BASE_URL = "https://clawplay.shop:3000";
+    const req = makeRequest("GET", "/api/auth/github", {
+      proxyHost: "clawplay.shop",
+      proxyProto: "https",
+    });
+    const res = await GET_github(req);
+
+    const location = res.headers.get("location") ?? "";
+    expect(location).toContain("redirect_uri=https%3A%2F%2Fclawplay.shop%2Fapi%2Fauth%2Fgithub%2Fcallback");
+    expect(location).not.toContain("%3A3000");
   });
 });
 
