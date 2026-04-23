@@ -211,6 +211,24 @@ describe("POST /api/auth/logout", () => {
     expect(location).toContain("/login");
   });
 
+  it("preserves a safe from param when redirecting to login", async () => {
+    const req = makeRequest("POST", "/api/auth/logout?from=%2Fdashboard");
+    const res = await POST_logout(req);
+
+    const location = res.headers.get("location") ?? "";
+    expect(location).toContain("/login?from=%2Fdashboard");
+  });
+
+  it("falls back to referer path when from param is absent", async () => {
+    const req = makeRequest("POST", "/api/auth/logout", {
+      headers: { referer: "https://clawplay.shop/dashboard?tab=profile" },
+    });
+    const res = await POST_logout(req);
+
+    const location = res.headers.get("location") ?? "";
+    expect(location).toContain("/login?from=%2Fdashboard%3Ftab%3Dprofile");
+  });
+
   it("redirects to the external proxy host, not the internal one", async () => {
     // Simulate nginx proxy: internal Host=localhost:3000, external host=clawplay.shop
     const req = makeRequest("POST", "/api/auth/logout", {

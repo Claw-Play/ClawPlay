@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useT } from "@/lib/i18n/context";
 import { AdminUserContext } from "@/lib/context/AdminUserContext";
@@ -51,7 +51,7 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname() ?? "";
-  const router = useRouter();
+  const searchParams = useSearchParams();
   const t = useT("admin");
   const tNav = useT("nav");
   const tCommon = useT("common");
@@ -129,11 +129,10 @@ export default function AdminLayout({
     function onLogout() {
       setUser(null);
       setLoading(false);
-      router.push("/login");
     }
     window.addEventListener("clawplay:logout", onLogout);
     return () => window.removeEventListener("clawplay:logout", onLogout);
-  }, [router]);
+  }, []);
 
   const navItems = user?.role === "reviewer" ? NAV_ITEMS_REVIEWER : NAV_ITEMS_ADMIN;
 
@@ -315,10 +314,11 @@ export default function AdminLayout({
                         <button
                           onClick={async () => {
                             setDropdownOpen(false);
+                            const from = `${pathname}${searchParams.toString() ? `?${searchParams.toString()}` : ""}`;
+                            const loginUrl = `/login?from=${encodeURIComponent(from)}`;
                             window.dispatchEvent(new Event("clawplay:logout"));
-                            await fetch("/api/auth/logout", { method: "POST" });
-                            router.push("/login");
-                            router.refresh();
+                            await fetch(`/api/auth/logout?from=${encodeURIComponent(from)}`, { method: "POST" });
+                            window.location.assign(loginUrl);
                           }}
                           className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 font-body transition-colors text-left"
                         >
