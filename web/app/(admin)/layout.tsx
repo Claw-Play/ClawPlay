@@ -317,8 +317,13 @@ export default function AdminLayout({
                             const from = `${pathname}${searchParams.toString() ? `?${searchParams.toString()}` : ""}`;
                             const loginUrl = `/login?from=${encodeURIComponent(from)}`;
                             window.dispatchEvent(new Event("clawplay:logout"));
-                            await fetch(`/api/auth/logout?from=${encodeURIComponent(from)}`, { method: "POST" });
-                            window.location.assign(loginUrl);
+                            try {
+                              await fetch(`/api/auth/logout?from=${encodeURIComponent(from)}`, {
+                                method: "POST",
+                                redirect: "manual",
+                              });
+                            } catch {}
+                            window.location.href = loginUrl;
                           }}
                           className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 font-body transition-colors text-left"
                         >

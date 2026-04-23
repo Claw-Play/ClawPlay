@@ -4,42 +4,62 @@ function normalizeHost(value: string): string {
   return value.split(",")[0].trim();
 }
 
+function isPrivateHost(host: string): boolean {
+  return (
+    host === "localhost" ||
+    host.startsWith("localhost:") ||
+    host.startsWith("localhost/") ||
+    /^127\./.test(host) ||
+    host === "::1" ||
+    host.endsWith(".local")
+  );
+}
+
+function buildOriginFromHost(host: string, forwardedProto: string | null): string {
+  const normalizedHost = normalizeHost(host);
+  const forwardedProtoValue = forwardedProto?.split(",")[0].trim().toLowerCase();
+  const proto = isPrivateHost(normalizedHost)
+    ? (forwardedProtoValue ?? "http")
+    : "https";
+  return `${proto}://${normalizedHost}`;
+}
+
+function getConfiguredPublicOrigin(): string | null {
+  const configuredBaseUrl = process.env.BASE_URL;
+  if (!configuredBaseUrl) return null;
+  try {
+    return new URL(configuredBaseUrl).origin;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Resolve the public app origin for redirects and OAuth callbacks.
  *
  * Preference order:
- * 1. Explicit BASE_URL env var
- * 2. Forwarded host/proto headers from the reverse proxy
+ * 1. Forwarded host/proto headers from the reverse proxy
+ * 2. Explicit BASE_URL env var (useful when the app only sees an internal host)
+ * 3. Raw Host header for local dev / fallback
  */
 export function getPublicOrigin(request: NextRequest): string {
-  const configuredBaseUrl = process.env.BASE_URL;
-  if (configuredBaseUrl) {
-    try {
-      return new URL(configuredBaseUrl).origin;
-    } catch {
-      // Ignore malformed values and fall through to forwarded headers.
-    }
+  const forwardedHost = request.headers.get("x-forwarded-host");
+  const forwardedProto = request.headers.get("x-forwarded-proto");
+  if (forwardedHost) {
+    return buildOriginFromHost(forwardedHost, forwardedProto);
   }
 
-  const forwardedHost = request.headers.get("x-forwarded-host");
-  const host = forwardedHost ?? request.headers.get("host");
+  const configuredOrigin = getConfiguredPublicOrigin();
+  const host = request.headers.get("host");
   if (host) {
-    const forwardedProto = request.headers.get("x-forwarded-proto");
     const normalizedHost = normalizeHost(host);
-    const isPrivateHost =
-      normalizedHost === "localhost" ||
-      normalizedHost.startsWith("localhost:") ||
-      normalizedHost.startsWith("localhost/") ||
-      /^127\./.test(normalizedHost) ||
-      normalizedHost === "::1" ||
-      normalizedHost.endsWith(".local");
-    const forwardedProtoValue = forwardedProto?.split(",")[0].trim().toLowerCase();
-    // Only trust forwarded proto for localhost/private hosts; default to https for public hosts
-    const proto = isPrivateHost
-      ? (forwardedProtoValue ?? "http")
-      : "https";
-    return `${proto}://${normalizeHost(host)}`;
+    if (isPrivateHost(normalizedHost) && configuredOrigin) {
+      return configuredOrigin;
+    }
+    return buildOriginFromHost(host, forwardedProto);
   }
+
+  if (configuredOrigin) return configuredOrigin;
 
   throw new Error("Unable to resolve public origin; set BASE_URL or forward Host/X-Forwarded-Proto headers");
 }

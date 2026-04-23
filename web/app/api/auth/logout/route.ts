@@ -2,10 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { buildClearCookieHeader } from "@/lib/auth";
 import { getAuthFromCookies } from "@/lib/auth";
 import { analytics } from "@/lib/analytics";
-
-function normalizeHost(value: string): string {
-  return value.split(",")[0].trim();
-}
+import { getPublicOrigin } from "@/lib/request-origin";
 
 function getSafeRedirectPath(value: string | null): string | null {
   if (!value || !value.startsWith("/")) return null;
@@ -29,25 +26,10 @@ export async function POST(request: NextRequest) {
     } catch {}
   }
 
-  const redirectUrl = request.nextUrl.clone();
-  redirectUrl.pathname = "/login";
-  redirectUrl.search = "";
+  const redirectUrl = new URL("/login", getPublicOrigin(request));
   const from = explicitFrom ?? fallbackFrom;
   if (from) {
     redirectUrl.searchParams.set("from", from);
-  }
-  // Ensure redirect URL uses the external host from proxy headers
-  const forwardedHost = request.headers.get("x-forwarded-host");
-  const forwardedProto = request.headers.get("x-forwarded-proto");
-  if (forwardedHost) {
-    redirectUrl.host = normalizeHost(forwardedHost);
-  }
-  if (forwardedProto) {
-    // Use first token from comma-separated list (multi-proxy scenario)
-    redirectUrl.protocol = forwardedProto.split(",")[0].trim().toLowerCase().replace(/:$/, "");
-    if (!redirectUrl.protocol.endsWith(":")) {
-      redirectUrl.protocol += ":";
-    }
   }
   const response = NextResponse.redirect(redirectUrl);
   response.headers.set("Set-Cookie", buildClearCookieHeader());

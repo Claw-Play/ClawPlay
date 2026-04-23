@@ -21,12 +21,13 @@ describe("getPublicOrigin", () => {
 
   // ── BASE_URL env var ────────────────────────────────────────────────────────
 
-  it("returns BASE_URL origin when set", () => {
+  it("uses forwarded host ahead of BASE_URL when proxy headers are present", () => {
     process.env.BASE_URL = "https://clawplay.shop";
     const req = makeRequest("GET", "/", {
-      headers: { "X-Forwarded-Host": "malicious.com" },
+      proxyHost: "proxy.clawplay.shop",
+      proxyProto: "https",
     });
-    expect(getPublicOrigin(req)).toBe("https://clawplay.shop");
+    expect(getPublicOrigin(req)).toBe("https://proxy.clawplay.shop");
   });
 
   it("falls back to forwarded headers when BASE_URL is malformed", () => {
@@ -38,11 +39,10 @@ describe("getPublicOrigin", () => {
     expect(getPublicOrigin(req)).toBe("https://clawplay.shop");
   });
 
-  it("ignores forwarded headers when BASE_URL is set to a valid URL", () => {
+  it("uses BASE_URL when request host is an internal dev host", () => {
     process.env.BASE_URL = "https://myapp.com";
     const req = makeRequest("GET", "/", {
-      proxyHost: "clawplay.shop",
-      proxyProto: "http",
+      headers: { "X-Forwarded-Host": "" },
     });
     expect(getPublicOrigin(req)).toBe("https://myapp.com");
   });
@@ -109,6 +109,15 @@ describe("getPublicOrigin", () => {
       proxyHost: "clawplay.shop, evil.com",
     });
     // normalizeHost splits on comma and trims
+    expect(getPublicOrigin(req)).toBe("https://clawplay.shop");
+  });
+
+  it("ignores a misconfigured BASE_URL with :3000 when forwarded host is public", () => {
+    process.env.BASE_URL = "https://clawplay.shop:3000";
+    const req = makeRequest("GET", "/", {
+      proxyHost: "clawplay.shop",
+      proxyProto: "https",
+    });
     expect(getPublicOrigin(req)).toBe("https://clawplay.shop");
   });
 
