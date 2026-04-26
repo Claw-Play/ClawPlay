@@ -182,7 +182,7 @@ export async function POST(request: NextRequest) {
       "只输出 ```mermaid 代码块，不要输出任何解释文字。",
     ].join("\n");
 
-    // Call LLM provider directly (auth already done via JWT cookie above)
+    // Call LLM provider directly (diagram is web-only, no relay needed)
     let result;
     try {
       const provider = getLLMProvider();

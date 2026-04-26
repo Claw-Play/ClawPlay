@@ -189,6 +189,20 @@ export function CopyIcon(props: IconProps) {
   );
 }
 
+export function PencilIcon(props: IconProps) {
+  return (
+    <BaseIcon {...props} style={{ transform: "translate(1px, -1px)" }}>
+      <path
+        d="M13.5 7.5l3 3M4 20v-3.5L15.293 5.207a1 1 0 0 1 1.414 0l2.086 2.086a1 1 0 0 1 0 1.414L7.5 20H4z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </BaseIcon>
+  );
+}
+
 export function StarIcon(props: IconProps) {
   return (
     <BaseIcon {...props}>
@@ -319,7 +333,7 @@ export function MessageIcon(props: IconProps) {
 
 export function ChatInstallIcon(props: IconProps) {
   return (
-    <BaseIcon {...props}>
+    <BaseIcon {...props} style={{ transform: "translateY(1px)" }}>
       <path
         d="M5.5 6.5A2.5 2.5 0 0 1 8 4h8a2.5 2.5 0 0 1 2.5 2.5v6A2.5 2.5 0 0 1 16 15H11l-3.5 3V15H8a2.5 2.5 0 0 1-2.5-2.5v-6Z"
         stroke="currentColor"
