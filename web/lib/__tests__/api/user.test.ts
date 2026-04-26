@@ -244,6 +244,36 @@ describe("GET /api/user/me — Bearer token", () => {
     expect(json.user.id).toBe(user.id);
   });
 
+  it("revoked Bearer CLAWPLAY_TOKEN → 401", async () => {
+    const { user, cookie } = await seedUser(db);
+    cookieStore.token = cookie.replace("clawplay_token=", "");
+
+    const genRes = await POST_generate();
+    const genJson = await genRes.json();
+    expect(genRes.status).toBe(200);
+
+    const { userTokens } = await import("@/lib/db/schema");
+    const { eq } = await import("drizzle-orm");
+    const tokenRecord = await db.query.userTokens.findFirst({
+      where: eq(userTokens.userId, user.id),
+    });
+    expect(tokenRecord).toBeTruthy();
+
+    const revokeReq = makeRequest("POST", "/api/user/token/revoke", {
+      body: { tokenId: tokenRecord.id },
+      cookie,
+    });
+    const revokeRes = await POST_revoke(revokeReq);
+    expect(revokeRes.status).toBe(200);
+
+    cookieStore.token = undefined;
+    const req = makeRequest("GET", "/api/user/me", {
+      headers: { Authorization: `Bearer ${genJson.token}` },
+    });
+    const res = await GET_me(req);
+    expect(res.status).toBe(401);
+  });
+
   it("Bearer token with invalid format → 401", async () => {
     cookieStore.token = undefined;
     const req = makeRequest("GET", "/api/user/me", {
@@ -253,14 +283,14 @@ describe("GET /api/user/me — Bearer token", () => {
     expect(res.status).toBe(401);
   });
 
-  it("Bearer token for non-existent user → 404", async () => {
+  it("Bearer token for non-existent user → 401", async () => {
     const fakeToken = encryptToken({ userId: 999998 });
     cookieStore.token = undefined;
     const req = makeRequest("GET", "/api/user/me", {
       headers: { Authorization: `Bearer ${fakeToken}` },
     });
     const res = await GET_me(req);
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(401);
   });
 });
 

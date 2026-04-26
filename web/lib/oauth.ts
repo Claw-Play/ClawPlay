@@ -11,8 +11,8 @@
  */
 
 function getBaseUrl(requestOrigin?: string): string {
-  // Prefer explicit BASE_URL env var; fall back to request origin for local dev
-  const base = process.env.BASE_URL ?? requestOrigin;
+  // Prefer the request-scoped public origin; fall back to BASE_URL for non-request contexts
+  const base = requestOrigin ?? process.env.BASE_URL;
   if (!base) throw new Error("BASE_URL env var is required for OAuth (or run the dev server on a known origin)");
   return base;
 }

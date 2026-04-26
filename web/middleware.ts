@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { getPublicOrigin } from "@/lib/request-origin";
 
 // Locale detection — read from cookie, fallback to env default
 // Note: we don't use next-intl's createMiddleware here because it interferes
@@ -15,8 +16,7 @@ export function middleware(request: NextRequest): Response {
   if (isProtected) {
     const token = request.cookies.get("clawplay_token")?.value;
     if (!token) {
-      const loginUrl = request.nextUrl.clone();
-      loginUrl.pathname = "/login";
+      const loginUrl = new URL("/login", getPublicOrigin(request));
       loginUrl.searchParams.set("from", pathname);
       return NextResponse.redirect(loginUrl);
     }

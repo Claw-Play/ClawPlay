@@ -8,10 +8,10 @@
  * 4. Pre-check passes, provider fails → 500/503
  * 5. Missing / invalid token → 401
  */
-import { describe, it, expect, beforeAll, afterAll, vi, beforeEach } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, afterEach, vi, beforeEach } from "vitest";
 import { tempDbPath, cleanupDb, seedUser } from "../helpers/db";
 import { makeRequest } from "../helpers/request";
-import { encryptToken } from "@/lib/token";
+import { encryptToken, hashToken } from "@/lib/token";
 
 // ── Mock @upstash/redis ─────────────────────────────────────────────────────────
 vi.mock("@upstash/redis", () => ({
@@ -26,6 +26,9 @@ vi.mock("@upstash/redis", () => ({
 const checkQuotaMock = vi.hoisted(() => vi.fn());
 const incrementQuotaMock = vi.hoisted(() => vi.fn());
 const getQuotaMock = vi.hoisted(() => vi.fn());
+const analyticsQuotaExceededMock = vi.hoisted(() => vi.fn());
+const analyticsQuotaUseMock = vi.hoisted(() => vi.fn());
+const analyticsQuotaErrorMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/redis", () => ({
   checkQuota: checkQuotaMock,
@@ -70,9 +73,9 @@ vi.mock("next/headers", () => ({
 vi.mock("@/lib/analytics", () => ({
   analytics: {
     quota: {
-      exceeded: vi.fn(),
-      use: vi.fn(),
-      error: vi.fn(),
+      exceeded: analyticsQuotaExceededMock,
+      use: analyticsQuotaUseMock,
+      error: analyticsQuotaErrorMock,
     },
   },
 }));
@@ -80,6 +83,7 @@ vi.mock("@/lib/analytics", () => ({
 // ── Env vars ───────────────────────────────────────────────────────────────────
 process.env.JWT_SECRET = "test-jwt-secret-32-bytes-long!!!";
 process.env.CLAWPLAY_SECRET_KEY = "a".repeat(64);
+process.env.ARK_TTS_API_KEY = "test-tts-api-key";
 process.env.UPSTASH_REDIS_REST_URL = "https://mock.upstash.io";
 process.env.UPSTASH_REDIS_REST_TOKEN = "mock-token";
 process.env.NODE_ENV = "test";
@@ -87,11 +91,13 @@ process.env.NODE_ENV = "test";
 let dbPath: string;
 let db: any;
 let userId: number;
+let activeAuthToken: string | null = null;
 
 // ── Per-route module refs ──────────────────────────────────────────────────────
 let POST_vision: (req: any) => Promise<Response>;
 let POST_image: (req: any) => Promise<Response>;
 let POST_llm: (req: any) => Promise<Response>;
+let POST_tts: (req: any) => Promise<Response>;
 
 beforeAll(async () => {
   dbPath = tempDbPath();
@@ -113,6 +119,9 @@ beforeAll(async () => {
 
   const llmMod = await import("@/app/api/ability/llm/generate/route");
   POST_llm = llmMod.POST;
+
+  const ttsMod = await import("@/app/api/ability/tts/synthesize/route");
+  POST_tts = ttsMod.POST;
 });
 
 afterAll(() => {
@@ -128,8 +137,24 @@ beforeEach(() => {
   getQuotaMock.mockResolvedValue({ used: 0, limit: 100000, remaining: 100000 });
 });
 
-function authHeader() {
-  return { Authorization: `Bearer ${encryptToken({ userId })}` };
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
+async function authHeader() {
+  if (activeAuthToken) {
+    return { Authorization: `Bearer ${activeAuthToken}` };
+  }
+  const token = encryptToken({ userId });
+  const { userTokens } = await import("@/lib/db/schema");
+  await db.insert(userTokens).values({
+    id: "auth-token-1",
+    userId,
+    tokenHash: hashToken(token),
+    encryptedPayload: token,
+  });
+  activeAuthToken = token;
+  return { Authorization: `Bearer ${token}` };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════════════
@@ -181,7 +206,7 @@ describe("Pre-check quota exceeded (before provider call)", () => {
 
     const req = makeRequest("POST", "/api/ability/vision/analyze", {
       body: { images: ["data:image/png;base64,abc"], prompt: "describe" },
-      headers: authHeader(),
+      headers: await authHeader(),
     });
     const res = await POST_vision(req);
     expect(res.status).toBe(429);
@@ -199,7 +224,7 @@ describe("Pre-check quota exceeded (before provider call)", () => {
 
     const req = makeRequest("POST", "/api/ability/image/generate", {
       body: { prompt: "a cat" },
-      headers: authHeader(),
+      headers: await authHeader(),
     });
     const res = await POST_image(req);
     expect(res.status).toBe(429);
@@ -215,7 +240,7 @@ describe("Pre-check quota exceeded (before provider call)", () => {
 
     const req = makeRequest("POST", "/api/ability/llm/generate", {
       body: { prompt: "hello" },
-      headers: authHeader(),
+      headers: await authHeader(),
     });
     const res = await POST_llm(req);
     expect(res.status).toBe(429);
@@ -238,7 +263,7 @@ describe("Quota exceeded AFTER provider success (incrementQuota returns ok=false
 
     const req = makeRequest("POST", "/api/ability/vision/analyze", {
       body: { images: ["data:image/png;base64,abc"], prompt: "describe" },
-      headers: authHeader(),
+      headers: await authHeader(),
     });
     const res = await POST_vision(req);
     expect(res.status).toBe(429);
@@ -256,7 +281,7 @@ describe("Quota exceeded AFTER provider success (incrementQuota returns ok=false
 
     const req = makeRequest("POST", "/api/ability/image/generate", {
       body: { prompt: "a cat" },
-      headers: authHeader(),
+      headers: await authHeader(),
     });
     const res = await POST_image(req);
     expect(res.status).toBe(429);
@@ -274,7 +299,7 @@ describe("Quota exceeded AFTER provider success (incrementQuota returns ok=false
 
     const req = makeRequest("POST", "/api/ability/llm/generate", {
       body: { prompt: "hello" },
-      headers: authHeader(),
+      headers: await authHeader(),
     });
     const res = await POST_llm(req);
     expect(res.status).toBe(429);
@@ -298,7 +323,7 @@ describe("Happy path: provider succeeds, quota incremented → 200", () => {
 
     const req = makeRequest("POST", "/api/ability/vision/analyze", {
       body: { images: ["data:image/png;base64,abc"], prompt: "describe" },
-      headers: authHeader(),
+      headers: await authHeader(),
     });
     const res = await POST_vision(req);
     expect(res.status).toBe(200);
@@ -318,7 +343,7 @@ describe("Happy path: provider succeeds, quota incremented → 200", () => {
 
     const req = makeRequest("POST", "/api/ability/image/generate", {
       body: { prompt: "a cat" },
-      headers: authHeader(),
+      headers: await authHeader(),
     });
     const res = await POST_image(req);
     expect(res.status).toBe(200);
@@ -337,7 +362,7 @@ describe("Happy path: provider succeeds, quota incremented → 200", () => {
 
     const req = makeRequest("POST", "/api/ability/llm/generate", {
       body: { prompt: "hello" },
-      headers: authHeader(),
+      headers: await authHeader(),
     });
     const res = await POST_llm(req);
     expect(res.status).toBe(200);
@@ -360,7 +385,7 @@ describe("Provider rate-limited → 503", () => {
 
     const req = makeRequest("POST", "/api/ability/vision/analyze", {
       body: { images: ["data:image/png;base64,abc"], prompt: "describe" },
-      headers: authHeader(),
+      headers: await authHeader(),
     });
     const res = await POST_vision(req);
     expect(res.status).toBe(503);
@@ -374,7 +399,7 @@ describe("Provider rate-limited → 503", () => {
 
     const req = makeRequest("POST", "/api/ability/image/generate", {
       body: { prompt: "a cat" },
-      headers: authHeader(),
+      headers: await authHeader(),
     });
     const res = await POST_image(req);
     expect(res.status).toBe(503);
@@ -387,9 +412,98 @@ describe("Provider rate-limited → 503", () => {
 
     const req = makeRequest("POST", "/api/ability/llm/generate", {
       body: { prompt: "hello" },
-      headers: authHeader(),
+      headers: await authHeader(),
     });
     const res = await POST_llm(req);
     expect(res.status).toBe(503);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════════════
+// 6. TTS route quota behavior
+// ═══════════════════════════════════════════════════════════════════════════════════════
+
+describe("TTS route quota flow", () => {
+  it("returns 401 without a bearer token", async () => {
+    const req = makeRequest("POST", "/api/ability/tts/synthesize", {
+      body: { text: "hello", voice: "BV001" },
+    });
+    const res = await POST_tts(req);
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 429 before provider call when quota check fails", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    checkQuotaMock.mockResolvedValueOnce({
+      allowed: false,
+      remaining: 0,
+      reason: "Quota exceeded.",
+    });
+
+    const req = makeRequest("POST", "/api/ability/tts/synthesize", {
+      body: { text: "hello world" },
+      headers: await authHeader(),
+    });
+    const res = await POST_tts(req);
+    const json = await res.json();
+
+    expect(res.status).toBe(429);
+    expect(json.remaining).toBe(0);
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(analyticsQuotaExceededMock).toHaveBeenCalledTimes(1);
+    expect(analyticsQuotaUseMock).not.toHaveBeenCalled();
+
+    vi.unstubAllGlobals();
+  });
+
+  it("returns 429 when provider succeeds but quota increment fails", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ audio: "mock-audio" }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    incrementQuotaMock.mockResolvedValueOnce({ ok: false });
+
+    const req = makeRequest("POST", "/api/ability/tts/synthesize", {
+      body: { text: "hello world", voice: "BV001" },
+      headers: await authHeader(),
+    });
+    const res = await POST_tts(req);
+    const json = await res.json();
+
+    expect(res.status).toBe(429);
+    expect(json.remaining).toBe(0);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(incrementQuotaMock).toHaveBeenCalledWith(userId, 5);
+    expect(analyticsQuotaExceededMock).toHaveBeenCalledTimes(1);
+    expect(analyticsQuotaUseMock).not.toHaveBeenCalled();
+
+    vi.unstubAllGlobals();
+  });
+
+  it("returns 200 and records quota use when provider and increment succeed", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ audio: "mock-audio" }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    incrementQuotaMock.mockResolvedValueOnce({ ok: true, remaining: 995 });
+
+    const req = makeRequest("POST", "/api/ability/tts/synthesize", {
+      body: { text: "hello world", voice: "BV001" },
+      headers: await authHeader(),
+    });
+    const res = await POST_tts(req);
+    const json = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(json.audio).toBe("mock-audio");
+    expect(json._quota).toEqual({ used: 5, remaining: 995 });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(incrementQuotaMock).toHaveBeenCalledWith(userId, 5);
+    expect(analyticsQuotaUseMock).toHaveBeenCalledTimes(1);
+
+    vi.unstubAllGlobals();
   });
 });

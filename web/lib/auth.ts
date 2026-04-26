@@ -63,7 +63,7 @@ export function buildSetCookieHeader(token: string): string {
     `${COOKIE_NAME}=${token}`,
     "HttpOnly",
     ...(isProduction ? ["Secure"] : []),
-    "SameSite=Strict",
+    "SameSite=Lax",
     `Max-Age=${COOKIE_MAX_AGE}`,
     `Path=/`,
   ];
@@ -76,7 +76,7 @@ export function buildClearCookieHeader(): string {
     `${COOKIE_NAME}=`,
     "HttpOnly",
     ...(isProduction ? ["Secure"] : []),
-    "SameSite=Strict",
+    "SameSite=Lax",
     "Max-Age=0",
     `Path=/`,
   ];

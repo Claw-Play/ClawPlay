@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { users, userTokens } from "@/lib/db/schema";
 import { eq, and, isNull } from "drizzle-orm";
-import { encryptToken, hashToken, decryptToken, type TokenPayload } from "@/lib/token";
+import { encryptToken, hashToken } from "@/lib/token";
+import { authenticateClawplayToken } from "@/lib/token-auth";
 import { getT } from "@/lib/i18n";
 
 function genId() {
@@ -15,40 +16,27 @@ function genId() {
  */
 export async function POST(request: NextRequest) {
   const t = await getT("errors");
-  const token =
-    request.headers.get("Authorization")?.replace("Bearer ", "") ??
-    request.cookies.get("clawplay_token")?.value;
-
-  if (!token) {
-    return NextResponse.json({ error: t("token_required") }, { status: 401 });
-  }
-
-  // Decrypt and validate
-  let payload: TokenPayload;
-  try {
-    payload = decryptToken(token);
-  } catch {
+  const auth = await authenticateClawplayToken(request);
+  if (!auth) {
     return NextResponse.json({ error: t("invalid_token") }, { status: 401 });
   }
 
-
-  // Verify user still exists
   const user = await db.query.users.findFirst({
-    where: eq(users.id, payload.userId),
+    where: eq(users.id, auth.userId),
   });
   if (!user) {
     return NextResponse.json({ error: t("user_not_found") }, { status: 404 });
   }
 
   // Revoke old token (add to blocklist)
-  const oldHash = hashToken(token);
+  const oldHash = hashToken(auth.token);
   await db
     .update(userTokens)
     .set({ revokedAt: new Date() })
     .where(and(eq(userTokens.tokenHash, oldHash), isNull(userTokens.revokedAt)));
 
   // Build new payload (permanent — no expiry, no quota fields)
-  const newPayload: TokenPayload = { userId: payload.userId };
+  const newPayload = { userId: auth.userId };
 
   const newEncrypted = encryptToken(newPayload);
   const newTokenHash = hashToken(newEncrypted);
@@ -57,7 +45,7 @@ export async function POST(request: NextRequest) {
   const tokenId = genId();
   await db.insert(userTokens).values({
     id: tokenId,
-    userId: payload.userId,
+    userId: auth.userId,
     tokenHash: newTokenHash,
     encryptedPayload: newEncrypted,
   });

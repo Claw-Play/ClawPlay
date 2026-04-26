@@ -4,7 +4,8 @@ import { users, userIdentities } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { exchangeGoogleCode, getGoogleUserInfo } from "@/lib/oauth";
 import { signJWT, buildSetCookieHeader } from "@/lib/auth";
-import { DEFAULT_QUOTA_FREE } from "@/lib/redis";
+import { DEFAULT_QUOTA_FREE, ensureQuota } from "@/lib/redis";
+import { getPublicOrigin } from "@/lib/request-origin";
 
 const AVATAR_COLORS = [
   "#586330", "#a23f00", "#fa7025", "#8a6040",
@@ -17,6 +18,7 @@ export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
   const code = searchParams.get("code");
   const state = searchParams.get("state") ?? "";
+  const publicOrigin = getPublicOrigin(request);
 
   let redirectPath = "/dashboard";
   try {
@@ -28,12 +30,12 @@ export async function GET(request: NextRequest) {
 
   if (!code) {
     return NextResponse.redirect(
-      new URL("/login?error=google_denied", request.nextUrl.origin)
+      new URL("/login?error=google_denied", publicOrigin)
     );
   }
 
   try {
-    const { accessToken } = await exchangeGoogleCode(code, request.nextUrl.origin);
+    const { accessToken } = await exchangeGoogleCode(code, publicOrigin);
     const userInfo = await getGoogleUserInfo(accessToken);
 
     const identity = await db.query.userIdentities.findFirst({
@@ -69,6 +71,8 @@ export async function GET(request: NextRequest) {
         credential: null,
       });
 
+      ensureQuota(user.id, DEFAULT_QUOTA_FREE).catch(() => {});
+
       userId = user.id;
       role = user.role as "user" | "admin" | "reviewer";
       redirectPath = "/?welcome#featured-skills";
@@ -76,14 +80,14 @@ export async function GET(request: NextRequest) {
 
     const token = await signJWT({ userId, role });
     const response = NextResponse.redirect(
-      new URL(redirectPath, request.nextUrl.origin)
+      new URL(redirectPath, publicOrigin)
     );
     response.headers.set("Set-Cookie", buildSetCookieHeader(token));
     return response;
   } catch (err) {
     console.error("[auth/google/callback]", err);
     return NextResponse.redirect(
-      new URL("/login?error=google_failed", request.nextUrl.origin)
+      new URL("/login?error=google_failed", publicOrigin)
     );
   }
 }

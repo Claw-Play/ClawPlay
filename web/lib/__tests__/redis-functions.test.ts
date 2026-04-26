@@ -121,7 +121,7 @@ describe("Redis quota functions", () => {
       expect(mockFns.set).toHaveBeenCalledWith(
         "clawplay:quota:10",
         { used: 0, limit: 500 },
-        { ex: 86400 }
+        { ex: 86400, nx: true }
       );
     });
 
@@ -131,7 +131,7 @@ describe("Redis quota functions", () => {
       expect(mockFns.set).toHaveBeenCalledWith(
         "clawplay:quota:11",
         { used: 0, limit: DEFAULT_QUOTA_FREE },
-        { ex: 86400 }
+        { ex: 86400, nx: true }
       );
     });
 

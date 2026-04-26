@@ -74,7 +74,7 @@ describe("Auth helpers", () => {
     const header = buildSetCookieHeader("mytoken");
     expect(header).toContain(`${COOKIE_NAME}=mytoken`);
     expect(header).toContain("HttpOnly");
-    expect(header).toContain("SameSite=Strict");
+    expect(header).toContain("SameSite=Lax");
     expect(header).toContain(`Max-Age=${COOKIE_MAX_AGE}`);
     expect(header).toContain("Path=/");
     // Secure flag is only set in production

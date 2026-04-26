@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { users, userIdentities } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { verifySmsCode } from "@/lib/sms";
-import { DEFAULT_QUOTA_FREE } from "@/lib/redis";
+import { DEFAULT_QUOTA_FREE, ensureQuota } from "@/lib/redis";
 import { signJWT, buildSetCookieHeader } from "@/lib/auth";
 import { analytics } from "@/lib/analytics";
 import { getT } from "@/lib/i18n";
@@ -78,6 +78,8 @@ export async function POST(request: NextRequest) {
         providerAccountId: phone,
         credential: null,
       });
+
+      ensureQuota(user.id, DEFAULT_QUOTA_FREE).catch(() => {});
 
       userId = user.id;
       role = user.role as "user" | "admin" | "reviewer";

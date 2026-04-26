@@ -1,5 +1,5 @@
 "use client";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useT } from "@/lib/i18n/context";
@@ -31,7 +31,6 @@ function NavIcon({ name }: { name: string }) {
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() ?? "";
   const searchParams = useSearchParams();
-  const router = useRouter();
   const t = useT("nav");
   const tCommon = useT("common");
   const isSkillsRoute = pathname.startsWith("/skills");
@@ -73,6 +72,25 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       .finally(() => setLoading(false));
   }, []);
 
+  // Re-fetch user when page becomes visible again (e.g. after OAuth redirect)
+  useEffect(() => {
+    function onVisible() {
+      if (!document.hidden) {
+        fetch("/api/user/me")
+          .then((r) => r.ok ? r.json() : null)
+          .then((data) => {
+            if (data) {
+              userCache.current = { user: data.user, loaded: true };
+              setUser(data.user);
+            }
+          })
+          .catch(() => {});
+      }
+    }
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, []);
+
   // Listen for profile updates from DashboardClient
   useEffect(() => {
     function onProfileUpdate(e: Event) {
@@ -82,6 +100,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
     window.addEventListener("clawplay:profile-updated", onProfileUpdate);
     return () => window.removeEventListener("clawplay:profile-updated", onProfileUpdate);
+  }, []);
+
+  // Listen for logout to clear cached user
+  useEffect(() => {
+    function onLogout() {
+      userCache.current = { user: null, loaded: true };
+      setUser(null);
+    }
+    window.addEventListener("clawplay:logout", onLogout);
+    return () => window.removeEventListener("clawplay:logout", onLogout);
   }, []);
 
   useEffect(() => {
@@ -266,9 +294,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                         setDropdownOpen(false);
                         localStorage.removeItem('clawplay_draft_form');
                         localStorage.removeItem('clawplay_draft_mermaid');
-                        await fetch("/api/auth/logout", { method: "POST" });
-                        router.push("/");
-                        router.refresh();
+                        const from = `${pathname}${searchParams.toString() ? `?${searchParams.toString()}` : ""}`;
+                        const loginUrl = `/login?from=${encodeURIComponent(from)}`;
+                        window.dispatchEvent(new Event("clawplay:logout"));
+                        try {
+                          await fetch(`/api/auth/logout?from=${encodeURIComponent(from)}`, {
+                            method: "POST",
+                            redirect: "manual",
+                          });
+                        } catch {}
+                        window.location.href = loginUrl;
                       }}
                       className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 font-body transition-colors text-left"
                     >

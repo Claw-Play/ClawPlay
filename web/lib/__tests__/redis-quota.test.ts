@@ -21,7 +21,7 @@ process.env.UPSTASH_REDIS_REST_URL = "https://mock.upstash.io";
 process.env.UPSTASH_REDIS_REST_TOKEN = "mock-token";
 
 // Import after mock is set up
-const { getQuota, checkQuota, incrementQuota, ABILITY_COSTS } = await import("@/lib/redis");
+const { getQuota, checkQuota, incrementQuota, ensureQuota, initQuota, checkAndIncrementQuota, ABILITY_COSTS } = await import("@/lib/redis");
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -111,6 +111,48 @@ describe("incrementQuota — Lua script and Redis failure branches", () => {
     mockEval.mockRejectedValueOnce(new Error("Redis timeout"));
     const result = await incrementQuota(1, 10);
     expect(result.ok).toBe(false);
+  });
+});
+
+describe("ensureQuota / initQuota / checkAndIncrementQuota", () => {
+  it("ensureQuota writes only missing quota using NX", async () => {
+    mockSet.mockResolvedValueOnce("OK");
+    await ensureQuota(7, 1234);
+    expect(mockSet).toHaveBeenCalledWith(
+      "clawplay:quota:7",
+      { used: 0, limit: 1234 },
+      { ex: 86400, nx: true }
+    );
+  });
+
+  it("ensureQuota swallows Redis errors", async () => {
+    mockSet.mockRejectedValueOnce(new Error("Redis down"));
+    await expect(ensureQuota(8, 1234)).resolves.toBeUndefined();
+  });
+
+  it("initQuota delegates to ensureQuota", async () => {
+    mockSet.mockResolvedValueOnce("OK");
+    await initQuota(9, 4321);
+    expect(mockSet).toHaveBeenCalledWith(
+      "clawplay:quota:9",
+      { used: 0, limit: 4321 },
+      { ex: 86400, nx: true }
+    );
+  });
+
+  it("checkAndIncrementQuota returns success when quota is available", async () => {
+    mockGet.mockResolvedValueOnce({ used: 10, limit: 1000 });
+    mockEval.mockResolvedValueOnce(980);
+    const result = await checkAndIncrementQuota(10, "image.generate");
+    expect(result.allowed).toBe(true);
+    expect(result.remaining).toBe(980);
+  });
+
+  it("checkAndIncrementQuota returns denied when quota check fails", async () => {
+    mockGet.mockResolvedValueOnce({ used: 1000, limit: 1000 });
+    const result = await checkAndIncrementQuota(11, "image.generate");
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toMatch(/Quota exceeded/i);
   });
 });
 

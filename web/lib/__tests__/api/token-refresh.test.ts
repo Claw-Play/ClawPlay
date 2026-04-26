@@ -9,13 +9,11 @@ import { tempDbPath, cleanupDb, seedUser } from "../helpers/db";
 import { makeRequest } from "../helpers/request";
 import { encryptToken } from "@/lib/token";
 
-// ── Redis mock ────────────────────────────────────────────────────────────────
-vi.mock("@upstash/redis", () => ({
-  Redis: vi.fn().mockImplementation(() => ({
-    get: vi.fn().mockResolvedValue(null),
-    set: vi.fn().mockResolvedValue("OK"),
-    eval: vi.fn().mockResolvedValue(990),
-  })),
+// ── Redis quota mock for GET /api/user/me ────────────────────────────────────
+const getQuotaMock = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/redis", () => ({
+  getQuota: getQuotaMock,
+  DEFAULT_QUOTA_FREE: 100000,
 }));
 
 // ── Controllable next/headers mock ───────────────────────────────────────────
@@ -38,6 +36,7 @@ process.env.UPSTASH_REDIS_REST_TOKEN = "mock-token";
 
 let dbPath: string;
 let db: any;
+let GET_me: (req: any) => Promise<Response>;
 let POST_refresh: (req: any) => Promise<Response>;
 
 beforeAll(async () => {
@@ -48,7 +47,9 @@ beforeAll(async () => {
   const dbMod = await import("@/lib/db");
   db = dbMod.db;
 
+  const meMod = await import("@/app/api/user/me/route");
   const refreshMod = await import("@/app/api/user/token/refresh/route");
+  GET_me = meMod.GET;
   POST_refresh = refreshMod.POST;
 });
 
@@ -61,6 +62,58 @@ afterAll(() => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe("POST /api/user/token/refresh", () => {
+  it("keeps quota unchanged while rotating the token", async () => {
+    getQuotaMock.mockResolvedValue({ used: 27, limit: 1000, remaining: 973 });
+
+    const { user } = await seedUser(db);
+    const encryptedToken = encryptToken({ userId: user.id });
+
+    const { userTokens } = await import("@/lib/db/schema");
+    const { hashToken } = await import("@/lib/token");
+    await db.insert(userTokens).values({
+      id: "token-quota-1",
+      userId: user.id,
+      tokenHash: hashToken(encryptedToken),
+      encryptedPayload: encryptedToken,
+    });
+
+    const beforeRes = await GET_me(
+      makeRequest("GET", "/api/user/me", {
+        headers: { Authorization: `Bearer ${encryptedToken}` },
+      })
+    );
+    const beforeJson = await beforeRes.json();
+    expect(beforeRes.status).toBe(200);
+    expect(beforeJson.quota).toEqual({ used: 27, limit: 1000, remaining: 973 });
+
+    const refreshRes = await POST_refresh(
+      makeRequest("POST", "/api/user/token/refresh", {
+        headers: { Authorization: `Bearer ${encryptedToken}` },
+      })
+    );
+    const refreshJson = await refreshRes.json();
+
+    expect(refreshRes.status).toBe(200);
+    expect(refreshJson.token).toBeTruthy();
+    expect(refreshJson.token).not.toBe(encryptedToken);
+
+    const afterRes = await GET_me(
+      makeRequest("GET", "/api/user/me", {
+        headers: { Authorization: `Bearer ${refreshJson.token}` },
+      })
+    );
+    const afterJson = await afterRes.json();
+    expect(afterRes.status).toBe(200);
+    expect(afterJson.quota).toEqual(beforeJson.quota);
+
+    const revokedOld = await GET_me(
+      makeRequest("GET", "/api/user/me", {
+        headers: { Authorization: `Bearer ${encryptedToken}` },
+      })
+    );
+    expect(revokedOld.status).toBe(401);
+  });
+
   it("valid token → 200, returns new encrypted token, old token revoked", async () => {
     const { user } = await seedUser(db);
 
@@ -122,13 +175,13 @@ describe("POST /api/user/token/refresh", () => {
     expect(res.status).toBe(401);
   });
 
-  it("token for non-existent user → 404", async () => {
+  it("token for non-existent user → 401", async () => {
     // Create a token with a userId that doesn't exist
     const fakeToken = encryptToken({ userId: 999999 });
     const req = makeRequest("POST", "/api/user/token/refresh", {
       headers: { Authorization: `Bearer ${fakeToken}` },
     });
     const res = await POST_refresh(req);
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(401);
   });
 });

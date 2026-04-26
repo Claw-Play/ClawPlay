@@ -4,7 +4,8 @@ import { users, userIdentities } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { exchangeGithubCode, getGithubUserInfo } from "@/lib/oauth";
 import { signJWT, buildSetCookieHeader } from "@/lib/auth";
-import { DEFAULT_QUOTA_FREE } from "@/lib/redis";
+import { DEFAULT_QUOTA_FREE, ensureQuota } from "@/lib/redis";
+import { getPublicOrigin } from "@/lib/request-origin";
 
 const AVATAR_COLORS = [
   "#586330", "#a23f00", "#fa7025", "#8a6040",
@@ -17,6 +18,7 @@ export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
   const code = searchParams.get("code");
   const state = searchParams.get("state") ?? "";
+  const publicOrigin = getPublicOrigin(request);
 
   let redirectPath = "/dashboard";
   try {
@@ -29,13 +31,13 @@ export async function GET(request: NextRequest) {
   if (!code) {
     console.error("[auth/github/callback] no code — user denied or state error");
     return NextResponse.redirect(
-      new URL("/login?error=github_denied", request.nextUrl.origin)
+      new URL("/login?error=github_denied", publicOrigin)
     );
   }
 
   try {
     console.log("[auth/github/callback] exchanging code...");
-    const accessToken = await exchangeGithubCode(code, request.nextUrl.origin);
+    const accessToken = await exchangeGithubCode(code, publicOrigin);
     console.log("[auth/github/callback] fetching user info...");
     const userInfo = await getGithubUserInfo(accessToken);
     console.log("[auth/github/callback] got user:", JSON.stringify(userInfo));
@@ -75,6 +77,8 @@ export async function GET(request: NextRequest) {
         credential: null,
       });
 
+      ensureQuota(user.id, DEFAULT_QUOTA_FREE).catch(() => {});
+
       userId = user.id;
       role = user.role as "user" | "admin" | "reviewer";
       // First-time login: redirect to homepage at featured-skills section
@@ -84,14 +88,14 @@ export async function GET(request: NextRequest) {
     const token = await signJWT({ userId, role });
     console.log("[auth/github/callback] success, redirecting to:", redirectPath);
     const response = NextResponse.redirect(
-      new URL(redirectPath, request.nextUrl.origin)
+      new URL(redirectPath, publicOrigin)
     );
     response.headers.set("Set-Cookie", buildSetCookieHeader(token));
     return response;
   } catch (err) {
     console.error("[auth/github/callback] error:", err);
     return NextResponse.redirect(
-      new URL("/login?error=github_failed", request.nextUrl.origin)
+      new URL("/login?error=github_failed", publicOrigin)
     );
   }
 }

@@ -101,6 +101,31 @@ describe("Dashboard data flow", () => {
     expect(json.quota.remaining).toBe(json.quota.limit - json.quota.used);
   });
 
+  it("ignores event_logs when Redis has no quota snapshot", async () => {
+    const { user, cookie } = await seedUser(db);
+    cookieStore.token = cookie.replace("clawplay_token=", "");
+
+    const { eventLogs } = await import("@/lib/db/schema");
+    await db.insert(eventLogs).values({
+      event: "quota.use",
+      userId: user.id,
+      targetType: "ability",
+      targetId: "llm.generate",
+      metadata: JSON.stringify({ totalTokens: 20927 }),
+    });
+
+    const req = makeRequest("GET", "/api/user/me", { cookie });
+    const res = await GET_me(req);
+    const json = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(json.quota).toEqual({
+      used: 0,
+      limit: 100000,
+      remaining: 100000,
+    });
+  });
+
   it("POST /api/user/token/generate returns permanent token (no expiresAt)", async () => {
     const { cookie } = await seedUser(db);
     cookieStore.token = cookie.replace("clawplay_token=", "");

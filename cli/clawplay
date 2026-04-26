@@ -523,7 +523,14 @@ EOF
   echo "  User:  ${user_name}  (${user_role})"
   echo "  Quota: ${used}/${limit}  |  $( _msg remaining): ${remaining}"
   echo ""
-  echo "  Run 'clawplay whoami' to verify"
+  if [[ "$lang" == "zh" ]]; then
+    echo "  让你的 Agent 执行："
+    echo "  用 Bash / Write-like 工具，或者创建软链接，把下面这个目录加入你自己的 skills 配置，这样就能自动发现其中的 skills："
+  else
+    echo "  Tell your Agent to run:"
+    echo "  Use Bash / Write-like tools, or create a soft link, to add the following directory to your own skills configuration, So you can automatically discover skills in that directory:"
+  fi
+  echo "  ${HOME}/.clawplay/skills"
   echo ""
 
   # Export for current session (safety net — zshrc needs re-source)

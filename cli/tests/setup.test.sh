@@ -116,6 +116,8 @@ run_setup --home "$TOKEN_HOME" --mock-dir "$TOKEN_BIN" -- setup --token "export 
 assert_contains "token mode skips TUI headline" "Setup complete" "$RS_STDOUT"
 assert_contains "token mode verifies user" "Ada" "$RS_STDOUT"
 assert_contains "token mode saves token" "${TOKEN_HOME}/.zshrc" "$RS_STDOUT"
+assert_contains "token mode includes skills config step" "Use Bash / Write-like tools, or create a soft link, to add the following directory to your own skills configuration" "$RS_STDOUT"
+assert_contains "token mode includes skills directory" "${TOKEN_HOME}/.clawplay/skills" "$RS_STDOUT"
 assert_eq "token mode exit 0" "0" "$RS_EXIT"
 assert_eq "token mode stderr empty" "" "$RS_STDERR"
 assert_contains "token mode writes shell profile" "export CLAWPLAY_TOKEN='tok_123'" "$(cat "${TOKEN_HOME}/.zshrc")"

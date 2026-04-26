@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$(git rev-parse --show-toplevel)"
+cd "$repo_root"
+
+if ! git diff --cached --name-only --diff-filter=ACMR | grep -qx 'web/lib/db/schema.ts'; then
+  exit 0
+fi
+
+if ! command -v pnpm >/dev/null 2>&1; then
+  echo "pre-commit: pnpm is required to generate Drizzle migrations" >&2
+  exit 1
+fi
+
+echo "pre-commit: schema change detected, running web db:generate..."
+pnpm --dir web run db:generate
+
+git add web/drizzle/migrations web/drizzle.config.ts

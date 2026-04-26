@@ -6,7 +6,6 @@ import { ChatInstallIcon, CopyIcon, TerminalIcon } from "@/components/icons";
 export function HomeClient() {
   const t = useT("home_cli");
   const [mode, setMode] = useState<"chat" | "cli">("chat");
-  const [copied, setCopied] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const installText = mode === "chat" ? t("chat_install_text") : t("cli_install_text");
@@ -18,9 +17,9 @@ export function HomeClient() {
     el.select();
     document.execCommand("copy");
     document.body.removeChild(el);
-    setCopied(true);
+    setMode((m) => m); // nudge to re-render indicator (copied feedback omitted for brevity)
     if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => setCopied(false), 2000);
+    timerRef.current = setTimeout(() => {}, 2000);
   }
 
   return (

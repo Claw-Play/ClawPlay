@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useT } from "@/lib/i18n/context";
 import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
@@ -8,12 +8,20 @@ import { ShrimpLogoIcon } from "@/components/icons";
 
 type Tab = "account" | "more";
 
+function getSafeRedirectPath(value: string | null): string {
+  if (!value || !value.startsWith("/")) return "/dashboard";
+  if (value.startsWith("//")) return "/dashboard";
+  return value;
+}
+
 export function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const t = useT("auth");
   const [tab, setTab] = useState<Tab>("account");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const redirectTo = getSafeRedirectPath(searchParams.get("from"));
 
   // Account tab
   const [email, setEmail] = useState("");
@@ -31,7 +39,7 @@ export function LoginForm() {
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? t("login_failed")); return; }
-      router.push("/dashboard");
+      router.push(redirectTo);
       router.refresh();
     } catch {
       setError(t("network_error"));
@@ -126,7 +134,7 @@ export function LoginForm() {
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               {/* Google */}
               <a
-                href="/api/auth/google?redirect=/dashboard"
+                href={`/api/auth/google?redirect=${encodeURIComponent(redirectTo)}`}
                 className="flex items-center justify-center gap-2 py-3 px-4 rounded-[20px] bg-[#faf3d0] hover:bg-[#f0e8b8] border border-[#e0d4bc] text-[#564337] font-semibold text-sm transition-colors font-body"
               >
                 <svg viewBox="0 0 24 24" className="w-5 h-5 shrink-0" aria-hidden="true">
@@ -140,7 +148,7 @@ export function LoginForm() {
 
               {/* GitHub */}
               <a
-                href="/api/auth/github?redirect=/dashboard"
+                href={`/api/auth/github?redirect=${encodeURIComponent(redirectTo)}`}
                 className="flex items-center justify-center gap-2 py-3 px-4 rounded-[20px] bg-[#faf3d0] hover:bg-[#f0e8b8] border border-[#e0d4bc] text-[#564337] font-semibold text-sm transition-colors font-body"
               >
                 <svg viewBox="0 0 24 24" className="w-5 h-5 shrink-0" aria-hidden="true">
@@ -151,7 +159,7 @@ export function LoginForm() {
 
               {/* X (Twitter) */}
               <a
-                href="/api/auth/x?redirect=/dashboard"
+                href={`/api/auth/x?redirect=${encodeURIComponent(redirectTo)}`}
                 className="flex items-center justify-center gap-2 py-3 px-4 rounded-[20px] bg-[#faf3d0] hover:bg-[#f0e8b8] border border-[#e0d4bc] text-[#564337] font-semibold text-sm transition-colors font-body"
               >
                 <svg viewBox="0 0 24 24" className="w-5 h-5 shrink-0" aria-hidden="true">
@@ -162,7 +170,7 @@ export function LoginForm() {
 
               {/* Discord */}
               <a
-                href="/api/auth/discord?redirect=/dashboard"
+                href={`/api/auth/discord?redirect=${encodeURIComponent(redirectTo)}`}
                 className="flex items-center justify-center gap-2 py-3 px-4 rounded-[20px] bg-[#faf3d0] hover:bg-[#f0e8b8] border border-[#e0d4bc] text-[#564337] font-semibold text-sm transition-colors font-body"
               >
                 <svg viewBox="0 0 24 24" className="w-5 h-5 shrink-0" aria-hidden="true">

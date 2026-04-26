@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { decryptToken, type TokenPayload } from "@/lib/token";
+import { authenticateClawplayToken } from "@/lib/token-auth";
 import { checkQuota, incrementQuota } from "@/lib/redis";
 import { getVisionProvider, type VisionAnalyzeRequest, type VisionImage } from "@/lib/providers/vision";
 import { analytics } from "@/lib/analytics";
@@ -10,26 +10,15 @@ const ABILITY = "vision.analyze";
 export async function POST(request: NextRequest) {
   const t = await getT("errors");
 
-  // 1. Extract + decrypt token
-  const token =
-    request.headers.get("Authorization")?.replace("Bearer ", "") ??
-    request.cookies.get("clawplay_token")?.value;
-
-  if (!token) {
+  const auth = await authenticateClawplayToken(request);
+  if (!auth) {
     return NextResponse.json({ error: t("authorization_required") }, { status: 401 });
   }
 
-  let payload: TokenPayload;
-  try {
-    payload = decryptToken(token);
-  } catch {
-    return NextResponse.json({ error: t("invalid_auth_token") }, { status: 401 });
-  }
-
   // 2. Check quota (pre-check with conservative estimate)
-  const quotaCheck = await checkQuota(payload.userId, ABILITY);
+  const quotaCheck = await checkQuota(auth.userId, ABILITY);
   if (!quotaCheck.allowed) {
-    analytics.quota.exceeded(payload.userId, ABILITY, quotaCheck.remaining ?? 0, quotaCheck.remaining ?? 0);
+    analytics.quota.exceeded(auth.userId, ABILITY, quotaCheck.remaining ?? 0, quotaCheck.remaining ?? 0);
     return NextResponse.json(
       { error: t("quota_exceeded"), reason: quotaCheck.reason, remaining: quotaCheck.remaining },
       { status: 429 }
@@ -91,20 +80,20 @@ export async function POST(request: NextRequest) {
 
     // 5. Deduct quota after success using actual tokens
     const actualTokens = result.usage?.totalTokens ?? 0;
-    const incr = await incrementQuota(payload.userId, actualTokens);
-    analytics.quota.use(payload.userId, ABILITY, actualTokens, { ...result.usage, provider });
-
+    const incr = await incrementQuota(auth.userId, actualTokens);
     if (!incr.ok) {
       // Quota exceeded (atomic check caught it) — return 429
+      analytics.quota.exceeded(auth.userId, ABILITY, quotaCheck.remaining ?? 0, quotaCheck.remaining ?? 0);
       return NextResponse.json(
         { error: t("quota_exceeded"), remaining: 0 },
         { status: 429 }
       );
     }
 
+    analytics.quota.use(auth.userId, ABILITY, actualTokens, { ...result.usage, provider });
     return NextResponse.json({ ...result, _quota: { used: actualTokens, remaining: incr.remaining ?? 0 } });
   } catch (err) {
-    analytics.quota.error(payload.userId, ABILITY, provider, (err as NodeJS.ErrnoException).code ?? "UNKNOWN");
+    analytics.quota.error(auth.userId, ABILITY, provider, (err as NodeJS.ErrnoException).code ?? "UNKNOWN");
     const code = (err as NodeJS.ErrnoException).code;
     if (code === "PROVIDER_RATE_LIMITED") {
       console.warn("[ability/vision/analyze] provider rate limited", { provider });
