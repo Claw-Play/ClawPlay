@@ -72,6 +72,27 @@ clawplay setup --agent   # Print setup steps for an agent to relay
 
 ---
 
+## Submit a Skill
+
+Developers submit Skills via the web UI at `/submit`, guided through a 4-step wizard:
+
+```
+Step 1: Basic Info        → Name, summary, repo URL, icon emoji
+Step 2: Abilities         → Select capabilities (LLM, Vision, Image, TTS)
+Step 3: Skill MD          → Write SKILL.md: YAML frontmatter + TAB sections
+Step 4: Diagram           → Auto-generate Mermaid flow diagram from bash blocks
+```
+
+**Submit Gate Card**: The submit button stays blocked until all 4 steps are verified. Each step shows its status (done/pending/todo). Clicking a step scrolls directly to it.
+
+**Capability Selector**: Choose which AI providers your skill uses — Ark (domestic) or Gemini (overseas). Routing is handled transparently by ClawPlay's multi-provider relay.
+
+**Skill MD Editor**: Split-pane editor for SKILL.md with real-time YAML frontmatter validation and TAB section editor (description, instructions, examples, dependencies).
+
+**Diagram Generator**: `clawplay skill diagram` calls LLM to generate a Mermaid flow diagram from your bash instructions, rendered inline on the submit page.
+
+---
+
 ## Architecture
 
 ### Relay Mode
@@ -189,13 +210,37 @@ ClawPlay/
 │   │   │   ├── admin/            # Admin: analytics, audit-logs, keys, skills, users
 │   │   │   ├── auth/            # Auth: login, logout, register, sms, oauth callbacks
 │   │   │   ├── cron/            # Cron: reset-keys
-│   │   │   ├── skills/          # Skills: list, submit, {slug}, versions, install, download, reviews
+│   │   │   ├── skills/          # Skills: list, submit, {slug}, versions, install, download, reviews, validate, diagram, slug-check, pending-count
 │   │   │   └── user/            # User: me, analytics, token
 │   │   └── page.tsx             # Homepage
 │   ├── components/
 │   │   ├── charts/               # LineChart, PieChart
 │   │   ├── FeaturedCarousel.tsx  # Featured skills carousel
-│   │   └── SkillDiagramPreview.tsx # Mermaid diagram renderer
+│   │   ├── FeaturedGrid.tsx      # Featured skills grid
+│   │   ├── SkillDiagramPreview.tsx # Mermaid diagram renderer (client-side)
+│   │   ├── SkillWorkspace.tsx    # Skill editing workspace
+│   │   ├── UserAvatarMenu.tsx    # User avatar dropdown
+│   │   ├── SiteTopNav.tsx        # Site-wide top navigation
+│   │   ├── HomeHeaderAuth.tsx    # Home page header auth section
+│   │   ├── CenteredNavLinks.tsx  # Centered navigation links
+│   │   ├── WhyChooseClawPlay.tsx # Home page feature highlights
+│   │   ├── CollapsibleCardHeader.tsx # Collapsible card header
+│   │   ├── ProfileEditModal.tsx  # Profile edit modal
+│   │   ├── ReviewsSection.tsx    # Skill reviews section
+│   │   ├── ReviewForm.tsx       # Review submission form
+│   │   ├── QuickInstallCard.tsx  # Quick install card
+│   │   ├── StatsSection.tsx      # Homepage stats with rolling digits
+│   │   └── submit/              # Submit wizard components
+│   │       ├── submit-page.tsx      # Page wrapper
+│   │       ├── submit-section.tsx   # Wizard orchestration + gate logic
+│   │       ├── submit-gate-card.tsx # Submission blocking card
+│   │       ├── submit-gate-card-shell.tsx # Gate card shell
+│   │       ├── submit-step-card.tsx  # Individual step card
+│   │       ├── version-submit-gate-card.tsx # Version submission gate
+│   │       ├── capability-selector.tsx # Multi-provider ability picker
+│   │       ├── skill-md-editor.tsx   # Split-pane YAML/TAB editor
+│   │       ├── agent-guide.tsx      # Agent setup instructions
+│   │       └── workflow-indicator.tsx # 4-step progress bar
 │   └── lib/
 │       ├── db/                   # Drizzle ORM + SQLite schema
 │       ├── auth.ts               # JWT helpers
@@ -203,6 +248,12 @@ ClawPlay/
 │       ├── token.ts              # AES-256-GCM token crypto
 │       ├── redis.ts              # Upstash Redis quota helpers
 │       ├── analytics.ts          # Event tracking system
+│       ├── ratings.ts            # Skill rating aggregation
+│       ├── review-notifications.ts # Email notifications for review events (SMTP)
+│       ├── submit-wizard.ts      # Wizard state machine + SKILL.md validation
+│       ├── request-origin.ts     # Public origin resolution (proxy-aware)
+│       ├── skill-security-scan.ts # Bash injection / SSRF / XSS pre-scan
+│       ├── skill-llm-safety.ts   # LLM content safety pre-check
 │       ├── oauth.ts              # OAuth provider configs + callbacks
 │       ├── wechat.ts             # WeChat OAuth helpers
 │       ├── sms.ts                # SMS send/verify helpers
@@ -267,8 +318,8 @@ pnpm test:all
 | Phase | Goal | Status |
 |-------|------|--------|
 | Phase 1 | Core infrastructure (CLI, Web, Relay, Token system, i18n, OAuth, Analytics) | ✅ Done |
-| Phase 2 | CN launch + initial user accumulation (providers ✅, user roles ✅, skill versioning ✅, auth, onboarding) | 🔲 In Progress |
-| Phase 3 | Social & UX (reviews ✅, Featured carousel ✅, Analytics ✅, sharing, notifications) | 🔲 In Progress |
+| Phase 2 | CN launch + initial user accumulation (providers ✅, user roles ✅, skill versioning ✅, submit wizard ✅, admin improvements ✅, auth, onboarding) | 🔲 In Progress |
+| Phase 3 | Social & UX (reviews ✅, Featured carousel ✅, Analytics ✅, ratings ✅, review notifications ✅, sharing, notifications) | 🔲 In Progress |
 | Phase 4 | Monetization & scale (Token Plans, multi-provider failover; LLM safety pre-scan ✅) | 🔲 Planned |
 | Phase 5 | Advanced AI — dual-track: Skill recovery + IP memory knowledge base | 🔲 Planned |
 | Phase 6 | International expansion + Mobile app | 🔲 Planned |

@@ -41,6 +41,8 @@
 - ✅ **自动安全扫描**：bash 注入检测 + LLM 安全预审，拦截恶意 Skill
 - ✅ **Skill 版本历史**：独立页面，LCS diff 对比相邻版本
 - ✅ **Providers 管理页面**：Admin 面板管理 API Key 和 Model，支持多 Key 分片
+- ✅ **Submit Wizard**：4 步提交向导（基本信息 → 能力选择 → Skill MD → 流程图），提交门控卡片，Skill MD 编辑器（YAML + TAB 分区），流程图自动生成，验证 API
+- ✅ **Admin 审核体验优化**：侧边栏实时 pending count（无需刷新），reject 强制填写原因（列表页 + 详情页）
 - **install.sh**：一行命令安装 CLI，写入 SKILL.md 引导用户
 - **Skill 下载 API**：`/api/skills/[slug]/download`（zip 打包 + 版本 + E2E 测试）
 - **开发者入门文档**：CLI 导入、SKILL.md 规范、本地调试方法，发布到 `docs/`
@@ -67,10 +69,11 @@
 
 ### 已完成
 
-- ✅ **Skill 评分与评论**：1-5星评分 + 文字评论，`skillRatings` 表，`/api/skills/[slug]/reviews` API，详情页 UI
+- ✅ **Skill 评分与评论**：1-5星评分 + 文字评论，`skillRatings` 表，`/api/skills/[slug]/reviews` API，详情页 UI，`lib/ratings.ts` 聚合计算
 - ✅ **Featured Skill 轮播**：`isFeatured` 字段，`FeaturedCarousel` 组件，首页自动切换，admin feature/unfeature 开关
 - ✅ **Analytics 事件追踪系统**：`eventLogs` + `userStats` 表；fire-and-forget DB 写入；追踪 inputTokens/outputTokens/provider
 - ✅ **Admin Analytics APIs**：平台总览、事件流、用户统计
+- ✅ **审核邮件通知**：`lib/review-notifications.ts`，SMTP 发送 approve/reject 邮件通知，`nodemailer.d.ts` 类型声明
 
 ### 进行中
 
@@ -80,7 +83,7 @@
 
 ### 待规划
 
-- 🔲 **通知中心**：审核状态变更、评论回复等消息推送
+- 🔲 **通知中心**：站内消息推送（审核状态变更、评论回复等），邮件通知已完成
 - 🔲 **Skill 依赖系统**：形象类基础 Skill，其他 Skill 依赖它，依赖安装要解决
 - 🔲 **社交功能**：用户分享玩耍心得，OpenClaw 自动分享对话卡片
 

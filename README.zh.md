@@ -72,6 +72,27 @@ clawplay setup --agent   # 输出给 Agent 转述的配置步骤
 
 ---
 
+## 提交 Skill
+
+开发者通过网页 UI 在 `/submit` 提交 Skill，页面引导你完成 4 步向导：
+
+```
+步骤 1：基本信息       → 名称、简介、仓库 URL、图标 emoji
+步骤 2：能力选择       → 选择 LLM、Vision、Image、TTS 能力
+步骤 3：Skill MD      → 编写 SKILL.md：YAML frontmatter + TAB 区段
+步骤 4：流程图         → 从 bash 指令块自动生成 Mermaid 流程图
+```
+
+**提交门控卡片**：4 步全部验证通过前提交按钮被锁定，每步显示状态（已完成/进行中/待办），点击步骤可直接滚动定位。
+
+**能力选择器**：选择你的 Skill 使用哪些 AI Provider — Ark（国内）或 Gemini（海外），路由由 ClawPlay 多 Provider Relay 透明处理。
+
+**Skill MD 编辑器**：SKILL.md 分栏编辑器，实时 YAML frontmatter 校验 + TAB 区段编辑器（description、instructions、examples、dependencies）。
+
+**流程图生成器**：`clawplay skill diagram` 调用 LLM 从 bash 指令生成 Mermaid 流程图，内联渲染在提交页面。
+
+---
+
 ## 架构
 
 ### Relay 模式
@@ -189,13 +210,37 @@ ClawPlay/
 │   │   │   ├── admin/            # 管理员：analytics、audit-logs、keys、skills、users
 │   │   │   ├── auth/            # 认证：login、logout、register、sms、oauth callbacks
 │   │   │   ├── cron/            # 定时任务：reset-keys
-│   │   │   ├── skills/          # Skills：列表、提交、{slug}、versions、install、download、reviews
+│   │   │   ├── skills/          # Skills：列表、提交、{slug}、versions、install、download、reviews、validate、diagram、slug-check、pending-count
 │   │   │   └── user/            # 用户：me、analytics、token
 │   │   └── page.tsx             # 首页
 │   ├── components/
 │   │   ├── charts/               # LineChart、PieChart
 │   │   ├── FeaturedCarousel.tsx  # Featured 技能轮播
-│   │   └── SkillDiagramPreview.tsx # Mermaid 流程图渲染器
+│   │   ├── FeaturedGrid.tsx      # Featured 技能网格
+│   │   ├── SkillDiagramPreview.tsx # Mermaid 流程图渲染器（客户端）
+│   │   ├── SkillWorkspace.tsx    # Skill 编辑工作区
+│   │   ├── UserAvatarMenu.tsx   # 用户头像下拉菜单
+│   │   ├── SiteTopNav.tsx       # 全站顶部导航
+│   │   ├── HomeHeaderAuth.tsx   # 首页头部登录区
+│   │   ├── CenteredNavLinks.tsx # 居中导航链接
+│   │   ├── WhyChooseClawPlay.tsx # 首页特色展示
+│   │   ├── CollapsibleCardHeader.tsx # 可折叠卡片头部
+│   │   ├── ProfileEditModal.tsx  # 资料编辑弹窗
+│   │   ├── ReviewsSection.tsx    # Skill 评价区
+│   │   ├── ReviewForm.tsx       # 评价表单
+│   │   ├── QuickInstallCard.tsx # 快速安装卡片
+│   │   ├── StatsSection.tsx      # 首页统计（数字滚动动画）
+│   │   └── submit/              # 提交向导组件
+│   │       ├── submit-page.tsx      # 页面包装器
+│   │       ├── submit-section.tsx   # 向导编排 + 门控逻辑
+│   │       ├── submit-gate-card.tsx # 提交门控卡片
+│   │       ├── submit-gate-card-shell.tsx # 门控卡片外壳
+│   │       ├── submit-step-card.tsx  # 单步骤卡片
+│   │       ├── version-submit-gate-card.tsx # 版本提交门控
+│   │       ├── capability-selector.tsx # 多 Provider 能力选择器
+│   │       ├── skill-md-editor.tsx   # 分栏 YAML/TAB 编辑器
+│   │       ├── agent-guide.tsx      # Agent 配置说明
+│   │       └── workflow-indicator.tsx # 4步骤进度条
 │   └── lib/
 │       ├── db/                   # Drizzle ORM + SQLite Schema
 │       ├── auth.ts               # JWT helpers
@@ -203,6 +248,12 @@ ClawPlay/
 │       ├── token.ts              # AES-256-GCM Token 加解密
 │       ├── redis.ts              # Upstash Redis 配额 helpers
 │       ├── analytics.ts          # 事件追踪系统
+│       ├── ratings.ts            # Skill 评分聚合
+│       ├── review-notifications.ts # 审核邮件通知（SMTP）
+│       ├── submit-wizard.ts      # 向导状态机 + SKILL.md 校验
+│       ├── request-origin.ts     # 公共 Origin 解析（支持代理头）
+│       ├── skill-security-scan.ts # Bash 注入 / SSRF / XSS 预检
+│       ├── skill-llm-safety.ts   # LLM 内容安全预审
 │       ├── oauth.ts              # OAuth Provider 配置 + 回调处理
 │       ├── wechat.ts             # 微信 OAuth helpers
 │       ├── sms.ts                # 短信发送/验证 helpers
@@ -267,8 +318,8 @@ pnpm test:all
 | 阶段 | 目标 | 状态 |
 |------|------|------|
 | Phase 1 | 核心基础设施（CLI、Web、Relay、Token 系统、i18n、OAuth、Analytics） | ✅ 已完成 |
-| Phase 2 | 国内上线 + 初始用户积累（Providers 管理 ✅、用户权限 ✅、Skill 版本 ✅、认证、新手引导） | 🔲 进行中 |
-| Phase 3 | 社交与用户体验（评论 ✅、Featured 轮播 ✅、Analytics ✅、分享、通知中心） | 🔲 进行中 |
+| Phase 2 | 国内上线 + 初始用户积累（Providers 管理 ✅、用户权限 ✅、Skill 版本 ✅、提交向导 ✅、Admin 改进 ✅、认证、新手引导） | 🔲 进行中 |
+| Phase 3 | 社交与用户体验（评论 ✅、Featured 轮播 ✅、Analytics ✅、评分系统 ✅、审核通知 ✅、分享、通知中心） | 🔲 进行中 |
 | Phase 4 | 商业化与规模化（Token Plan、多 Provider 故障转移；LLM 安全预审 ✅） | 🔲 计划中 |
 | Phase 5 | 高级 AI 能力 — 双线深化：Skill 中断恢复 + IP 记忆知识库 | 🔲 计划中 |
 | Phase 6 | 出海与移动端（GitHub OAuth、Stripe、多区域路由、原生 APP） | 🔲 计划中 |
