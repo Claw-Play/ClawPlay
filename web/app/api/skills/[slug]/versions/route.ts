@@ -84,10 +84,11 @@ export async function POST(
 
   try {
     const body = await request.json();
-    const { version, changelog, skillMdContent } = body as {
+    const { version, changelog, skillMdContent, workflowMd } = body as {
       version?: string;
       changelog?: string;
       skillMdContent?: string;
+      workflowMd?: string;
     };
 
     if (!version || !skillMdContent) {
@@ -182,6 +183,7 @@ export async function POST(
       version: version.trim(),
       changelog: changelog?.trim() ?? "",
       content: skillMdContent,
+      workflowMd: workflowMd ?? "",
       parsedMetadata: JSON.stringify(parsedMetadata),
       authorId: auth.userId,
       moderationStatus: versionModerationStatus,

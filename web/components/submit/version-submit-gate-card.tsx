@@ -18,6 +18,7 @@ interface Props {
   diagramDone: boolean;
   changelog: string;
   skillMdContent: string;
+  diagramMermaid?: string;
   validationResult?: ValidationResult | null;
   onSubmitSuccess?: () => void;
   onNavigateStep?: (targetId: string) => void;
@@ -87,6 +88,7 @@ export default function VersionSubmitGateCard({
   diagramDone,
   changelog,
   skillMdContent,
+  diagramMermaid,
   validationResult,
   onSubmitSuccess,
   onNavigateStep,
@@ -126,6 +128,7 @@ export default function VersionSubmitGateCard({
           version: version.trim(),
           changelog: changelog.trim(),
           skillMdContent,
+          workflowMd: diagramMermaid,
         }),
       });
       const data = await res.json();
@@ -137,7 +140,7 @@ export default function VersionSubmitGateCard({
       setSubmitStatus("error");
       setSubmitError(err instanceof Error ? err.message : String(err));
     }
-  }, [canSubmit, changelog, router, skillMdContent, slug, t, version, onSubmitSuccess]);
+  }, [canSubmit, changelog, diagramMermaid, router, skillMdContent, slug, t, version, onSubmitSuccess]);
 
   const steps: SubmitGateStep[] = [
     {

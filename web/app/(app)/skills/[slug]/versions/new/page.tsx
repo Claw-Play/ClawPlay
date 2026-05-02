@@ -394,6 +394,7 @@ export default function SubmitNewVersionPage() {
                 diagramDone={diagramDone}
                 changelog={changelog}
                 skillMdContent={skillMdContent}
+                diagramMermaid={diagramMermaid}
                 validationResult={validationResult}
               onSubmitSuccess={() => {
                 clearSubmitDraft(draftStorageKey);
