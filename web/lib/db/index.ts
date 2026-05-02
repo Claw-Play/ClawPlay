@@ -132,6 +132,7 @@ CREATE TABLE IF NOT EXISTS skills (
 
 CREATE UNIQUE INDEX IF NOT EXISTS skills_by_slug ON skills(slug);
 CREATE INDEX IF NOT EXISTS skills_by_status_deleted ON skills(moderation_status, deleted_at);
+CREATE INDEX IF NOT EXISTS skills_pending_by_created ON skills(moderation_status, deleted_at, created_at);
 
 CREATE TABLE IF NOT EXISTS skill_versions (
   id TEXT PRIMARY KEY,

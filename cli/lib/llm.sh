@@ -81,7 +81,11 @@ _llm_generate() {
     -H "Authorization: Bearer ${CLAWPLAY_TOKEN}" \
     -H "Content-Type: application/json" \
     -d "$json") || {
-    echo "[clawplay llm] ERROR: Request to ClawPlay relay failed." >&2
+    if api_is_auth_error_response "$response"; then
+      api_print_reconfigure_key_hint "[clawplay llm]"
+    else
+      echo "[clawplay llm] ERROR: Request to ClawPlay relay failed." >&2
+    fi
     exit 1
   }
 
@@ -89,7 +93,11 @@ _llm_generate() {
   local err
   err=$(echo "$response" | jq -r '.error // empty' 2>/dev/null)
   if [[ -n "$err" ]]; then
-    echo "[clawplay llm] ERROR: $err" >&2
+    if api_is_auth_error_response "$response"; then
+      api_print_reconfigure_key_hint "[clawplay llm]"
+    else
+      echo "[clawplay llm] ERROR: $err" >&2
+    fi
     exit 1
   fi
 

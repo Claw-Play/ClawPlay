@@ -7,7 +7,11 @@ import matter from "gray-matter";
 import { scanSkillContent } from "@/lib/skill-security-scan";
 import { llmSafetyReview } from "@/lib/skill-llm-safety";
 import { analytics } from "@/lib/analytics";
+import { getPublicOrigin } from "@/lib/request-origin";
+import { sendSkillSubmissionReviewEmail } from "@/lib/review-notifications";
 import { getT } from "@/lib/i18n";
+
+export const runtime = "nodejs";
 
 // Generate a slug from name
 function slugify(name: string): string {
@@ -21,6 +25,14 @@ function genId() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
 
+function isUniqueConstraintError(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  return (
+    err.message.includes("UNIQUE constraint failed") ||
+    err.message.includes("SQLITE_CONSTRAINT_UNIQUE")
+  );
+}
+
 export async function POST(request: NextRequest) {
   const t = await getT("errors");
   const auth = await getAuthFromCookies();
@@ -32,6 +44,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const {
       name,
+      slug: providedSlug,
       summary,
       repoUrl,
       iconEmoji,
@@ -39,6 +52,7 @@ export async function POST(request: NextRequest) {
       workflowMd,
     } = body as {
       name?: string;
+      slug?: string;
       summary?: string;
       repoUrl?: string;
       iconEmoji?: string;
@@ -46,7 +60,7 @@ export async function POST(request: NextRequest) {
       workflowMd?: string;
     };
 
-    if (!name || !skillMdContent) {
+    if (!name?.trim() || !skillMdContent?.trim()) {
       return NextResponse.json(
         { error: t("name_required") },
         { status: 400 }
@@ -129,13 +143,17 @@ export async function POST(request: NextRequest) {
     const authorName = user?.name || "";
     const authorEmail = emailIdentity?.providerAccountId ?? "";
 
+    const normalizedName = name.trim();
+    const normalizedSummary = summary?.trim() ?? "";
+    const normalizedRepoUrl = repoUrl?.trim() ?? "";
+
     // ── 5. 生成 slug ────────────────────────────────────────────────────────
-    let slug = slugify(name);
-    const existing = await db.query.skills.findFirst({
-      where: eq(skills.slug, slug),
-    });
-    if (existing) {
-      slug = `${slug}-${genId().slice(0, 6)}`;
+    let slug = slugify(providedSlug?.trim() || "");
+    if (!slug) {
+      slug = slugify(normalizedName);
+    }
+    if (!slug) {
+      return NextResponse.json({ error: t("invalid_slug") }, { status: 400 });
     }
 
     // ── 6. 解析 SKILL.md frontmatter ────────────────────────────────────────
@@ -147,48 +165,83 @@ export async function POST(request: NextRequest) {
       // Graceful degradation — store as-is
     }
 
-    const skillId = genId();
-    const versionId = genId();
     const version = "1.0.0";
 
-    // ── 7. 写 DB ────────────────────────────────────────────────────────────
-    await db.insert(skills).values({
-      id: skillId,
-      slug,
-      name: name.trim(),
-      summary: summary?.trim() ?? "",
-      authorName: authorName ?? "",
-      authorEmail: authorEmail ?? "",
-      authorId: auth.userId,
-      repoUrl: repoUrl?.trim() ?? "",
-      iconEmoji: iconEmoji ?? "🦐",
-      moderationStatus: "pending",
-      moderationReason: "",
-      moderationFlags: JSON.stringify(allFlags),
-      latestVersionId: versionId,
-      statsStars: 0,
-      statsRatingsCount: 0,
-      isFeatured: 0,
-    });
+    let skillId = "";
+    let versionId = "";
+    const maxSlugAttempts = 5;
 
-    await db.insert(skillVersions).values({
-      id: versionId,
-      skillId,
-      version,
-      changelog: "Initial submission.",
-      content: skillMdContent,
-      parsedMetadata: JSON.stringify(parsedMetadata),
-      workflowMd: workflowMd ?? "",
-      authorId: auth.userId,
-      moderationStatus: "pending",
-      moderationFlags: JSON.stringify([]),
-    });
+    for (let attempt = 0; attempt < maxSlugAttempts; attempt++) {
+      const candidateSlug = attempt === 0 ? slug : `${slug}-${genId().slice(0, 6)}`;
+      skillId = genId();
+      versionId = genId();
+
+      try {
+        // ── 7. 写 DB ────────────────────────────────────────────────────────
+        await db.transaction((tx) => {
+          tx.insert(skills).values({
+            id: skillId,
+            slug: candidateSlug,
+            name: normalizedName,
+            summary: normalizedSummary,
+            authorName: authorName ?? "",
+            authorEmail: authorEmail ?? "",
+            authorId: auth.userId,
+            repoUrl: normalizedRepoUrl,
+            iconEmoji: iconEmoji ?? "🦐",
+            moderationStatus: "pending",
+            moderationReason: "",
+            moderationFlags: JSON.stringify(allFlags),
+            latestVersionId: versionId,
+            statsStars: 0,
+            statsRatingsCount: 0,
+            isFeatured: 0,
+          }).run();
+
+          tx.insert(skillVersions).values({
+            id: versionId,
+            skillId,
+            version,
+            changelog: "Initial submission.",
+            content: skillMdContent,
+            parsedMetadata: JSON.stringify(parsedMetadata),
+            workflowMd: workflowMd ?? "",
+            authorId: auth.userId,
+            moderationStatus: "pending",
+            moderationFlags: JSON.stringify([]),
+          }).run();
+        });
+
+        slug = candidateSlug;
+        break;
+      } catch (err) {
+        if (isUniqueConstraintError(err) && attempt < maxSlugAttempts - 1) {
+          continue;
+        }
+        throw err;
+      }
+    }
 
     analytics.skill.submit(skillId, "pending");
 
+    const publicOrigin = getPublicOrigin(request);
+    const reviewUrl = new URL(`/admin/review/${skillId}`, publicOrigin).toString();
+    void sendSkillSubmissionReviewEmail({
+      skillId,
+      skillName: normalizedName,
+      slug,
+      summary: normalizedSummary,
+      repoUrl: normalizedRepoUrl,
+      authorName: authorName || "Unknown author",
+      authorEmail: authorEmail || "",
+      reviewFlags: allFlags,
+      reviewUrl,
+      submittedAt: new Date().toISOString(),
+    });
+
     return NextResponse.json(
       {
-        skill: { id: skillId, slug, name, version },
+        skill: { id: skillId, slug, name: normalizedName, version },
         message: t("skill_submitted"),
         reviewFlags: allFlags.length > 0 ? allFlags : undefined,
       },

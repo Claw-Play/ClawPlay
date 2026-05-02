@@ -1,5 +1,6 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
+
+import { useCallback, useDeferredValue, useEffect, useState } from "react";
 import Link from "next/link";
 import { useT } from "@/lib/i18n/context";
 import { usePendingCount } from "@/lib/context/PendingCountContext";
@@ -32,116 +33,23 @@ function timeAgo(dateStr: string, t: (key: string, values?: Record<string, strin
   return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-function SkillRow({
-  skill,
-  onApprove,
-  onReject,
-  actioningId,
-  rejectId,
-  rejectReason,
-  onReasonChange,
-  onConfirmReject,
-  onCancelReject,
-  t,
-}: {
-  skill: Skill;
-  onApprove: (id: string) => void;
-  onReject: (id: string) => void;
-  actioningId: string | null;
-  rejectId: string | null;
-  rejectReason: string;
-  onReasonChange: (v: string) => void;
-  onConfirmReject: () => void;
-  onCancelReject: () => void;
-  t: (key: string) => string;
-}) {
-  const isLoading = actioningId === skill.id;
-
+function LoadingState({ tCommon }: { tCommon: (key: string) => string }) {
   return (
-    <div className="bg-[#f8f4db] flex flex-row items-start gap-3 px-3 py-3 rounded-[24px] md:rounded-[32px] transition-all md:gap-5 md:items-center md:px-5 md:py-5">
-      {/* Info */}
-      <div className="flex-1 min-w-0 space-y-0.5">
-        <div className="flex items-center gap-2 flex-wrap">
-          <h3
-            className="font-bold text-[16px] md:text-[18px] text-[#1d1c0d] whitespace-nowrap"
-            style={{ fontFamily: "var(--font-jakarta)" }}
+    <div className="mx-auto max-w-[1240px] space-y-5 px-4 sm:px-6">
+      <div className="h-12 w-full animate-pulse rounded-full border border-[#dbe5f7] bg-white" />
+      <div className="space-y-3">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div
+            key={i}
+            className="rounded-[24px] border border-[#dbe5f7] bg-white px-4 py-5 shadow-[0_12px_28px_rgba(25,43,87,0.04)]"
           >
-            {skill.name}
-          </h3>
-          <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wide uppercase bg-[#ffdbcd] text-[#351000]">
-            {t("status_new")}
-          </span>
-        </div>
-        <p className="text-[13px] md:text-[14px] text-[#564337] leading-snug" style={{ fontFamily: "var(--font-vietnam)" }}>
-          {t("submitted_by")}{" "}
-          <span className="font-semibold">
-            {skill.authorName || skill.authorEmail?.split("@")[0] || t("unknown")}
-          </span>{" "}
-          • {timeAgo(skill.createdAt, t)}
-        </p>
-        {skill.summary && (
-          <p className="text-[12px] md:text-[12px] text-[#586330] font-medium italic leading-relaxed line-clamp-2 md:line-clamp-1 max-w-none md:max-w-xs">
-            {skill.summary}
-          </p>
-        )}
-      </div>
-
-      {/* Actions */}
-      <div className="w-[102px] shrink-0 flex flex-col items-end gap-1.5 sm:w-[116px] md:w-auto md:flex-row md:flex-wrap md:items-center md:justify-end">
-        {rejectId === skill.id ? (
-          <div className="flex w-full flex-col items-end gap-1.5 md:w-auto md:flex-row md:flex-wrap md:items-center md:justify-end">
-            <textarea
-              placeholder={t("reject_reason_placeholder")}
-              value={rejectReason}
-              onChange={(e) => onReasonChange(e.target.value)}
-              rows={1}
-              className="w-full px-3 py-2 rounded-full border border-[#e8dfc8] text-sm text-[#564337] focus:outline-none focus:ring-2 focus:ring-[#a23f00]/30 resize-none bg-white md:w-44"
-              style={{ fontFamily: "var(--font-vietnam)" }}
-            />
-            <button
-              onClick={onConfirmReject}
-              disabled={isLoading || !rejectReason.trim()}
-              className="min-h-10 px-3.5 py-2 bg-[#DC2626] hover:bg-[#b91c1c] text-white text-xs font-semibold rounded-full transition-colors disabled:opacity-50 whitespace-nowrap"
-            >
-              {isLoading ? "..." : t("confirm")}
-            </button>
-            <button
-              onClick={onCancelReject}
-              className="min-h-10 px-3.5 py-2 bg-[#f8f4db] text-[#7a6a5a] text-xs font-semibold rounded-full hover:bg-[#ede9cf] transition-colors whitespace-nowrap"
-            >
-              {t("cancel")}
-            </button>
+            <div className="h-4 w-1/3 animate-pulse rounded-full bg-[#edf4ff]" />
+            <div className="mt-3 h-3 w-2/3 animate-pulse rounded-full bg-[#f0f6ff]" />
+            <div className="mt-2 h-3 w-1/2 animate-pulse rounded-full bg-[#f0f6ff]" />
           </div>
-        ) : (
-          <>
-            <Link
-              href={`/admin/review/${skill.id}`}
-              className="inline-flex min-h-9 w-[80px] items-center justify-center self-end bg-white border border-[rgba(220,193,177,0.1)] px-2 py-2 rounded-full text-[#a23f00] text-[12px] md:w-auto md:px-3 md:text-[14px] font-semibold hover:shadow-md transition-all whitespace-nowrap"
-              style={{ fontFamily: "var(--font-vietnam)" }}
-            >
-              {t("view_details")}
-            </Link>
-            <div className="flex w-full items-center justify-end gap-1.5">
-              <button
-                onClick={() => onReject(skill.id)}
-                disabled={isLoading}
-                className="w-9 h-9 flex items-center justify-center bg-[rgba(186,26,26,0.1)] rounded-full hover:bg-[rgba(186,26,26,0.2)] transition-colors disabled:opacity-50"
-                title={t("reject")}
-              >
-                <CloseIcon className="w-3.5 h-3.5" />
-              </button>
-              <button
-                onClick={() => onApprove(skill.id)}
-                disabled={isLoading}
-                className="w-9 h-9 flex items-center justify-center bg-[rgba(88,99,48,0.1)] rounded-full hover:bg-[rgba(88,99,48,0.2)] transition-colors disabled:opacity-50"
-                title={t("approve")}
-              >
-                <CheckIcon className="w-4 h-4" />
-              </button>
-            </div>
-          </>
-        )}
+        ))}
       </div>
+      <div className="text-center text-sm text-[#7c879f]">{tCommon("loading")}</div>
     </div>
   );
 }
@@ -151,35 +59,66 @@ export default function AdminReviewPage() {
   const tCommon = useT("common");
   const { decrement } = usePendingCount();
   const [skills, setSkills] = useState<Skill[]>([]);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [actioningId, setActioningId] = useState<string | null>(null);
   const [rejectId, setRejectId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
+  const deferredSearch = useDeferredValue(search);
 
-  const fetchPending = useCallback(async () => {
-    const res = await fetch("/api/admin/skills");
-    if (res.ok) {
-      const data = await res.json();
-      setSkills(data.skills ?? []);
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  const refreshPending = useCallback(async (targetPage: number, targetSearch: string, signal?: AbortSignal) => {
+    const params = new URLSearchParams({
+      limit: String(PAGE_SIZE),
+      offset: String((targetPage - 1) * PAGE_SIZE),
+    });
+    if (targetSearch.trim()) params.set("search", targetSearch.trim());
+
+    const res = await fetch(`/api/admin/skills?${params}`, signal ? { signal } : undefined);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.error) {
+      throw new Error(data.error ?? "Failed to load pending skills.");
     }
-    setLoading(false);
+
+    setSkills(Array.isArray(data.skills) ? data.skills : []);
+    setTotal(typeof data.pagination?.total === "number" ? data.pagination.total : 0);
   }, []);
 
   useEffect(() => {
-    fetchPending();
-  }, [fetchPending]);
+    const controller = new AbortController();
 
-  const filtered = skills.filter((s) =>
-    search
-      ? s.name.toLowerCase().includes(search.toLowerCase()) ||
-        (s.authorName || "").toLowerCase().includes(search.toLowerCase())
-      : true
-  );
+    setLoading(true);
+    setError(null);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+    refreshPending(page, deferredSearch, controller.signal)
+      .catch((err) => {
+        if (!controller.signal.aborted) {
+          setError(err instanceof Error ? err.message : "Failed to load pending skills.");
+          setSkills([]);
+          setTotal(0);
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+
+    return () => controller.abort();
+  }, [deferredSearch, page, refreshPending]);
+
+  useEffect(() => {
+    if (loading) return;
+    if (total === 0 && page !== 1) {
+      setPage(1);
+      return;
+    }
+    if (total > 0 && page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [loading, page, total, totalPages]);
 
   async function approve(skillId: string) {
     setActioningId(skillId);
@@ -190,8 +129,8 @@ export default function AdminReviewPage() {
         body: JSON.stringify({ action: "approve" }),
       });
       if (res.ok) {
-        setSkills((prev) => prev.filter((s) => s.id !== skillId));
         decrement();
+        await refreshPending(page, deferredSearch);
       }
     } finally {
       setActioningId(null);
@@ -213,108 +152,174 @@ export default function AdminReviewPage() {
         body: JSON.stringify({ action: "reject", reason: rejectReason }),
       });
       if (res.ok) {
-        setSkills((prev) => prev.filter((s) => s.id !== rejectId));
+        decrement();
         setRejectId(null);
         setRejectReason("");
-        decrement();
+        await refreshPending(page, deferredSearch);
       }
     } finally {
       setActioningId(null);
     }
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-24">
-        <div className="text-[#7a6a5a] animate-pulse font-body">{tCommon("loading")}</div>
-      </div>
-    );
+  if (loading && skills.length === 0) {
+    return <LoadingState tCommon={tCommon} />;
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6 px-4 sm:px-6">
-      {/* Search bar */}
+    <div className="mx-auto max-w-[1240px] space-y-5 px-4 sm:px-6">
       <div className="relative">
-        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[#6b7280]">
-          <SearchIcon className="w-4 h-4 shrink-0" />
+        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[#8aa0cb]">
+          <SearchIcon className="h-4 w-4" />
         </div>
         <input
           type="text"
           value={search}
-          onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setPage(1);
+          }}
           placeholder={t("search_placeholder")}
-          className="w-full bg-[#e7e3ca] pl-12 pr-4 py-3 rounded-full text-[14px] text-[#1d1c0d] placeholder:text-[#6b7280] focus:outline-none focus:ring-2 focus:ring-[#a23f00]/30"
-          style={{ fontFamily: "var(--font-vietnam)" }}
+          className="h-12 w-full rounded-full border border-[#dbe5f7] bg-white pl-12 pr-4 text-[14px] text-[#15213b] placeholder:text-[#98a3bc] outline-none transition focus:border-[#2d67f7] focus:ring-2 focus:ring-[#2d67f7]/15"
         />
       </div>
 
-      {/* Skills List */}
-      {paginated.length === 0 ? (
-        <div className="bg-[#f8f4db] rounded-[32px] md:rounded-[48px] p-7 md:p-14 text-center space-y-4">
-          <div className="text-5xl">🌿</div>
-          <h3 className="text-xl font-bold text-[#564337]" style={{ fontFamily: "var(--font-jakarta)" }}>
-            {t("all_clear")}
-          </h3>
-          <p className="text-sm text-[#7a6a5a] font-body">{t("no_pending")}</p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {paginated.map((skill) => (
-            <SkillRow
-              key={skill.id}
-              skill={skill}
-              onApprove={approve}
-              onReject={openReject}
-              actioningId={actioningId}
-              rejectId={rejectId}
-              rejectReason={rejectReason}
-              onReasonChange={setRejectReason}
-              onConfirmReject={confirmReject}
-              onCancelReject={() => { setRejectId(null); setRejectReason(""); }}
-              t={t}
-            />
-          ))}
+      {error && (
+        <div className="rounded-[20px] border border-[#f2c6c6] bg-[#fff5f5] px-4 py-3 text-sm text-[#b42318]">
+          {error}
         </div>
       )}
 
-      {/* Pagination Footer */}
-      {filtered.length > PAGE_SIZE && (
-        <div className="flex flex-col gap-3 pt-4 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-[14px] text-[#564337]" style={{ fontFamily: "var(--font-vietnam)" }}>
+      {skills.length === 0 ? (
+        <div className="rounded-[28px] border border-[#dbe5f7] bg-white px-6 py-12 text-center shadow-[0_14px_32px_rgba(25,43,87,0.05)]">
+          <div className="text-5xl">🌿</div>
+          <h3 className="mt-4 text-[18px] font-semibold text-[#1f2b45]">{t("all_clear")}</h3>
+          <p className="mt-2 text-[14px] text-[#7c879f]">{t("no_pending")}</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {skills.map((skill) => {
+            const isLoading = actioningId === skill.id;
+            return (
+              <article
+                key={skill.id}
+                className="rounded-[24px] border border-[#dbe5f7] bg-white px-4 py-4 shadow-[0_12px_28px_rgba(25,43,87,0.04)] sm:px-5 sm:py-5"
+              >
+                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="truncate text-[16px] font-semibold text-[#15213b]">{skill.name}</h3>
+                      <span className="rounded-full bg-[#edf4ff] px-2.5 py-1 text-[11px] font-semibold text-[#2d67f7]">
+                        {t("status_new")}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-[13px] text-[#6d7891]">
+                      {t("submitted_by")}{" "}
+                      <span className="font-medium text-[#394766]">
+                        {skill.authorName || skill.authorEmail?.split("@")[0] || t("unknown")}
+                      </span>{" "}
+                      · {timeAgo(skill.createdAt, t)}
+                    </p>
+                    {skill.summary && (
+                      <p className="mt-2 max-w-3xl text-[13px] leading-6 text-[#7c879f] line-clamp-2">
+                        {skill.summary}
+                      </p>
+                    )}
+                  </div>
+
+                  {rejectId !== skill.id ? (
+                    <div className="flex items-center gap-2 self-start md:self-center">
+                      <Link
+                        href={`/admin/review/${skill.id}`}
+                        className="inline-flex h-10 items-center justify-center rounded-full border border-[#bfd0f4] bg-white px-4 text-[13px] font-medium text-[#2d67f7] transition-colors hover:bg-[#f7faff]"
+                      >
+                        {t("view_details")}
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => openReject(skill.id)}
+                        disabled={isLoading}
+                        className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#dbe5f7] bg-white text-[#7c879f] transition-colors hover:border-[#ffd2d2] hover:bg-[#fff5f5] hover:text-[#ef4444] disabled:opacity-50"
+                        title={t("reject")}
+                      >
+                        <CloseIcon className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => approve(skill.id)}
+                        disabled={isLoading}
+                        className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#dbe5f7] bg-[#edf4ff] text-[#2d67f7] transition-colors hover:bg-[#dbe9ff] disabled:opacity-50"
+                        title={t("approve")}
+                      >
+                        <CheckIcon className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex w-full flex-col gap-2 md:w-auto md:min-w-[340px]">
+                      <textarea
+                        placeholder={t("reject_reason_placeholder")}
+                        value={rejectReason}
+                        onChange={(e) => setRejectReason(e.target.value)}
+                        rows={2}
+                        className="w-full rounded-[18px] border border-[#dbe5f7] bg-[#f7faff] px-4 py-3 text-[14px] text-[#15213b] placeholder:text-[#98a3bc] outline-none transition focus:border-[#2d67f7] focus:ring-2 focus:ring-[#2d67f7]/15"
+                      />
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setRejectId(null);
+                            setRejectReason("");
+                          }}
+                          className="h-10 rounded-full border border-[#dbe5f7] bg-white px-4 text-[13px] font-medium text-[#5f6c86] transition-colors hover:bg-[#f7faff]"
+                        >
+                          {tCommon("cancel")}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={confirmReject}
+                          disabled={isLoading || !rejectReason.trim()}
+                          className="h-10 rounded-full bg-[#ef4444] px-4 text-[13px] font-medium text-white shadow-[0_10px_20px_rgba(239,68,68,0.18)] transition-colors hover:bg-[#dc2626] disabled:opacity-50"
+                        >
+                          {isLoading ? "..." : tCommon("confirm")}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      )}
+
+      {total > PAGE_SIZE && (
+        <div className="flex flex-col gap-3 pt-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-[13px] text-[#7c879f]">
             {t("paginate_showing", {
               start: String((page - 1) * PAGE_SIZE + 1),
-              end: String(Math.min(page * PAGE_SIZE, filtered.length)),
-              total: String(filtered.length),
+              end: String(Math.min(page * PAGE_SIZE, total)),
+              total: String(total),
             })}
           </p>
           <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page === 1}
-              className="w-10 h-10 flex items-center justify-center bg-[#ede9cf] rounded-[32px] disabled:opacity-40 transition-colors"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#dbe5f7] bg-white text-[#2d67f7] transition-colors hover:bg-[#f7faff] disabled:opacity-40"
             >
-              <ChevronLeftIcon className="w-3 h-3" />
+              <ChevronLeftIcon className="h-3.5 w-3.5" />
             </button>
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-              <button
-                key={p}
-                onClick={() => setPage(p)}
-                className={`w-10 h-10 flex items-center justify-center rounded-[32px] text-[16px] font-semibold transition-colors ${
-                  p === page
-                    ? "bg-[#a23f00] text-white"
-                    : "bg-[#ede9cf] text-[#a23f00]"
-                }`}
-                style={{ fontFamily: "var(--font-vietnam)" }}
-              >
-                {p}
-              </button>
-            ))}
+
+            <span className="px-2 text-[13px] text-[#7c879f]">
+              {page} / {totalPages}
+            </span>
+
             <button
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={page === totalPages}
-              className="w-10 h-10 flex items-center justify-center bg-[#ede9cf] rounded-[32px] disabled:opacity-40 transition-colors"
+              disabled={page >= totalPages}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#dbe5f7] bg-white text-[#2d67f7] transition-colors hover:bg-[#f7faff] disabled:opacity-40"
             >
-              <ChevronRightIcon className="w-3 h-3" />
+              <ChevronRightIcon className="h-3.5 w-3.5" />
             </button>
           </div>
         </div>

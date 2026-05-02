@@ -94,9 +94,11 @@ run_script() {
 
   # Build env lines
   local env_lines=""
-  for kv in "${env_vars[@]+"${env_vars[@]}"}"; do
-    env_lines+="export $(printf '%q' "$kv")"$'\n'
-  done
+  if [[ ${#env_vars[@]} -gt 0 ]]; then
+    for kv in "${env_vars[@]}"; do
+      env_lines+="export $(printf '%q' "$kv")"$'\n'
+    done
+  fi
 
   # Escape curl_response for embedding in heredoc
   local escaped_response

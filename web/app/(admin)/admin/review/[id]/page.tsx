@@ -4,8 +4,8 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useT } from "@/lib/i18n/context";
 import { usePendingCount } from "@/lib/context/PendingCountContext";
-import SkillDiagramPreview from "@/components/SkillDiagramPreview";
-import { CalendarIcon, CheckIcon, CloseIcon, DocumentIcon, LinkIcon } from "@/components/icons";
+import { SkillMdWorkspace, WorkflowDiagramWorkspace } from "@/components/SkillWorkspace";
+import { CalendarIcon, CheckIcon, LinkIcon } from "@/components/icons";
 
 interface SkillDetail {
   id: string;
@@ -32,20 +32,20 @@ const ChecklistItem = ({
 }) => (
   <div
     onClick={() => onChange(!checked)}
-    className={`flex items-center gap-3 p-3 rounded-full transition-all cursor-pointer ${
+    className={`flex cursor-pointer items-center gap-3 rounded-[6px] border px-4 py-3 transition-all ${
       checked
-        ? "bg-white border border-white"
-        : "border border-dashed border-[#dcc1b1]"
+        ? "border-[#dbe5f7] bg-[#f7faff]"
+        : "border-dashed border-[#dbe5f7] bg-white"
     }`}
   >
     <div
-      className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
-        checked ? "bg-[#a23f00] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)]" : "border-2 border-[#dcc1b1]"
+      className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full ${
+        checked ? "bg-[#2d67f7] shadow-sm" : "border-2 border-[#dbe5f7] bg-white"
       }`}
     >
       {checked && <CheckIcon className="w-3 h-3 text-white" />}
     </div>
-    <span className={`text-sm font-medium font-body ${checked ? "text-[#1d1c0d]" : "text-[#586330]"}`}>
+    <span className={`text-sm font-medium font-body ${checked ? "text-[#102040]" : "text-[#667391]"}`}>
       {label}
     </span>
   </div>
@@ -75,22 +75,31 @@ export default function AdminReviewDetailPage() {
       router.push("/admin/review");
       return;
     }
-    fetchSkill();
+    const controller = new AbortController();
+    fetchSkill(controller.signal);
+    return () => controller.abort();
   }, [skillId]);
   /* eslint-enable react-hooks/exhaustive-deps */
 
-  async function fetchSkill() {
-    const res = await fetch("/api/admin/skills");
-    if (res.ok) {
-      const data = await res.json();
-      const found = (data.skills ?? []).find((s: SkillDetail) => s.id === skillId);
-      if (!found) {
+  async function fetchSkill(signal?: AbortSignal) {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/admin/skills/${skillId}`, signal ? { signal } : undefined);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.skill) {
         router.push("/admin/review");
         return;
       }
-      setSkill(found);
+      setSkill(data.skill as SkillDetail);
+    } catch (err) {
+      if (!(err instanceof DOMException && err.name === "AbortError")) {
+        router.push("/admin/review");
+      }
+    } finally {
+      if (!signal?.aborted) {
+        setLoading(false);
+      }
     }
-    setLoading(false);
   }
 
   async function approve() {
@@ -132,7 +141,7 @@ export default function AdminReviewDetailPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24">
-        <div className="text-[#7a6a5a] animate-pulse font-body">{tCommon("loading")}</div>
+        <div className="text-[#52617d] animate-pulse font-body">{tCommon("loading")}</div>
       </div>
     );
   }
@@ -144,236 +153,194 @@ export default function AdminReviewDetailPage() {
     : null;
 
   return (
-    <div className="max-w-6xl space-y-6 px-4 sm:px-6">
-      {/* Breadcrumb */}
-      <div className="flex flex-wrap items-center gap-2 text-sm text-[#7a6a5a] font-body">
-        <Link href="/admin/review" className="hover:text-[#a23f00]">{t("breadcrumb")}</Link>
-        <span>/</span>
-        <span className="font-semibold text-[#564337] break-words">{skill.name}</span>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Main content - 8 cols */}
-        <div className="lg:col-span-8 space-y-6">
-          {/* Hero Header Card */}
-          <div className="bg-[#f8f4db] rounded-[28px] md:rounded-[48px] p-4 md:p-8 flex flex-col sm:flex-row sm:items-center gap-4 md:gap-6">
-            <div className="w-[56px] h-[56px] md:w-[96px] md:h-[96px] bg-white rounded-[24px] md:rounded-[48px] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)] flex items-center justify-center flex-shrink-0">
-              <span className="text-4xl md:text-5xl">{skill.iconEmoji}</span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-3 flex-wrap">
-                <h1 className="text-lg md:text-2xl font-extrabold font-heading text-[#1d1c0d] tracking-tight break-words">
-                  {skill.name}
-                </h1>
-                <span className="px-3 py-1 bg-[rgba(162,63,0,0.1)] border border-[rgba(162,63,0,0.2)] text-[#a23f00] text-[10px] font-semibold uppercase tracking-wider rounded-full font-body">
-                  {t("pending_review")}
-                </span>
-              </div>
-              <div className="flex flex-col gap-2 mt-2 text-sm text-[#586330] font-body sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
-                <span className="flex items-center gap-1">
-                  <CalendarIcon className="w-4 h-4" />
-                  <span>{t("submitted")} {new Date(skill.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
-                </span>
-                {skill.authorEmail && (
-                  <span className="flex items-center gap-1">
-                    <span>📧</span>
-                    <span>{skill.authorEmail}</span>
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Metadata Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            {/* Bio & Description */}
-            <div className="bg-white rounded-[28px] md:rounded-[48px] p-4 md:p-6 border border-[rgba(220,193,177,0.1)] card-shadow space-y-3">
-              <p className="text-[10px] font-bold text-[#a23f00] uppercase tracking-widest font-body">
-                {t("bio_description")}
-              </p>
-              <p className="text-base italic text-[rgba(29,28,13,0.8)] leading-relaxed font-body">
-                {skill.summary
-                  ? `"${skill.summary}"`
-                  : t("no_description")}
-              </p>
-            </div>
-
-            {/* Author Details */}
-            <div className="bg-white rounded-[28px] md:rounded-[48px] p-4 md:p-6 border border-[rgba(220,193,177,0.1)] card-shadow space-y-4">
-              <p className="text-[10px] font-bold text-[#a23f00] uppercase tracking-widest font-body">
-                {t('author_details')}
-              </p>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-[#586330] font-body">{t("author_id")}</span>
-                  <span className="text-sm font-bold font-mono-custom text-[#1d1c0d]">
-                    USR-{String(skill.id).padStart(4, "0")}-X
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-[#586330] font-body">{t("email_label")}</span>
-                  <span className="text-sm font-medium text-[#1d1c0d] font-body">
-                    {skill.authorEmail || "—"}
-                  </span>
-                </div>
-                {skill.repoUrl && (
-                  <a
-                    href={skill.repoUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 text-sm font-semibold text-[#a23f00] hover:text-[#c45000] transition-colors font-body"
-                  >
-                    <LinkIcon className="w-4 h-4" />
-                    <span>{repoDomain}</span>
-                  </a>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* SKILL.md Preview */}
-          {skill.skillMdContent && (
-            <div className="bg-white rounded-[28px] md:rounded-[48px] border border-[rgba(220,193,177,0.1)] card-shadow overflow-hidden">
-              <div className="bg-[#ede9cf] px-6 py-3 flex items-center justify-between">
-                <span className="flex items-center gap-2 text-sm font-bold text-[#586330] uppercase tracking-widest font-body">
-                  <DocumentIcon className="w-4 h-4" /> {t("skill_md_preview")}
-                </span>
-                <span className="text-[10px] text-[rgba(88,99,48,0.6)] font-mono-custom">
-                  UTF-8 • {(skill.skillMdContent?.length ?? 0)} chars
-                </span>
-              </div>
-              <div className="p-4 md:p-8 max-h-[500px] overflow-y-auto">
-                <pre className="whitespace-pre-wrap text-sm font-mono-custom text-[#1d1c0d] leading-relaxed">
-                  {skill.skillMdContent}
-                </pre>
-              </div>
-            </div>
-          )}
-
-          {/* Workflow Diagram Preview */}
-          {skill.skillMdContent && (
-            <div>
-              <p className="text-xs font-bold text-[#564337] mb-3 font-body">
-                {t("diagram_preview_label")}
-              </p>
-              <div className="bg-[#f8f4db] rounded-[22px] md:rounded-[32px] p-4 md:p-6 border border-[rgba(220,193,177,0.3)]">
-                <SkillDiagramPreview
-                  skillMdContent={skill.skillMdContent}
-                  initialMermaid={skill.workflowMd ?? undefined}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Submission Timeline */}
-          <div className="bg-[#f8f4db] rounded-[28px] md:rounded-[48px] p-4 md:p-6 space-y-3">
-            <p className="text-[10px] font-bold text-[#a23f00] uppercase tracking-widest font-body">
-              {t("submission_timeline")}
-            </p>
-            <div className="space-y-4">
-              <TimelineItem
-                dot="#586330"
-                title={t("security_scan_passed")}
-                time={new Date(skill.createdAt).toLocaleString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                  year: "numeric",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              />
-              <TimelineItem
-                dot="#a23f00"
-                title={t("assigned_moderator")}
-                time={t("today")}
-              />
-            </div>
-          </div>
+    <div className="relative min-h-screen bg-[#fbfdff]">
+      <div className="relative mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
+        <div className="mb-6 flex items-center gap-2 text-sm text-[#667391]">
+          <Link href="/admin/review" className="font-medium text-[#2d67f7] transition-colors hover:text-[#2457d4]">
+            {t("breadcrumb")}
+          </Link>
+          <span className="text-[#b3c0dd]">/</span>
+          <span className="min-w-0 truncate font-medium text-[#102040]">{skill.name}</span>
         </div>
 
-        {/* Right sidebar - 4 cols */}
-        <div className="space-y-3.5 lg:col-span-4">
-          {/* Moderator Checklist */}
-          <div className="bg-[#ede9cf] border border-[rgba(220,193,177,0.3)] rounded-[16px] p-3 md:p-5 space-y-2.5">
-            <div className="flex items-center gap-2">
-              <CheckIcon className="w-4 h-4" />
-              <p className="text-xs font-bold text-[#1d1c0d] uppercase tracking-widest font-body">
-                {t("moderator_checklist")}
-              </p>
-            </div>
-            <div className="space-y-2">
-              <ChecklistItem
-                label={t("icon_matches_bio")}
-                checked={checklist.iconMatches}
-                onChange={(v) => setChecklist((c) => ({ ...c, iconMatches: v }))}
-              />
-              <ChecklistItem
-                label={t("license_cc0_mit")}
-                checked={checklist.licenseOk}
-                onChange={(v) => setChecklist((c) => ({ ...c, licenseOk: v }))}
-              />
-              <ChecklistItem
-                label={t("manual_link_check")}
-                checked={checklist.manualLinkCheck}
-                onChange={(v) => setChecklist((c) => ({ ...c, manualLinkCheck: v }))}
-              />
-            </div>
-            <p className="text-[10px] italic text-[rgba(88,99,48,0.7)] font-body">
-              {t("complete_checklist")}
-            </p>
-          </div>
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+          <div className="space-y-6">
+            <div className="rounded-[6px] border border-[#dbe5f7] bg-white p-6 shadow-[0_8px_20px_rgba(25,43,87,0.06)]">
+              <div className="flex flex-col gap-5">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <h1 className="break-words font-heading text-[32px] font-bold tracking-[-0.03em] text-[#102040]">
+                      {skill.name}
+                    </h1>
+                    <p className="mt-2 font-body text-sm text-[#667391]">
+                      {tCommon("submitted")}{" "}
+                      <span className="font-semibold text-[#102040]">{skill.authorEmail || tCommon("anonymous")}</span>
+                      <span className="mx-2 text-[#b3c0dd]">•</span>
+                      <span className="font-medium text-[#2d67f7]">
+                        {new Date(skill.createdAt).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })}
+                      </span>
+                    </p>
+                  </div>
 
-          {/* Review Decision Card */}
-          <div className="bg-white rounded-[22px] p-3.5 md:p-8 border border-[rgba(162,63,0,0.05)] card-shadow shadow-[0px_20px_50px_0px_rgba(86,67,55,0.12)] space-y-3.5">
-            <div>
-              <h3 className="text-base md:text-xl font-extrabold font-heading text-[#a23f00]">{t("final_decision")}</h3>
-              <p className="text-[10px] text-[#586330]/60 uppercase tracking-widest font-body mt-0.5">
-                {t("admin_verification")}
-              </p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-[#dfe8f8] bg-[#f7faff] px-3 py-1 text-xs font-semibold text-[#2d67f7]">
+                      <CalendarIcon className="h-3.5 w-3.5" /> {t("pending_review")}
+                    </span>
+                    {repoDomain && (
+                      <span className="inline-flex items-center gap-1.5 rounded-full border border-[#dfe8f8] bg-[#f7faff] px-3 py-1 text-xs font-medium text-[#667391]">
+                        <LinkIcon className="h-3.5 w-3.5 text-[#2d67f7]" /> {repoDomain}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+              </div>
             </div>
 
-            {/* Rejection feedback */}
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between mb-1">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-[#1d1c0d] font-body">
-                  {t("rejection_feedback")}
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+              <div className="rounded-[6px] border border-[#dbe5f7] bg-white p-6 shadow-[0_8px_20px_rgba(25,43,87,0.06)] space-y-3">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-[#2d67f7] font-body">
+                  {t("bio_description")}
                 </p>
-                <p className="text-[10px] italic text-[#ba1a1a] font-body lowercase">
-                  {t("rejection_required")}
+                <p className="text-sm leading-7 text-[#52617d] font-body">
+                  {skill.summary ? skill.summary : t("no_description")}
                 </p>
               </div>
-              <textarea
-                placeholder={t("feedback_placeholder")}
-                value={feedback}
-                onChange={(e) => setFeedback(e.target.value)}
-                rows={5}
-                className="w-full border-2 border-[#ede9cf] rounded-[16px] p-3.5 md:p-4 text-sm text-[#1d1c0d] focus:outline-none focus:border-[#a23f00] resize-none font-body placeholder:text-[rgba(88,99,48,0.3)]"
+
+              <div className="rounded-[6px] border border-[#dbe5f7] bg-white p-6 shadow-[0_8px_20px_rgba(25,43,87,0.06)] space-y-4">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-[#2d67f7] font-body">
+                  {t("author_details")}
+                </p>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-sm text-[#667391] font-body">{t("email_label")}</span>
+                    <span className="text-sm font-medium text-[#102040] font-body">{skill.authorEmail || "—"}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-sm text-[#667391] font-body">{t("author_id")}</span>
+                    <span className="text-sm font-bold font-mono-custom text-[#102040]">
+                      USR-{String(skill.id).padStart(4, "0")}
+                    </span>
+                  </div>
+                  {skill.repoUrl && (
+                    <a
+                      href={skill.repoUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 text-sm font-semibold text-[#2d67f7] transition-colors hover:text-[#2457d4] font-body"
+                    >
+                      <LinkIcon className="h-4 w-4" />
+                      <span>{repoDomain}</span>
+                    </a>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {skill.skillMdContent && (
+              <SkillMdWorkspace
+                title="SKILL.md"
+                description={t("skill_md_preview")}
+                value={skill.skillMdContent}
+                mode="preview"
               />
-            </div>
+            )}
 
-            {/* Action buttons */}
-            <div className="space-y-2.5">
-              <button
-                onClick={approve}
-                disabled={actioning}
-                className="w-full flex items-center justify-center gap-3 min-h-12 bg-gradient-to-r from-[#a23f00] to-[#fa7025] text-white font-semibold rounded-full shadow-[0px_10px_15px_-3px_rgba(162,63,0,0.2),0px_4px_6px_-4px_rgba(162,63,0,0.2)] hover:opacity-90 transition-all font-heading disabled:opacity-50"
-              >
-                {actioning ? t("processing") : t("approve_publish")}
-              </button>
-              <button
-                onClick={reject}
-                disabled={actioning || !feedback.trim()}
-                className="w-full flex items-center justify-center gap-3 min-h-12 border-2 border-[rgba(186,26,26,0.2)] text-[#ba1a1a] font-semibold rounded-full hover:bg-red-50 transition-colors font-heading disabled:opacity-50"
-              >
-                <CloseIcon className="w-4 h-4" /> {t("reject_submission")}
-              </button>
-            </div>
+            {skill.workflowMd && (
+              <WorkflowDiagramWorkspace
+                title={t("diagram_preview_label")}
+                description={t("diagram_preview_desc")}
+                mermaid={skill.workflowMd}
+                mode="preview"
+              />
+            )}
 
-            {/* Disclaimer */}
-            <div className="border-t border-[#ede9cf] pt-4">
-              <p className="text-[11px] text-[#586330] leading-relaxed font-body">
-                &ldquo;{t("approve_disclaimer")}&rdquo;
+            <div className="rounded-[6px] border border-[#dbe5f7] bg-white p-6 shadow-[0_8px_20px_rgba(25,43,87,0.06)] space-y-3">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-[#2d67f7] font-body">
+                {t("submission_timeline")}
               </p>
+              <div className="space-y-4">
+                <TimelineItem
+                  dot="#2d67f7"
+                  title={t("security_scan_passed")}
+                  time={new Date(skill.createdAt).toLocaleString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                />
+                <TimelineItem dot="#2d67f7" title={t("assigned_moderator")} time={t("today")} />
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-6 lg:sticky lg:top-6 lg:self-start">
+            <div className="rounded-[6px] border border-[#dbe5f7] bg-white p-5 shadow-[0_8px_20px_rgba(25,43,87,0.06)] space-y-2.5">
+              <div className="flex items-center gap-2">
+                <CheckIcon className="h-4 w-4 text-[#2d67f7]" />
+                <p className="text-xs font-bold uppercase tracking-widest text-[#102040] font-body">
+                  {t("moderator_checklist")}
+                </p>
+              </div>
+              <div className="space-y-2">
+                <ChecklistItem
+                  label={t("icon_matches_bio")}
+                  checked={checklist.iconMatches}
+                  onChange={(v) => setChecklist((c) => ({ ...c, iconMatches: v }))}
+                />
+                <ChecklistItem
+                  label={t("license_cc0_mit")}
+                  checked={checklist.licenseOk}
+                  onChange={(v) => setChecklist((c) => ({ ...c, licenseOk: v }))}
+                />
+                <ChecklistItem
+                  label={t("manual_link_check")}
+                  checked={checklist.manualLinkCheck}
+                  onChange={(v) => setChecklist((c) => ({ ...c, manualLinkCheck: v }))}
+                />
+              </div>
+              <p className="text-[10px] italic text-[#667391] font-body">{t("complete_checklist")}</p>
+            </div>
+
+            <div className="rounded-[6px] border border-[#dbe5f7] bg-white p-5 shadow-[0_8px_20px_rgba(25,43,87,0.06)] space-y-4">
+              <div>
+                <h3 className="font-heading text-[18px] font-bold tracking-[-0.02em] text-[#102040]">
+                  {t("final_decision")}
+                </h3>
+              </div>
+
+              <div className="space-y-1.5">
+                <textarea
+                  placeholder={t("feedback_placeholder")}
+                  value={feedback}
+                  onChange={(e) => setFeedback(e.target.value)}
+                  rows={5}
+                  className="w-full resize-none rounded-[6px] border border-[#d9e4f7] bg-[#fbfdff] p-4 text-sm text-[#102040] placeholder:text-[#98a3bc] transition-colors focus:border-[#2d67f7] focus:outline-none focus:ring-2 focus:ring-[#2d67f7]/10 font-body"
+                />
+              </div>
+
+              <div className="space-y-2.5">
+                <button
+                  onClick={approve}
+                  disabled={actioning}
+                  className="w-full rounded-[6px] bg-[#2d67f7] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#2457d4] disabled:cursor-not-allowed disabled:opacity-50 font-heading"
+                >
+                  {actioning ? t("processing") : t("approve_publish")}
+                </button>
+                <button
+                  onClick={reject}
+                  disabled={actioning || !feedback.trim()}
+                  className="w-full rounded-[6px] border border-[#f2c6c6] bg-white px-5 py-2.5 text-sm font-semibold text-[#c44] transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 font-heading"
+                >
+                  {t("reject_submission")}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -387,11 +354,11 @@ function TimelineItem({ dot, title, time }: { dot: string; title: string; time: 
     <div className="flex items-start gap-4">
       <div className="flex flex-col items-center flex-shrink-0">
         <div className="w-3 h-3 rounded-full" style={{ backgroundColor: dot }} />
-        <div className="w-[2px] flex-1 bg-[rgba(220,193,177,0.3)] min-h-4" />
+        <div className="w-[2px] flex-1 bg-[rgba(219,229,247,0.3)] min-h-4" />
       </div>
       <div>
-        <p className="text-sm font-semibold text-[#1d1c0d] font-body">{title}</p>
-        <p className="text-xs text-[#586330] font-body">{time}</p>
+        <p className="text-sm font-semibold text-[#102040] font-body">{title}</p>
+        <p className="text-xs text-[#667391] font-body">{time}</p>
       </div>
     </div>
   );

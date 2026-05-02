@@ -99,6 +99,11 @@ export const skills = sqliteTable(
       table.moderationStatus,
       table.deletedAt
     ),
+    index("skills_pending_by_created").on(
+      table.moderationStatus,
+      table.deletedAt,
+      table.createdAt
+    ),
   ]
 );
 

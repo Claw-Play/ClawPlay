@@ -81,23 +81,17 @@ export function buildGuideContent(
   sections.push("   - metadata.clawdbot.emoji: 图标 emoji");
   sections.push("   - metadata.clawdbot.requires.bins: 依赖的命令列表");
   sections.push("");
-  sections.push("2. 章节必须按 Phase（分支）组织：");
-  sections.push("   - 使用 `## Phase {name}` 或 `## {name} 分支` 格式");
-  sections.push("   - Phase 名称使用 snake_case（如 init、awaiting_desc）");
-  sections.push("   - 每个 Phase 描述一个独立的状态节点");
+  sections.push("2. 章节结构建议：");
+  sections.push("   - 如果你的 Skill 有明显状态流转，可用 `## Phase {name}` 组织内容");
+  sections.push("   - Phase 名称建议使用 snake_case（如 init、awaiting_input）");
+  sections.push("   - Mermaid 流程图可以辅助说明状态，但不是硬性要求");
   sections.push("");
-  sections.push("3. Phase 间的状态转换：");
-  sections.push("   - 入口：`[*] --> init`（所有流程从 [*] 开始）");
-  sections.push("   - 出口：`done --> [*]`（终态回到 [*]）");
-  sections.push("   - 转换需标注条件，如 `phase_a --> phase_b : 条件说明`");
-  sections.push("");
-  sections.push("4. 必须包含的章节：");
-  sections.push("   - # Name（标题）");
+  sections.push("3. 可选补充章节：");
   sections.push("   - ## When to Use（使用场景）");
   sections.push("   - ## Workflow（工作流步骤）");
   sections.push("   - ## Commands（CLI 命令说明）");
   sections.push("   - ## Notes（补充说明）");
-  sections.push("   - ## Flow（Mermaid 状态机图，可选但推荐）");
+  sections.push("   - ## Flow（Mermaid 状态机图，可选）");
   sections.push("");
 
   // ── Section 4: CLI Command Reference ───────────────────────────────────
@@ -169,7 +163,7 @@ export interface SkillMdValidation {
 
 /**
  * Lightweight client-side format validation for SKILL.md content.
- * Checks frontmatter structure, Phase sections, and key required sections.
+ * Checks only the minimal required frontmatter structure.
  * Reused by both Step 3 (instant client check) and /api/skills/validate.
  */
 export function validateSkillMdFormat(content: string): SkillMdValidation {
@@ -201,27 +195,6 @@ export function validateSkillMdFormat(content: string): SkillMdValidation {
     }
   }
 
-  // ── Phase sections ─────────────────────────────────────────────────────
-  const hasPhase = /^##\s+(Phase\s+\w+|\w+\s+分支)\s*$/m.test(content);
-  if (!hasPhase) {
-    warnings.push(
-      "No Phase sections found. Use `## Phase {name}` or `## {name} 分支` to define workflow states.",
-    );
-  }
-
-  // ── Key sections ───────────────────────────────────────────────────────
-  const requiredSections = [
-    { heading: "## When to Use", label: "When to Use" },
-    { heading: "## Workflow", label: "Workflow" },
-    { heading: "## Commands", label: "Commands" },
-    { heading: "## Notes", label: "Notes" },
-  ];
-  for (const { heading, label } of requiredSections) {
-    if (!content.includes(heading)) {
-      warnings.push(`Missing recommended section: \`${label}\`.`);
-    }
-  }
-
   return { errors, warnings };
 }
 
@@ -236,4 +209,3 @@ export function parseSkillNameFromMd(content: string): string {
   const nameMatch = fm.match(/^name:\s*(.+)$/m);
   return nameMatch ? nameMatch[1].trim() : "";
 }
-

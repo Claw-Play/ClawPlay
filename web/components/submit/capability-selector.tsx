@@ -1,18 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import { CopyIcon, CheckIcon } from "@/components/icons";
+import { CopyIcon, CheckIcon, WarningIcon } from "@/components/icons";
+import CollapsibleCardHeader from "@/components/CollapsibleCardHeader";
 import { buildGuideContent } from "@/lib/submit-wizard";
 import type { ComposeAbility, ComposeModule } from "@/lib/submit-wizard";
 
 interface Props {
-  t: (key: string) => string;
+  t: (key: string, values?: Record<string, string | number>) => string;
   selectedAbilities: ComposeAbility[];
   selectedModules: ComposeModule[];
   guideContent: string;
   onToggleAbility: (a: ComposeAbility) => void;
   onToggleModule: (m: ComposeModule) => void;
   onGenerateGuide: (content: string) => void;
+  onCopyGuide?: () => void;
 }
 
 const ABILITIES: ComposeAbility[] = ["image", "llm", "vision"];
@@ -26,13 +28,16 @@ export default function CapabilitySelector({
   onToggleAbility,
   onToggleModule,
   onGenerateGuide,
+  onCopyGuide,
 }: Props) {
   const [copied, setCopied] = useState(false);
   const [generated, setGenerated] = useState(false);
+  const [open, setOpen] = useState(true);
 
   async function handleCopy() {
     await navigator.clipboard.writeText(guideContent);
     setCopied(true);
+    onCopyGuide?.();
     setTimeout(() => setCopied(false), 2000);
   }
 
@@ -43,14 +48,14 @@ export default function CapabilitySelector({
 
   return (
     <section className="rounded-lg border border-[#d8dde6] bg-white">
-      <div className="px-7 pt-6">
-        <h2 className="font-heading text-xl font-bold text-[#111827]">
-          1. {t("wizard_select_abilities")}
-        </h2>
-        <p className="mt-3 text-sm leading-6 text-[#64748b]">{t("wizard_select_abilities_desc")}</p>
-      </div>
-
-      <div className="space-y-5 px-7 py-6">
+      <CollapsibleCardHeader
+        title={`2. ${t("wizard_select_abilities")}`}
+        description={t("wizard_select_abilities_desc")}
+        open={open}
+        onToggle={() => setOpen(!open)}
+      />
+      <div className={`overflow-hidden transition-all duration-300 ease-in-out ${open ? "max-h-[5000px] opacity-100" : "max-h-0 opacity-0"}`}>
+        <div className="space-y-5 px-7 py-6">
         <div className="space-y-3">
           <div className="grid gap-3 md:grid-cols-3">
             {ABILITIES.map((ability) => {
@@ -86,7 +91,7 @@ export default function CapabilitySelector({
             <h3 className="text-xs font-semibold text-[#64748b]">
               {t("wizard_select_modules")}
             </h3>
-            <span className="text-xs text-[#94a3b8]">{selectedModules.length} selected</span>
+            <span className="text-xs text-[#94a3b8]">{t("modules_selected_count", { n: selectedModules.length })}</span>
           </div>
           <div className="flex flex-wrap gap-2">
             {MODULES.map((module) => {
@@ -118,9 +123,16 @@ export default function CapabilitySelector({
           >
             {t(generated ? "wizard_regenerate_guide" : "wizard_generate_guide")}
           </button>
-          <span className="text-sm leading-6 text-[#64748b]">
-            {selectedAbilities.length === 0 ? t("wizard_ability_required") : t("wizard_guide_desc")}
-          </span>
+          {selectedAbilities.length === 0 ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-sm font-semibold text-amber-800 shadow-sm">
+              <WarningIcon className="h-4 w-4 text-amber-500" />
+              {t("wizard_ability_required")}
+            </span>
+          ) : (
+            <span className="text-sm leading-6 text-[#64748b]">
+              {t("wizard_guide_desc")}
+            </span>
+          )}
         </div>
 
         {guideContent && (
@@ -150,6 +162,7 @@ export default function CapabilitySelector({
             </pre>
           </div>
         )}
+      </div>
       </div>
     </section>
   );

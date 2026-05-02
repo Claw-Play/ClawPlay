@@ -137,21 +137,21 @@ export function ProfileEditModal({
       aria-labelledby="profile-edit-title"
     >
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-[#1d1c0d]/40 backdrop-blur-sm" />
+      <div className="absolute inset-0 bg-[#1a1a2e]/40 backdrop-blur-sm" />
 
       {/* Card */}
-      <div className="relative w-full max-w-md bg-[#fefae0] rounded-[32px] shadow-[0px_8px_40px_rgba(86,67,55,0.18)] border border-[rgba(220,193,177,0.2)] overflow-hidden">
+      <div className="relative w-full max-w-md bg-[#f8faff] rounded-[32px] shadow-[0px_8px_40px_rgba(25,43,87,0.18)] border border-[rgba(219,229,247,0.2)] overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-8 pt-8 pb-4">
           <h2
             id="profile-edit-title"
-            className="text-2xl font-extrabold font-heading text-[#1d1c0d]"
+            className="text-2xl font-extrabold font-heading text-[#1a1a2e]"
           >
             {t("edit_profile")}
           </h2>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-[#f0e8d0] flex items-center justify-center text-[#564337] hover:bg-[#e8dfc8] transition-colors"
+            className="w-8 h-8 rounded-full bg-[#edf4ff] flex items-center justify-center text-[#1f2b45] hover:bg-[#dbe5f7] transition-colors"
             aria-label={t("close")}
           >
             <CloseIcon className="w-4 h-4" />
@@ -186,7 +186,7 @@ export function ProfileEditModal({
           <div>
             <label
               htmlFor="profile-name"
-              className="block text-sm font-semibold text-[#564337] mb-2 font-body"
+              className="block text-sm font-semibold text-[#1f2b45] mb-2 font-body"
             >
               {t("user_name")}
             </label>
@@ -200,14 +200,14 @@ export function ProfileEditModal({
                 if (e.key === "Enter") handleSave();
               }}
               maxLength={32}
-              className="w-full bg-white border border-[#e0d4bc] rounded-full px-6 py-3 text-[#564337] font-body placeholder-[#a89888] focus:outline-none focus:ring-2 focus:ring-[#a23f00]/30 focus:border-[#a23f00] transition-colors"
+              className="w-full bg-white border border-[#c8d7f7] rounded-full px-6 py-3 text-[#1f2b45] font-body placeholder-[#6d7891] focus:outline-none focus:ring-2 focus:ring-[#2d67f7]/30 focus:border-[#2d67f7] transition-colors"
               placeholder={t("user_name")}
             />
           </div>
 
           {/* Avatar upload */}
           <div>
-            <p className="block text-sm font-semibold text-[#564337] mb-3 font-body">
+            <p className="block text-sm font-semibold text-[#1f2b45] mb-3 font-body">
               {t("upload_avatar")}
             </p>
             <div className="flex items-center gap-3">
@@ -221,7 +221,7 @@ export function ProfileEditModal({
               />
               <label
                 htmlFor="avatar-upload"
-                className="flex-1 py-2.5 rounded-full border-2 border-[#e0d4bc] text-[#564337] font-semibold font-body text-center cursor-pointer hover:bg-[#f0e8d0] transition-colors"
+                className="flex-1 py-2.5 rounded-full border-2 border-[#c8d7f7] text-[#1f2b45] font-semibold font-body text-center cursor-pointer hover:bg-[#edf4ff] transition-colors"
               >
                 {t("upload_avatar")}
               </label>
@@ -248,14 +248,14 @@ export function ProfileEditModal({
           <button
             onClick={onClose}
             disabled={saving}
-            className="flex-1 py-3 rounded-full border-2 border-[#e0d4bc] text-[#564337] font-semibold font-body hover:bg-[#f0e8d0] transition-colors disabled:opacity-50"
+            className="flex-1 py-3 rounded-full border-2 border-[#c8d7f7] text-[#1f2b45] font-semibold font-body hover:bg-[#edf4ff] transition-colors disabled:opacity-50"
           >
             {tCommon("cancel")}
           </button>
           <button
             onClick={handleSave}
             disabled={saving || name.trim().length < 2}
-            className="flex-1 py-3 rounded-full bg-gradient-to-r from-[#a23f00] to-[#fa7025] text-white font-semibold font-heading shadow-[0_4px_12px_rgba(162,63,0,0.25)] hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
+            className="flex-1 py-3 rounded-full bg-gradient-to-r from-[#2d67f7] to-[#4f82f7] text-white font-semibold font-heading shadow-[0_4px_12px_rgba(45,103,247,0.25)] hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {saving ? (
               <>

@@ -4,53 +4,65 @@ import { useCallback, useEffect, useState } from 'react';
 import { useT } from '@/lib/i18n/context';
 
 interface SkillDiagramPreviewProps {
-  skillMdContent: string;
-  /** Pre-loaded mermaid diagram (e.g. from a submitted skill). If provided, the generate button is hidden and the diagram renders directly. */
   initialMermaid?: string;
-  /** Called with the raw mermaid text when generation succeeds */
-  onGenerated?: (mermaid: string) => void;
-  /** Called when loading status changes (loading=true → start, idle/error/success → done) */
-  onLoadingChange?: (loading: boolean) => void;
-  /** compact = hide generate button, used when button is placed outside */
-  compact?: boolean;
+  className?: string;
+  framed?: boolean;
 }
 
-const STORAGE_KEY = 'clawplay_draft_mermaid';
+const MERMAID_SCRIPT_SRC = 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js';
 let mermaidInitialized = false;
 let mermaidScriptLoaded = false;
 
+export function normalizeMermaidCode(code: string): string {
+  return code.replace(/^```mermaid\s*([\s\S]*?)```\s*$/i, '$1').trim();
+}
+
+export async function validateMermaidCode(
+  code: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const mermaid = (window as Window & {
+    mermaid?: {
+      parse(code: string): Promise<unknown> | unknown;
+    };
+  }).mermaid;
+
+  if (!mermaid) {
+    return { ok: false, error: 'diagram_mermaid_loading' };
+  }
+
+  try {
+    await mermaid.parse(code);
+    return { ok: true };
+  } catch (err: unknown) {
+    return {
+      ok: false,
+      error: (err as Error)?.message || String(err) || 'diagram_syntax_error',
+    };
+  }
+}
+
 export default function SkillDiagramPreview({
-  skillMdContent,
   initialMermaid,
-  onGenerated,
-  onLoadingChange,
-  compact = false,
+  className = '',
+  framed = true,
 }: SkillDiagramPreviewProps) {
   const t = useT('submit');
   const [mounted, setMounted] = useState(false);
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
-  const [mermaid, setMermaid] = useState<string>('');
-  const [editMode, setEditMode] = useState(false);
-  const [editedCode, setEditedCode] = useState<string>('');
-  const [errorMsg, setErrorMsg] = useState<string>('');
-  const [svg, setSvg] = useState<string>('');
+  const [errorMsg, setErrorMsg] = useState('');
+  const [svg, setSvg] = useState('');
 
-  // Mark as mounted
-  useEffect(() => setMounted(true), []);
+  const mermaidCode = normalizeMermaidCode(initialMermaid ?? '');
 
-  // Initialize from initialMermaid (review page — no generate needed)
   useEffect(() => {
-    if (!mounted || !initialMermaid) return;
-    setMermaid(initialMermaid);
-    setStatus('success');
-  }, [mounted, initialMermaid]);
+    setMounted(true);
+  }, []);
 
-  // Load mermaid.js from CDN once
   useEffect(() => {
     if (mermaidInitialized) return;
     mermaidInitialized = true;
     const script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js';
+    script.src = MERMAID_SCRIPT_SRC;
     script.onload = () => {
       mermaidScriptLoaded = true;
       (window as Window & { mermaid?: { initialize(opts: unknown): void } }).mermaid?.initialize({
@@ -62,193 +74,127 @@ export default function SkillDiagramPreview({
     document.head.appendChild(script);
   }, []);
 
-  // Restore mermaid from localStorage after mount (skip when initialMermaid is set)
-  useEffect(() => {
-    if (!mounted || !!initialMermaid) return;
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        setMermaid(parsed.mermaid || '');
-        setSvg(parsed.svg || '');
-        if (parsed.mermaid) setStatus('success');
-      }
-    } catch {}
-  }, [mounted, initialMermaid]);
-
-  const renderSvg = useCallback(async (mermaidCode: string) => {
-    const m = (window as Window & { mermaid?: { render(id: string, code: string): Promise<{ svg: string }> } }).mermaid;
-    if (!m) {
+  const renderSvg = useCallback(async (code: string) => {
+    const mermaid = (window as Window & { mermaid?: { render(id: string, code: string): Promise<{ svg: string }> } }).mermaid;
+    if (!mermaid) {
+      setStatus('error');
       setErrorMsg(t('diagram_mermaid_loading'));
+      setSvg('');
       return false;
     }
+
     try {
-      const id = 'mermaid-' + Date.now();
-      const { svg: renderedSvg } = await m.render(id, mermaidCode);
+      const id = `mermaid-${Date.now()}`;
+      const { svg: renderedSvg } = await mermaid.render(id, code);
+      if (/Syntax error in text|mermaid version/i.test(renderedSvg)) {
+        setStatus('error');
+        setErrorMsg(t('diagram_syntax_error'));
+        setSvg('');
+        return false;
+      }
       setSvg(renderedSvg);
       setErrorMsg('');
+      setStatus('success');
       return true;
     } catch (err: unknown) {
       const msg = (err as Error)?.message || String(err);
       const descMatch = msg.match(/(No diagram type.*)$/m) || msg.match(/( parser error.*)$/m);
       const desc = descMatch ? descMatch[1] : t('diagram_syntax_error');
-      setErrorMsg('Mermaid: ' + desc);
+      setErrorMsg(`Mermaid: ${desc}`);
       setSvg('');
+      setStatus('error');
       return false;
     }
   }, [t]);
 
-  // Re-render SVG when both mermaid and script are ready
   useEffect(() => {
-    if (!mermaid || !mounted) return;
-    if (status !== 'success') return;
-    // Wait for mermaid script if not yet loaded
-    if (!mermaidScriptLoaded) {
-      const check = setInterval(() => {
-        if (mermaidScriptLoaded) {
-          clearInterval(check);
-          const bare = mermaid.replace(/^```mermaid\s*([\s\S]*?)```\s*$/i, '$1').trim();
-          renderSvg(bare);
-        }
-      }, 100);
-      return () => clearInterval(check);
-    }
-    const bare = mermaid.replace(/^```mermaid\s*([\s\S]*?)```\s*$/i, '$1').trim();
-    renderSvg(bare);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mermaid, mounted, status]);
-
-  const handleGenerate = useCallback(async () => {
-    if (!skillMdContent?.trim()) {
-      setErrorMsg(t('diagram_input_required'));
+    if (!mounted) return;
+    if (!mermaidCode) {
+      setStatus('idle');
+      setSvg('');
+      setErrorMsg('');
       return;
     }
+
     setStatus('loading');
     setErrorMsg('');
     setSvg('');
-    onLoadingChange?.(true);
 
-    try {
-      const res = await fetch('/api/skills/diagram', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ skillMdContent }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || t('failed'));
-      }
-      const generated = data.mermaid || '';
-      setMermaid(generated);
-      setStatus('success');
-      onGenerated?.(generated);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ mermaid: generated, svg: '' }));
-    } catch (err: unknown) {
-      setErrorMsg((err as Error).message || t('failed'));
-      setStatus('error');
-    } finally {
-      onLoadingChange?.(false);
+    if (mermaidScriptLoaded) {
+      void (async () => {
+        const validation = await validateMermaidCode(mermaidCode);
+        if (!validation.ok) {
+          setStatus('error');
+          setErrorMsg(
+            validation.error === 'diagram_mermaid_loading'
+              ? t('diagram_mermaid_loading')
+              : t('diagram_syntax_error'),
+          );
+          setSvg('');
+          return;
+        }
+        await renderSvg(mermaidCode);
+      })();
+      return;
     }
-  }, [skillMdContent, onGenerated, onLoadingChange, t]);
 
-  // Listen for external generate-diagram event (triggered from label row button)
-  useEffect(() => {
-    const handler = () => handleGenerate();
-    window.addEventListener('generate-diagram', handler);
-    return () => window.removeEventListener('generate-diagram', handler);
-  }, [handleGenerate]);
+    const timer = setInterval(() => {
+      if (!mermaidScriptLoaded) return;
+      clearInterval(timer);
+      void (async () => {
+        const validation = await validateMermaidCode(mermaidCode);
+        if (!validation.ok) {
+          setStatus('error');
+          setErrorMsg(
+            validation.error === 'diagram_mermaid_loading'
+              ? t('diagram_mermaid_loading')
+              : t('diagram_syntax_error'),
+          );
+          setSvg('');
+          return;
+        }
+        await renderSvg(mermaidCode);
+      })();
+    }, 100);
 
-  const handleSaveEdit = useCallback(async () => {
-    const bare = editedCode.replace(/^```mermaid\s*([\s\S]*?)```\s*$/i, '$1').trim();
-    const ok = await renderSvg(bare);
-    if (ok) {
-      const fenced = '```mermaid\n' + bare + '\n```';
-      setMermaid(fenced);
-      onGenerated?.(fenced);
-      setEditMode(false);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ mermaid: fenced, svg: '' }));
-    }
-  }, [editedCode, renderSvg, onGenerated]);
+    return () => clearInterval(timer);
+  }, [mermaidCode, mounted]);
+
+  if (!mermaidCode && status === 'idle') {
+    return null;
+  }
 
   return (
-    <div className="space-y-3">
-      {/* Generate button — hidden when initialMermaid is provided (read-only) or in compact mode */}
-      {!compact && !initialMermaid && (
-        <button
-          onClick={handleGenerate}
-          disabled={status === 'loading'}
-          className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        >
-          {status === 'loading' ? t('diagram_loading') : t('diagram_generate')}
-        </button>
+    <div className={className}>
+      {status === 'loading' && !svg && !errorMsg && (
+        <div className="flex items-center gap-3 rounded-lg border border-[#dbeafe] bg-[#eff6ff] px-4 py-3">
+          <svg className="h-5 w-5 animate-spin text-[#1d4ed8]" viewBox="0 0 24 24" fill="none">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+          </svg>
+          <span className="text-sm text-[#1e3a8a]">{t('diagram_mermaid_loading')}</span>
+        </div>
       )}
 
-      {/* Compact mode: empty-state hint */}
-      {compact && !svg && !errorMsg && (
-        <p className="text-xs text-[#a89888] font-body italic">
-          {t('diagram_preview_label')} — {t('diagram_input_required')}
-        </p>
-      )}
-
-      {/* Error */}
       {errorMsg && (
-        <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-sm text-red-700">{errorMsg}</p>
-          {mermaid && (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+          <p className="text-sm text-red-600">{errorMsg}</p>
+          {mermaidCode && (
             <details className="mt-2">
-              <summary className="text-xs text-red-500 cursor-pointer">{t('view_source')}</summary>
-              <pre className="mt-1 p-2 bg-red-100 rounded text-xs overflow-x-auto">{mermaid}</pre>
+              <summary className="cursor-pointer text-xs text-red-500">{t('view_source')}</summary>
+              <pre className="mt-1 overflow-x-auto rounded bg-red-100 p-2 text-xs">{mermaidCode}</pre>
             </details>
           )}
         </div>
       )}
 
-      {/* SVG preview */}
       {svg && (
-        <div className="p-4 bg-white border border-gray-200 rounded-xl shadow-sm overflow-x-auto">
-          <div dangerouslySetInnerHTML={{ __html: svg }} />
-        </div>
-      )}
-
-      {/* Source code — editable */}
-      {mermaid && (
-        <div className="text-xs">
-          {!editMode ? (
-            <div className="flex items-center justify-between">
-              <button
-                className="text-gray-500 hover:text-gray-700 transition-colors font-body"
-                onClick={() => {
-                  setEditedCode(mermaid);
-                  setEditMode(true);
-                }}
-              >
-                {t('view_source')}
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              <textarea
-                className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-xs font-mono-custom text-gray-700 resize-y min-h-[120px] focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400"
-                value={editedCode}
-                onChange={(e) => setEditedCode(e.target.value)}
-                rows={Math.max(6, editedCode.split('\n').length + 1)}
-              />
-              <div className="flex gap-2">
-                <button
-                  onClick={handleSaveEdit}
-                  className="px-3 py-1.5 bg-indigo-600 text-white text-xs font-medium rounded-lg hover:bg-indigo-700 transition-colors"
-                >
-                  {t('save')}
-                </button>
-                <button
-                  className="px-3 py-1.5 bg-gray-100 text-gray-600 text-xs font-medium rounded-lg hover:bg-gray-200 transition-colors"
-                  onClick={() => setEditMode(false)}
-                >
-                  {t('cancel')}
-                </button>
-              </div>
-            </div>
-          )}
+        <div
+          className={`overflow-x-auto bg-white ${
+            framed ? "rounded-xl border border-gray-200 p-4 shadow-sm" : "p-0"
+          }`}
+        >
+          <div className="[&_svg]:block [&_svg]:h-auto [&_svg]:w-full [&_svg]:max-w-full" dangerouslySetInnerHTML={{ __html: svg }} />
         </div>
       )}
     </div>

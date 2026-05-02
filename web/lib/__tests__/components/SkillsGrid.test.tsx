@@ -81,18 +81,18 @@ describe("SkillsClient — category filter", () => {
     expect(skillHeadings().length).toBe(3);
   });
 
-  it("active '全部' button has gradient class", () => {
+  it("active '全部' button has blue active style", () => {
     render(<SkillsClient initialSkills={FAKE_SKILLS} />, { wrapper: TestWrapper });
     const allBtn = screen.getByRole("button", { name: new RegExp(T.category_all) });
-    expect(allBtn.className).toContain("from-[#a23f00]");
-    expect(allBtn.className).toContain("to-[#fa7025]");
+    expect(allBtn.className).toContain("bg-[#2d67f7]");
+    expect(allBtn.className).toContain("text-white");
   });
 
-  it("active category button has gradient class", () => {
+  it("active category button has blue active style", () => {
     render(<SkillsClient initialSkills={FAKE_SKILLS} />, { wrapper: TestWrapper });
     const artBtn = screen.getByRole("button", { name: new RegExp(T.category_art) });
     act(() => { artBtn.click(); });
-    expect(artBtn.className).toContain("from-[#a23f00]");
+    expect(artBtn.className).toContain("bg-[#2d67f7]");
   });
 });
 

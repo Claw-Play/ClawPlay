@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { users, userIdentities } from "@/lib/db/schema";
-import { eq, and } from "drizzle-orm";
+import { users, userIdentities, userTokens } from "@/lib/db/schema";
+import { eq, and, isNull } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { signJWT, buildSetCookieHeader } from "@/lib/auth";
 import { analytics } from "@/lib/analytics";
@@ -51,8 +51,16 @@ export async function POST(request: NextRequest) {
     const token = await signJWT({ userId: user.id, role: user.role as "user" | "admin" | "reviewer" });
     analytics.user.login(user.id, "email");
 
+    // Check if user already has a non-revoked token
+    const existingToken = await db
+      .select({ id: userTokens.id })
+      .from(userTokens)
+      .where(and(eq(userTokens.userId, user.id), isNull(userTokens.revokedAt)))
+      .limit(1);
+
     const response = NextResponse.json({
       user: { id: user.id, email, role: user.role },
+      hasToken: existingToken.length > 0,
     });
     response.headers.set("Set-Cookie", buildSetCookieHeader(token));
     return response;

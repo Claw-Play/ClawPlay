@@ -16,6 +16,7 @@ import { execSync } from 'node:child_process';
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { resolve, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { t } from './i18n.mjs';
 
 // ---------------------------------------------------------------------------
 // CLI entry point
@@ -23,9 +24,9 @@ import { fileURLToPath } from 'node:url';
 async function main() {
   const filePath = process.argv[2];
   if (!filePath) {
-    console.error('Usage: clawplay skill diagram <path-to-SKILL.md>');
+    console.error(t('diagramUsage'));
     console.error('');
-    console.error('Requires CLAWPLAY_TOKEN (no extra API keys needed).');
+    console.error(t('diagramRequiresToken'));
     process.exit(1);
   }
 
@@ -34,10 +35,10 @@ async function main() {
     const { content } = readSkillFile(resolved);
     const outputPath = await generateDiagram(content, resolved);
     console.log('');
-    console.log('✅ 已生成 Mermaid 流程图');
-    console.log(`📄 保存至: ${outputPath}`);
+    console.log(t('diagramDone'));
+    console.log(t('diagramSaved', { path: outputPath }));
     console.log('');
-    console.log('提示: 将以下内容复制到 SKILL.md 中即可：');
+    console.log(t('diagramTip'));
     console.log('---8<---');
     const saved = readFileSync(outputPath, 'utf-8');
     console.log(saved);

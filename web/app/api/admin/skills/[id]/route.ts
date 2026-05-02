@@ -1,10 +1,59 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthFromCookies } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { skills } from "@/lib/db/schema";
-import { eq, and, isNull } from "drizzle-orm";
+import { skillVersions, skills } from "@/lib/db/schema";
+import { eq, and, isNull, desc } from "drizzle-orm";
 import { analytics } from "@/lib/analytics";
 import { getT } from "@/lib/i18n";
+
+export async function GET(
+  _request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  const t = await getT("errors");
+  const auth = await getAuthFromCookies();
+  if (!auth) {
+    return NextResponse.json({ error: t("unauthorized") }, { status: 401 });
+  }
+
+  if (auth.role !== "admin" && auth.role !== "reviewer") {
+    return NextResponse.json({ error: t("forbidden") }, { status: 403 });
+  }
+
+  const skill = await db.query.skills.findFirst({
+    where: and(eq(skills.id, params.id), isNull(skills.deletedAt)),
+  });
+
+  if (!skill) {
+    return NextResponse.json({ error: t("skill_not_found") }, { status: 404 });
+  }
+
+  const latestVersion = await db
+    .select({
+      content: skillVersions.content,
+      workflowMd: skillVersions.workflowMd,
+      parsedMetadata: skillVersions.parsedMetadata,
+      createdAt: skillVersions.createdAt,
+    })
+    .from(skillVersions)
+    .where(eq(skillVersions.skillId, skill.id))
+    .orderBy(desc(skillVersions.createdAt))
+    .limit(1);
+
+  const version = latestVersion[0] ?? null;
+
+  return NextResponse.json({
+    skill: {
+      ...skill,
+      createdAt: skill.createdAt?.toISOString?.() ?? null,
+      updatedAt: skill.updatedAt?.toISOString?.() ?? null,
+      skillMdContent: version?.content ?? null,
+      workflowMd: version?.workflowMd ?? null,
+      parsedMetadata: version?.parsedMetadata ?? "{}",
+      latestVersionCreatedAt: version?.createdAt?.toISOString?.() ?? null,
+    },
+  });
+}
 
 export async function PATCH(
   request: NextRequest,

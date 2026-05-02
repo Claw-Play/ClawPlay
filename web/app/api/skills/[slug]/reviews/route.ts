@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { skills, skillRatings } from "@/lib/db/schema";
 import { eq, and, isNull, sql } from "drizzle-orm";
 import { getT } from "@/lib/i18n";
+import { averageRating } from "@/lib/ratings";
 
 export async function GET(
   request: NextRequest,
@@ -44,10 +45,7 @@ export async function GET(
     skillId: skill.id,
     statsStars: skill.statsStars,
     statsRatingsCount: skill.statsRatingsCount,
-    averageRating:
-      skill.statsRatingsCount > 0
-        ? Number((skill.statsStars / skill.statsRatingsCount).toFixed(1))
-        : null,
+    averageRating: averageRating(skill.statsStars, skill.statsRatingsCount),
     reviews: publicReviews,
   });
 }
@@ -83,63 +81,70 @@ export async function POST(
       comment?: string;
     };
 
-    if (!rating || rating < 1 || rating > 5) {
+    const validatedRating = Number(rating);
+
+    if (!Number.isInteger(validatedRating) || validatedRating < 1 || validatedRating > 5) {
       return NextResponse.json(
         { error: t("rating_invalid") },
         { status: 400 }
       );
     }
 
-    // Check existing rating
-    const existing = await db.query.skillRatings.findFirst({
-      where: and(
-        eq(skillRatings.skillId, skill.id),
-        eq(skillRatings.userId, auth.userId)
-      ),
+    const { total, count } = db.transaction((tx) => {
+      const existing = tx
+        .select({ id: skillRatings.id })
+        .from(skillRatings)
+        .where(and(
+          eq(skillRatings.skillId, skill.id),
+          eq(skillRatings.userId, auth.userId)
+        ))
+        .get();
+
+      if (existing) {
+        tx
+          .update(skillRatings)
+          .set({ rating: validatedRating, comment: comment?.trim() ?? "", createdAt: new Date() })
+          .where(eq(skillRatings.id, existing.id))
+          .run();
+      } else {
+        tx.insert(skillRatings).values({
+          skillId: skill.id,
+          userId: auth.userId,
+          rating: validatedRating,
+          comment: comment?.trim() ?? "",
+        }).run();
+      }
+
+      const agg = tx
+        .select({
+          total: sql<number>`sum(${skillRatings.rating})`,
+          count: sql<number>`count(*)`,
+        })
+        .from(skillRatings)
+        .where(eq(skillRatings.skillId, skill.id))
+        .all();
+
+      const total = Number(agg[0]?.total ?? 0);
+      const count = Number(agg[0]?.count ?? 0);
+
+      tx
+        .update(skills)
+        .set({ statsStars: total, statsRatingsCount: count })
+        .where(eq(skills.id, skill.id))
+        .run();
+
+      return { total, count };
     });
-
-    if (existing) {
-      // Update existing rating
-      await db
-        .update(skillRatings)
-        .set({ rating, comment: comment?.trim() ?? "", createdAt: new Date() })
-        .where(eq(skillRatings.id, existing.id));
-    } else {
-      // Insert new rating
-      await db.insert(skillRatings).values({
-        skillId: skill.id,
-        userId: auth.userId,
-        rating,
-        comment: comment?.trim() ?? "",
-      });
-    }
-
-    // Recompute aggregate stats from all ratings for this skill
-    const agg = await db
-      .select({
-        total: sql<number>`sum(${skillRatings.rating})`,
-        count: sql<number>`count(*)`,
-      })
-      .from(skillRatings)
-      .where(eq(skillRatings.skillId, skill.id));
-
-    const total = Number(agg[0]?.total ?? 0);
-    const count = Number(agg[0]?.count ?? 0);
-
-    await db
-      .update(skills)
-      .set({ statsStars: total, statsRatingsCount: count })
-      .where(eq(skills.id, skill.id));
 
     void (async () => {
       const { analytics } = await import("@/lib/analytics");
-      analytics.skill.review(skill.id, auth.userId, rating);
+      analytics.skill.review(skill.id, auth.userId, validatedRating);
     })();
 
     return NextResponse.json(
       {
         message: t("review_submitted"),
-        averageRating: count > 0 ? Number((total / count).toFixed(1)) : null,
+        averageRating: averageRating(total, count),
         count,
       },
       { status: 201 }

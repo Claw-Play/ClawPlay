@@ -12,13 +12,14 @@ import { checkFrontmatter, usesClawplay } from './checks/frontmatter.mjs';
 import { checkPhases } from './checks/phases.mjs';
 import { checkBash } from './checks/bash.mjs';
 import { checkPrompts } from './checks/prompts.mjs';
+import { detectLang, t } from './i18n.mjs';
 
 // ---------------------------------------------------------------------------
 // Entry point
 // ---------------------------------------------------------------------------
 const filePath = process.argv[2];
 if (!filePath) {
-  console.error('Usage: clawplay skill lint <path-to-SKILL.md> [--json]');
+  console.error(t('lintUsage'));
   process.exit(1);
 }
 
@@ -39,7 +40,7 @@ try {
   if (isJson) {
     process.stdout.write(JSON.stringify({ error: err.message }, null, 2) + '\n');
   } else {
-    console.error(`❌ lint: ${err.message}`);
+    console.error(t('lintError', { msg: err.message }));
   }
   process.exit(1);
 }

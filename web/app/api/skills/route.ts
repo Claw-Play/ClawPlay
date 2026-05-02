@@ -22,6 +22,7 @@ export async function GET(request: NextRequest) {
         moderationStatus: skills.moderationStatus,
         latestVersionId: skills.latestVersionId,
         statsStars: skills.statsStars,
+        statsInstalls: skills.statsInstalls,
         createdAt: skills.createdAt,
       })
       .from(skills)
@@ -32,7 +33,7 @@ export async function GET(request: NextRequest) {
         )
       );
 
-    let results: { id: string; slug: string; name: string; summary: string; authorName: string; iconEmoji: string; moderationStatus: "pending" | "approved" | "rejected"; latestVersionId: string | null; statsStars: number; createdAt: Date | null }[] = await query;
+    let results: { id: string; slug: string; name: string; summary: string; authorName: string; iconEmoji: string; moderationStatus: "pending" | "approved" | "rejected"; latestVersionId: string | null; statsStars: number; statsInstalls: number; createdAt: Date | null }[] = await query;
 
     // Filter by emoji (client-side as it's not indexed for now)
     if (emoji) {

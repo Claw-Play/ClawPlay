@@ -140,19 +140,19 @@ export default async function SkillVersionsPage({
   const latestVersion = versions[0];
 
   return (
-    <div className="min-h-screen bg-[#faf3d0]">
+    <div className="min-h-screen bg-[#fbfdff]">
       <div className="max-w-4xl mx-auto px-6 py-10">
         {/* Breadcrumb */}
-        <div className="flex items-center gap-2 text-sm text-[#7a6a5a] mb-8 font-body">
-          <Link href="/skills" className="hover:text-[#a23f00]">
+        <div className="flex items-center gap-2 text-sm text-[#52617d] mb-8 font-body">
+          <Link href="/skills" className="hover:text-[#2d67f7]">
             {t("breadcrumb_skills")}
           </Link>
           <span>/</span>
-          <Link href={`/skills/${skill.slug}`} className="hover:text-[#a23f00]">
+          <Link href={`/skills/${skill.slug}`} className="hover:text-[#2d67f7]">
             {skill.name}
           </Link>
           <span>/</span>
-          <span className="font-semibold text-[#564337]">
+          <span className="font-semibold text-[#1f2b45]">
             {t("breadcrumb_versions")}
           </span>
         </div>
@@ -161,17 +161,17 @@ export default async function SkillVersionsPage({
         <div className="mb-8">
           <div className="flex items-start justify-between gap-4 mb-2">
             <div>
-              <h1 className="text-3xl font-bold font-heading text-[#564337] mb-2">
+              <h1 className="text-3xl font-bold font-heading text-[#1f2b45] mb-2">
                 {t("title")}
               </h1>
-              <p className="text-[#7a6a5a] font-body">
+              <p className="text-[#52617d] font-body">
                 {t("subtitle", { name: skill.name })}
               </p>
             </div>
             {skill.authorId === authUserId && skill.moderationStatus === "approved" && (
               <Link
                 href={`/skills/${skill.slug}/versions/new`}
-                className="flex-shrink-0 px-4 py-2 text-sm font-semibold text-white bg-gradient-to-r from-[#a23f00] to-[#fa7025] rounded-full font-heading shadow hover:opacity-90 transition-opacity"
+                className="flex-shrink-0 px-4 py-2 text-sm font-semibold text-white bg-gradient-to-r from-[#2d67f7] to-[#4f82f7] rounded-full font-heading shadow hover:opacity-90 transition-opacity"
               >
                 + {t("submit_new_version")}
               </Link>
@@ -188,12 +188,12 @@ export default async function SkillVersionsPage({
             return (
               <div
                 key={versionId}
-                className="bg-[#fffdf7] card-radius border border-[#e8dfc8] card-shadow overflow-hidden"
+                className="bg-[#ffffff] card-radius border border-[#dbe5f7] card-shadow overflow-hidden"
               >
                 {/* Version header */}
-                <div className="flex items-center justify-between px-6 py-4 border-b border-[#e8dfc8]">
+                <div className="flex items-center justify-between px-6 py-4 border-b border-[#dbe5f7]">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-xl font-bold font-heading text-[#564337]">
+                    <span className="text-xl font-bold font-heading text-[#1f2b45]">
                       v{version}
                     </span>
                     {isLatest && (
@@ -202,7 +202,7 @@ export default async function SkillVersionsPage({
                       </span>
                     )}
                     {v.moderationStatus === "pending" && (
-                      <span className="px-2 py-0.5 bg-[#a23f00]/10 text-[#a23f00] text-xs font-semibold rounded-full font-body">
+                      <span className="px-2 py-0.5 bg-[#2d67f7]/10 text-[#2d67f7] text-xs font-semibold rounded-full font-body">
                         {tCommon("pending")}
                       </span>
                     )}
@@ -220,7 +220,7 @@ export default async function SkillVersionsPage({
                       isAdmin={authRole === "admin" || authRole === "reviewer"}
                       isDeprecated={!!v.deprecatedAt}
                     />
-                    <div className="flex items-center gap-4 text-sm text-[#7a6a5a] font-body">
+                    <div className="flex items-center gap-4 text-sm text-[#52617d] font-body">
                       {v.changelog && (
                         <span>{t("changelog")}: {v.changelog}</span>
                       )}
@@ -245,7 +245,7 @@ export default async function SkillVersionsPage({
                 {/* Diff view */}
                 {diffLines && diffLines.length > 0 ? (
                   <div className="px-6 py-4 overflow-x-auto">
-                    <p className="text-xs text-[#7a6a5a] mb-3 font-body">
+                    <p className="text-xs text-[#52617d] mb-3 font-body">
                       {t("compare_with_previous")}
                     </p>
                     <div className="text-sm font-mono leading-relaxed rounded-lg overflow-hidden">
@@ -260,7 +260,7 @@ export default async function SkillVersionsPage({
                               : "text-[#495057]"
                           }`}
                         >
-                          <span className="w-8 flex-shrink-0 text-right text-[#a89888] select-none">
+                          <span className="w-8 flex-shrink-0 text-right text-[#6d7891] select-none">
                             {line.type !== "added" ? line.lineNo : ""}
                           </span>
                           <span className="w-6 flex-shrink-0 select-none">
@@ -278,7 +278,7 @@ export default async function SkillVersionsPage({
                     </div>
                   </div>
                 ) : diffLines ? (
-                  <div className="px-6 py-4 text-sm text-[#7a6a5a] font-body italic">
+                  <div className="px-6 py-4 text-sm text-[#52617d] font-body italic">
                     {t("no_diff")}
                   </div>
                 ) : null}
@@ -288,7 +288,7 @@ export default async function SkillVersionsPage({
         </div>
 
         {versions.length === 0 && (
-          <div className="text-center py-16 text-[#7a6a5a] font-body">
+          <div className="text-center py-16 text-[#52617d] font-body">
             {t("no_versions")}
           </div>
         )}

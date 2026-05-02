@@ -2,6 +2,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useT } from "@/lib/i18n/context";
+import { formatAverageRating } from "@/lib/ratings";
+import { CopyIcon, SearchIcon, StarIcon } from "@/components/icons";
 
 interface Skill {
   slug: string;
@@ -11,30 +13,13 @@ interface Skill {
   iconEmoji: string | null;
   statsStars: number | null;
   statsRatingsCount: number | null;
+  statsInstalls: number | null;
   createdAt: Date | null;
 }
 
 interface SkillsClientProps {
   initialSkills: Skill[];
   initialSort?: string;
-}
-
-function CopyIcon() {
-  return (
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-      <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
-      <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
-    </svg>
-  );
-}
-
-function SearchIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="11" cy="11" r="8"/>
-      <path d="m21 21-4.35-4.35"/>
-    </svg>
-  );
 }
 
 export function SkillsClient({ initialSkills, initialSort: _initialSort }: SkillsClientProps) {
@@ -75,43 +60,39 @@ export function SkillsClient({ initialSkills, initialSort: _initialSort }: Skill
   }
 
   return (
-    <div className="min-h-screen bg-[#fefae0] flex flex-col">
-      {/* Main content — centered, max-w-[1280px] */}
-      <div className="flex-1 w-full max-w-[1280px] mx-auto px-4 sm:px-6 pb-16 sm:pb-20">
-        {/* Hero Header */}
-        <div className="text-center pt-12 sm:pt-16 pb-8">
-          <h1 className="text-4xl sm:text-5xl md:text-7xl font-extrabold font-heading text-[#1d1c0d] tracking-tight leading-[1.05] mb-4 break-words">
+    <div className="min-h-screen bg-[#fbfdff] flex flex-col">
+      <div className="flex-1 w-full px-4 sm:px-6 lg:px-8 pb-14 sm:pb-16">
+        <div className="pt-9 sm:pt-[42px] pb-6 text-center">
+          <h1 className="text-[40px] sm:text-[44px] font-semibold font-heading text-[#15213b] tracking-[-0.025em] leading-[1.08] mb-3 break-words">
             {t("title")}
           </h1>
-          <p className="text-sm sm:text-lg text-[#564337] font-body max-w-2xl mx-auto leading-relaxed">
+          <p className="text-[14px] text-[#52617d] font-body max-w-3xl mx-auto leading-relaxed">
             {t("subtitle")}
           </p>
         </div>
 
-        {/* Search Bar — centered, max-w-[672px] */}
-        <div className="relative max-w-[672px] mx-auto mb-6">
-          <div className="absolute left-6 top-1/2 -translate-y-1/2 text-[rgba(86,67,55,0.6)] pointer-events-none">
-            <SearchIcon />
+        <div className="relative mx-auto mb-5 w-full max-w-[760px]">
+          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[#6d7891] pointer-events-none">
+            <SearchIcon className="h-4 w-4" />
           </div>
           <input
             type="text"
             placeholder={t("search_placeholder")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full h-14 pl-16 pr-6 rounded-2xl bg-[#ede9cf] border-2 border-transparent text-[#564337] placeholder-[rgba(86,67,55,0.6)] text-base font-body focus:outline-none focus:border-[#a23f00] transition-all shadow-[0_1px_2px_rgba(0,0,0,0.05)]"
+            className="w-full h-10 pl-11 pr-5 rounded-[9px] bg-white border border-[#cfdcf3] text-[#15213b] placeholder:text-[#7c879f] text-[13px] font-body focus:outline-none focus:border-[#2d67f7] focus:ring-2 focus:ring-[#2d67f7]/10 transition-all shadow-[0_6px_16px_rgba(25,43,87,0.025)]"
           />
         </div>
 
-        {/* Category Filters — centered row */}
-        <div className="flex flex-wrap gap-2 sm:gap-3 justify-center mb-8 sm:mb-10">
+        <div className="flex flex-wrap justify-center gap-2 mb-6">
           {categories.map(({ label, emoji, filter }) => (
             <button
               key={filter}
               onClick={() => setActiveCategory(filter)}
-              className={`flex items-center gap-2 px-4 sm:px-5 py-2.5 rounded-full text-sm sm:text-base font-semibold font-body transition-all ${
+              className={`flex min-h-8 items-center gap-1.5 px-4 py-1.5 rounded-full text-[12px] font-semibold font-body transition-all ${
                 activeCategory === filter
-                  ? "bg-gradient-to-r from-[#a23f00] to-[#fa7025] text-white shadow-[0_6px_20px_rgba(162,63,0,0.25)]"
-                  : "bg-[#ede9cf] text-[#586330] hover:bg-[#ddd8b8]"
+                  ? "bg-[#2d67f7] text-white shadow-[0_8px_18px_rgba(45,103,247,0.2)]"
+                  : "bg-white text-[#52617d] border border-[#dbe5f7] hover:border-[#bfd0f4] hover:bg-[#f7faff]"
               }`}
             >
               <span>{emoji}</span>
@@ -120,27 +101,26 @@ export function SkillsClient({ initialSkills, initialSort: _initialSort }: Skill
           ))}
         </div>
 
-        {/* Skills Grid — 4 columns */}
         {filtered.length === 0 ? (
           <div className="text-center py-16 sm:py-24 space-y-4">
-            <div className="text-6xl">{activeCategory || "🦐"}</div>
-            <h2 className="text-xl sm:text-2xl font-bold text-[#564337] font-heading">
+            <div className="text-5xl">{activeCategory || "✨"}</div>
+            <h2 className="text-xl sm:text-2xl font-bold text-[#15213b] font-heading">
               {search ? t("no_results", { query: search }) : t("no_category")}
             </h2>
-            <p className="text-[#7a6a5a] font-body">
+            <p className="text-[#6d7891] font-body">
               {search ? t("try_different") : t("be_first")}
             </p>
             {search && (
               <button
                 onClick={() => setSearch("")}
-                className="mt-2 px-6 py-2 rounded-full bg-[#ede9cf] text-[#5c6834] text-sm font-semibold font-body hover:bg-[#ddd8b8] transition-all"
+                className="mt-2 px-6 py-2 rounded-full bg-white border border-[#dbe5f7] text-[#2d67f7] text-sm font-semibold font-body hover:bg-[#f7faff] transition-all"
               >
                 {t("clear_search")}
               </button>
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+          <div className="grid grid-cols-1 gap-[14px] sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {filtered.map((s) => (
               <SkillCard
                 key={s.slug}
@@ -168,55 +148,57 @@ function SkillCard({
   const t = useT("skills");
   const tCommon = useT("common");
   const installCmd = `clawplay install ${skill.slug}`;
-  const stars = skill.statsRatingsCount ? (skill.statsStars ?? 0) / skill.statsRatingsCount : 0;
+  const totalInstalls = skill.statsInstalls ?? 0;
+  const installs = totalInstalls >= 1000
+    ? `${(totalInstalls / 1000).toFixed(1)}k`
+    : String(totalInstalls);
 
   return (
-    <div className="bg-white rounded-[48px] shadow-[0_8px_24px_rgba(86,67,55,0.06)] overflow-hidden flex flex-col">
-      {/* Card body — clickable link */}
-      <Link href={`/skills/${skill.slug}`} className="p-8 flex flex-col flex-1 gap-3 hover:opacity-80 transition-opacity">
-        {/* Skill name */}
-        <h3 className="text-xl font-bold font-heading text-[#1d1c0d] leading-snug">
-          {skill.name}
-        </h3>
+      <div className="bg-white rounded-[10px] border border-[#dbe5f7] shadow-[0_8px_22px_rgba(25,43,87,0.03)] overflow-hidden flex flex-col transition-colors hover:border-[#bfd0f4]">
+        <Link href={`/skills/${skill.slug}`} className="px-4 pt-4 pb-3 flex flex-col flex-1 gap-2.5 hover:bg-[#fbfdff] transition-colors">
+          <h3 className="text-[15px] font-semibold font-heading text-[#15213b] leading-snug line-clamp-2">
+            {skill.name}
+          </h3>
+          <p className="min-h-[36px] text-[12px] text-[#52617d] font-body leading-relaxed line-clamp-2 flex-1">
+            {skill.summary || tCommon("no_description")}
+          </p>
 
-        {/* Description */}
-        <p className="text-sm text-[#564337] font-body leading-relaxed line-clamp-3 flex-1">
-          {skill.summary || tCommon("no_description")}
-        </p>
-
-        {/* Author + stats */}
-        <div className="flex items-center justify-between pt-3 border-t border-[rgba(220,193,177,0.2)]">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-[#ede9cf] flex items-center justify-center text-xs font-bold font-heading text-[#586330] overflow-hidden">
-              {skill.authorName ? skill.authorName[0].toUpperCase() : "?"}
+          <div className="flex items-center justify-between pt-2">
+            <div className="flex items-center gap-2">
+              <div className="w-5 h-5 rounded-full bg-[#d9e8ff] flex items-center justify-center text-[10px] font-bold font-heading text-[#2d67f7] overflow-hidden">
+                {skill.authorName ? skill.authorName[0].toUpperCase() : "?"}
+              </div>
+              <span className="text-[11px] text-[#52617d] font-body truncate max-w-[92px]">
+                {skill.authorName || tCommon("anonymous")}
+              </span>
             </div>
-            <span className="text-xs text-[#564337] font-body truncate max-w-[100px]">
-              {skill.authorName || tCommon("anonymous")}
-            </span>
+            <div className="flex items-center gap-2 text-[11px] text-[#52617d] font-body">
+              <span className="inline-flex items-center gap-1">
+                <StarIcon className="h-3 w-3 text-[#2d67f7]" />
+                {formatAverageRating(skill.statsStars, skill.statsRatingsCount)}
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <span className="text-[#9aa4be]">◔</span>
+                {installs}
+              </span>
+            </div>
           </div>
-          <div className="flex items-center gap-3">
-            <span className="text-xs text-[rgba(86,67,55,0.8)] font-body">
-              ⭐ {stars.toFixed(1)}
-            </span>
-          </div>
-        </div>
-      </Link>
+        </Link>
 
-      {/* Install command bar */}
-      <div className="mx-6 mb-6">
-        <div className="bg-[#586330] rounded-[32px] px-4 py-2.5 flex items-center justify-between gap-2">
-          <code className="text-xs font-mono-custom text-[#fefae0] truncate flex-1">
+      <div className="mx-4 mb-4">
+        <div className="bg-[#f0f6ff] rounded-[6px] border border-[#d6e4fb] px-3 py-2 flex items-center justify-between gap-2">
+          <code className="text-[11px] font-mono-custom text-[#2d67f7] truncate flex-1">
             {installCmd}
           </code>
           <button
             onClick={onCopy}
-            className="flex-shrink-0 text-[#fefae0] hover:text-white transition-colors"
+            className="flex-shrink-0 text-[#2d67f7] hover:text-[#2457d4] transition-colors"
             title={t("copy_command")}
           >
             {copied ? (
-              <span className="text-xs font-bold">{t("skill_copied")}</span>
+              <span className="text-[11px] font-bold">{t("skill_copied")}</span>
             ) : (
-              <CopyIcon />
+              <CopyIcon className="h-3.5 w-3.5" />
             )}
           </button>
         </div>

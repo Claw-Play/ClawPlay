@@ -7,8 +7,28 @@ interface PieChartProps {
 export default function PieChart({ data, size = 120, totalLabel = "次" }: PieChartProps) {
   if (!data || data.length === 0 || data.every((d) => d.value === 0)) {
     return (
-      <div className="flex items-center justify-center text-[#a89070] text-xs font-body" style={{ width: size, height: size }}>
-        No data
+      <div className="flex flex-col items-center justify-center gap-4 text-[#8aa0cb]" style={{ width: size, height: size }}>
+        <svg viewBox="0 0 120 120" className="h-[84px] w-[84px]" aria-hidden="true">
+          <defs>
+            <linearGradient id="pie-empty-a" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor="#cfe0ff" />
+              <stop offset="100%" stopColor="#a7c2ff" />
+            </linearGradient>
+          </defs>
+          <ellipse cx="60" cy="94" rx="26" ry="7" fill="#e9f0ff" />
+          <path d="M40 52h40l-4 22H44z" fill="url(#pie-empty-a)" opacity="0.72" />
+          <path d="M44 45h24l6 7H50z" fill="#dce7ff" />
+          <path d="M44 52h40l-4 8H48z" fill="#bcd0ff" />
+          <path d="M42 60h36l-3 14H45z" fill="#c9dbff" />
+          <path d="M42 46h10l2 6H44z" fill="#f4f8ff" />
+          <path d="M79 48l3-6" stroke="#b6cbff" strokeWidth="2" strokeLinecap="round" />
+          <path d="M30 39l2 4" stroke="#b6cbff" strokeWidth="2" strokeLinecap="round" />
+          <path d="M90 36l-2 5" stroke="#b6cbff" strokeWidth="2" strokeLinecap="round" />
+          <circle cx="31" cy="36" r="2" fill="#d3e1ff" />
+          <circle cx="88" cy="31" r="2" fill="#d3e1ff" />
+          <circle cx="79" cy="40" r="1.5" fill="#d3e1ff" />
+        </svg>
+        <div className="text-xs font-medium text-[#8aa0cb]">No data</div>
       </div>
     );
   }
@@ -62,7 +82,7 @@ export default function PieChart({ data, size = 120, totalLabel = "次" }: PieCh
             key={i}
             d={s.path}
             fill={s.color}
-            stroke="#fefae0"
+            stroke="#f8faff"
             strokeWidth="0.5"
           />
         ))}
@@ -73,8 +93,8 @@ export default function PieChart({ data, size = 120, totalLabel = "次" }: PieCh
           textAnchor="middle"
           fontSize="11"
           fontWeight="700"
-          fill="#564337"
-          fontFamily="Plus Jakarta Sans, sans-serif"
+          fill="#1f2b45"
+          fontFamily="var(--font-geist-sans), sans-serif"
         >
           {total >= 1000 ? `${(total / 1000).toFixed(1)}k` : total}
         </text>
@@ -84,8 +104,8 @@ export default function PieChart({ data, size = 120, totalLabel = "次" }: PieCh
           textAnchor="middle"
           fontSize="8"
           fontWeight="700"
-          fill="#564337"
-          fontFamily="Be Vietnam Pro, sans-serif"
+          fill="#7c879f"
+          fontFamily="var(--font-geist-sans), sans-serif"
         >
           {totalLabel}
         </text>
@@ -99,8 +119,8 @@ export default function PieChart({ data, size = 120, totalLabel = "次" }: PieCh
               className="w-2 h-2 rounded-full flex-shrink-0"
               style={{ backgroundColor: s.color }}
             />
-            <span className="text-xs text-[#564337] font-body truncate">{s.name}</span>
-            <span className="text-xs text-[#a89070] font-body ml-auto flex-shrink-0">{s.percent}%</span>
+            <span className="text-xs text-[#394766] font-medium truncate">{s.name}</span>
+            <span className="text-xs text-[#8aa0cb] font-medium ml-auto flex-shrink-0">{s.percent}%</span>
           </div>
         ))}
       </div>

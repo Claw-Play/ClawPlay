@@ -11,7 +11,7 @@ echo ""
 echo "▶ whoami — missing token"
 echo ""
 
-run_script --lib "$LIB" --fn cmd_whoami
+run_script --lib "$LIB" --env "CLAWPLAY_TOKEN=" --fn cmd_whoami
 assert_contains "no token → error message"    "CLAWPLAY_TOKEN is not set" "$RS_STDERR"
 assert_exit     "no token → exit 1"           "1" "$RS_EXIT"
 assert_eq       "no token → stdout empty"     ""  "$RS_STDOUT"
@@ -22,9 +22,10 @@ echo ""
 
 run_script --lib "$LIB" \
   --env "CLAWPLAY_TOKEN=fake-token" \
-  --curl-response '{"error":"Invalid token."}' \
+  --curl-response '{"error":"Token revoked."}' \
   --fn cmd_whoami
-assert_contains "API error → printed to stderr" "Invalid token" "$RS_STDERR"
+assert_contains "API error → reconfigure hint shown" "重新配置后再试" "$RS_STDERR"
+assert_contains "API error → dashboard hint shown" "clawplay setup" "$RS_STDERR"
 assert_exit     "API error → exit 1"             "1" "$RS_EXIT"
 
 echo ""

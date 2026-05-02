@@ -142,7 +142,7 @@ Tokens are AES-256-GCM encrypted on the server. The plaintext (userId, expiry) i
 ```bash
 cd web
 cp .env.example .env.local
-# Fill in: JWT_SECRET, CLAWPLAY_SECRET_KEY, UPSTASH_REDIS_REST_URL/TOKEN, DATABASE_URL, BASE_URL
+# Fill in: JWT_SECRET, CLAWPLAY_SECRET_KEY, UPSTASH_REDIS_REST_URL/TOKEN, DATABASE_URL, BASE_URL, SMTP_* for review emails
 pnpm install
 pnpm dev
 ```
@@ -160,6 +160,13 @@ Open [http://localhost:3000](http://localhost:3000).
 | `UPSTASH_REDIS_REST_URL` | Upstash Redis REST URL |
 | `UPSTASH_REDIS_REST_TOKEN` | Upstash Redis REST Token |
 | `DATABASE_URL` | SQLite path (default: `../data/clawplay.db`) |
+| `TEAM_REVIEW_EMAIL` | Team review inbox (default: `clawplay-team@googlegroups.com`) |
+| `SMTP_HOST` | SMTP server host for review notifications |
+| `SMTP_PORT` | SMTP server port (Gmail commonly uses `587`) |
+| `SMTP_USER` | SMTP login user, usually your personal Gmail/Workspace account |
+| `SMTP_PASS` | SMTP app password |
+| `SMTP_FROM` | From address used in outgoing review emails |
+| `SMTP_SECURE` | Set to `true` for implicit TLS SMTP (optional) |
 
 **CLI**
 

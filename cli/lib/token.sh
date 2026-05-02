@@ -13,6 +13,9 @@ cmd_whoami() {
     exit 1
   fi
 
+  TOKEN_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  source "${TOKEN_LIB_DIR}/api.sh"
+
   # Call /api/user/me with the encrypted token (uses global CLAWPLAY_API_URL)
   local response
   response=$(curl -s \
@@ -26,7 +29,11 @@ cmd_whoami() {
   local err
   err=$(echo "$response" | jq -r '.error // empty' 2>/dev/null)
   if [[ -n "$err" ]]; then
-    echo "[clawplay] ERROR: ${err}" >&2
+    if api_is_auth_error_response "$response"; then
+      api_print_reconfigure_key_hint "[clawplay]"
+    else
+      echo "[clawplay] ERROR: ${err}" >&2
+    fi
     exit 1
   fi
 

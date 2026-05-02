@@ -47,6 +47,8 @@ export default defineConfig({
         "app/api/ability/tts/**",
         "app/api/ability/llm/**",
         "app/api/ability/vision/**",
+        // OAuth helpers require external fetch + env vars — low ROI to unit test
+        "lib/oauth.ts",
         // Test infrastructure — not production code
         "lib/__tests__/**",
         // Drizzle schema: FK reference callbacks (() => table.id) are ORM introspection

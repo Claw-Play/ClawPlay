@@ -1,26 +1,26 @@
 "use client";
+
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 import { useT } from "@/lib/i18n/context";
 import { AdminUserContext } from "@/lib/context/AdminUserContext";
 import { PendingCountContext } from "@/lib/context/PendingCountContext";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import { SiteTopNav } from "@/components/SiteTopNav";
+import type { UserAvatarMenuItem } from "@/components/UserAvatarMenu";
 import {
-  AdminShieldIcon,
   AuditIcon,
   ChevronRightIcon,
-  ChevronLeftIcon,
   DashboardIcon,
   EventsIcon,
-  LogoutIcon,
   MenuIcon,
   ProvidersIcon,
   ReviewIcon,
   ShrimpLogoIcon,
-  SubmitIcon,
   UsersIcon,
 } from "@/components/icons";
+import UserAvatarMenu from "@/components/UserAvatarMenu";
 
 interface UserInfo {
   id: number;
@@ -45,38 +45,35 @@ const NAV_ITEMS_REVIEWER = [
   { href: "/admin/review", icon: ReviewIcon, labelKey: "pending_reviews" as const },
 ];
 
-export default function AdminLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() ?? "";
-  const searchParams = useSearchParams();
   const t = useT("admin");
   const tNav = useT("nav");
   const tCommon = useT("common");
   const [user, setUser] = useState<UserInfo | null>(null);
   const [loading, setLoading] = useState(true);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
-  const dropdownRef = useRef<HTMLDivElement>(null);
   const mobileNavRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     async function init() {
       try {
-        const meRes = await fetch("/api/user/me");
-        const meData = await meRes.json();
+        const [meRes, skillsRes] = await Promise.all([
+          fetch("/api/user/me"),
+          fetch("/api/admin/skills/pending-count"),
+        ]);
+        const [meData, skillsData] = await Promise.all([
+          meRes.json(),
+          skillsRes.json(),
+        ]);
         if (meData.user?.role !== "admin" && meData.user?.role !== "reviewer") {
           window.location.href = "/";
           return;
         }
         setUser(meData.user);
 
-        const skillsRes = await fetch("/api/admin/skills");
-        const skillsData = await skillsRes.json();
-        const count = Array.isArray(skillsData.skills) ? skillsData.skills.length : 0;
+        const count = typeof skillsData.count === "number" ? skillsData.count : 0;
         setPendingCount(count);
       } catch {
         window.location.href = "/login";
@@ -87,20 +84,8 @@ export default function AdminLayout({
     init();
   }, []);
 
-  // Close dropdown on outside click
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setDropdownOpen(false);
-      }
-    }
-    if (dropdownOpen) document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [dropdownOpen]);
-
   useEffect(() => {
     setMobileNavOpen(false);
-    setDropdownOpen(false);
   }, [pathname]);
 
   useEffect(() => {
@@ -124,7 +109,6 @@ export default function AdminLayout({
     };
   }, [mobileNavOpen]);
 
-  // Listen for logout to clear user and redirect
   useEffect(() => {
     function onLogout() {
       setUser(null);
@@ -135,6 +119,20 @@ export default function AdminLayout({
   }, []);
 
   const navItems = user?.role === "reviewer" ? NAV_ITEMS_REVIEWER : NAV_ITEMS_ADMIN;
+  const navTop = [
+    { label: tNav("home"), href: "/" },
+    { label: tNav("skill_lib"), href: "/skills" },
+    { label: tNav("community"), href: "/community" },
+  ];
+  const avatarMenuItems: UserAvatarMenuItem[] = user
+    ? [
+        { href: "/dashboard", label: tCommon("dashboard"), kind: "dashboard" } as UserAvatarMenuItem,
+        { href: "/submit", label: tCommon("submit"), kind: "submit" } as UserAvatarMenuItem,
+        ...(user.role === "admin"
+          ? ([{ href: "/admin", label: tCommon("admin_panel"), kind: "admin", tone: "accent" }] as UserAvatarMenuItem[])
+          : []),
+      ]
+    : [];
 
   function isActive(href: string): boolean {
     if (href === "/admin") return pathname === "/admin";
@@ -150,201 +148,190 @@ export default function AdminLayout({
     return n > 99 ? "99+" : String(n);
   }
 
-  function getPageTitle(): string {
-    const item = navItems.find((n) => isActive(n.href));
-    if (item) return t(item.labelKey);
-    return t("admin_panel");
-  }
-
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#fefae0] px-4">
-        <div className="text-[#7a6a5a] animate-pulse font-body">{t("loading")}</div>
+      <div className="min-h-screen bg-[#fbfdff] flex items-center justify-center px-4">
+        <div className="animate-pulse font-medium text-[#6d7891]">{t("loading")}</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#fefae0] flex overflow-x-hidden">
+    <div className="min-h-screen bg-[#fbfdff] text-[#1f2b45]">
       {mobileNavOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/30 backdrop-blur-[2px] md:hidden"
+          className="fixed inset-0 z-40 bg-black/25 backdrop-blur-[2px] md:hidden"
           onClick={() => setMobileNavOpen(false)}
         />
       )}
-      {/* Left Sidebar */}
-      <aside
-        ref={mobileNavRef}
-        className={`fixed inset-y-0 left-0 z-50 w-[160px] max-w-[58vw] bg-[#f8f4db] flex flex-col px-2 py-3 shadow-[8px_0px_24px_0px_rgba(86,67,55,0.08)] transition-transform duration-200 md:static md:z-auto md:w-[213px] md:max-w-none md:flex-shrink-0 md:py-8 md:px-4 ${
-          mobileNavOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
-        }`}
-      >
-        {/* Logo */}
-        <div className="flex items-center gap-1.5 px-1 pb-4 border-b border-[#e8dfc8] md:gap-3 md:px-4 md:pb-8 md:border-b-0">
-          <div className="w-[32px] h-[32px] rounded-full bg-gradient-to-br from-[#a23f00] to-[#fa7025] flex items-center justify-center flex-shrink-0 md:w-[40px] md:h-[40px] text-white">
-            <ShrimpLogoIcon className="w-5 h-5 md:w-6 md:h-6" />
-          </div>
-          <div>
-            <p className="text-[#a23f00] font-bold font-heading text-sm leading-tight md:text-lg">{t("admin_panel")}</p>
-            <p className="text-[#586330] text-[10px] uppercase tracking-widest font-body leading-tight">
-              {user?.role === "reviewer" ? t("reviewer") : t("admin")}
-            </p>
-          </div>
-        </div>
 
-        {/* Nav */}
-        <nav className="flex-1 pt-3 space-y-1.5 md:pt-0 md:space-y-1">
-          {navItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex items-center justify-between rounded-full px-2.5 py-2 text-[12px] font-semibold font-body transition-all md:gap-3 md:px-4 md:py-3 md:text-sm ${
-                isActive(item.href)
-                  ? "bg-gradient-to-r from-[#a23f00] to-[#fa7025] text-white shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.1),0px_4px_6px_-4px_rgba(0,0,0,0.1)]"
-                  : "text-[#586330] hover:bg-[#ede9cf]"
-              }`}
+      <SiteTopNav
+        containerClassName="mx-auto max-w-none px-4 sm:px-6 lg:px-8"
+        centerItems={navTop.map(({ label, href }) => ({
+          label,
+          href,
+          active:
+            href === "/"
+              ? pathname === "/"
+              : href === "/skills"
+                ? pathname.startsWith("/skills")
+                : pathname.startsWith("/community"),
+        }))}
+        leftSlot={
+          <>
+            <button
+              type="button"
+              onClick={() => setMobileNavOpen((prev) => !prev)}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#dbe5f7] bg-white text-[#2d67f7] shadow-[0_8px_18px_rgba(25,43,87,0.04)] transition-colors hover:bg-[#f7faff] md:hidden"
+              aria-label={mobileNavOpen ? "Close navigation menu" : "Open navigation menu"}
             >
-              <span className="flex items-center gap-1.5 min-w-0">
-                <item.icon className="w-4 h-4 md:w-5 md:h-5 shrink-0" />
-                <span className="truncate font-medium leading-tight">
-                  {item.href === "/admin/review"
-                    ? `${t(item.labelKey)} (${displayCount(pendingCount)})`
-                    : t(item.labelKey)}
-                </span>
-              </span>
-              <ChevronRightIcon className="w-3 h-3 text-current shrink-0" />
-            </Link>
-          ))}
-        </nav>
-
-        {/* Bottom */}
-        <div className="space-y-0.5 pt-2 border-t border-[rgba(220,193,177,0.2)] md:space-y-1">
-          <Link
-            href="/dashboard"
-            className="flex items-center justify-between rounded-full px-2.5 py-2 text-[12px] text-[#586330] hover:bg-[#ede9cf] transition-colors font-body md:gap-3 md:px-4 md:py-3 md:text-sm"
-          >
-            <span className="flex items-center gap-1.5 min-w-0">
-              <ChevronLeftIcon className="w-3 h-3" />
-              <span className="truncate font-medium leading-tight">{t("back_to_app")}</span>
-            </span>
-            <ChevronRightIcon className="w-3 h-3 text-current shrink-0" />
-          </Link>
-        </div>
-      </aside>
-
-      {/* Main content */}
-      <div className="flex-1 flex flex-col min-h-screen">
-        {/* Top header */}
-        <header className="sticky top-0 z-50 bg-[#fefae0] border-b border-[#e8dfc8] shadow-[0px_8px_24px_0px_rgba(86,67,55,0.06)]">
-          <div className="max-w-[1536px] mx-auto px-4 py-3 flex items-center justify-between gap-3 md:px-8 md:py-4">
-            <div className="flex flex-1 items-center gap-2 min-w-0">
-              <button
-                type="button"
-                onClick={() => setMobileNavOpen((prev) => !prev)}
-                className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#e8dfc8] bg-white text-[#564337] shadow-[0_4px_12px_rgba(86,67,55,0.06)] transition-colors hover:bg-[#faf3d0] md:hidden"
-                aria-label={mobileNavOpen ? "Close navigation menu" : "Open navigation menu"}
-              >
-              <span className="inline-flex h-5 w-5 items-center justify-center" aria-hidden="true">
-                <MenuIcon className="w-5 h-5" />
-              </span>
+              <MenuIcon className="h-5 w-5" />
             </button>
-              <div className="min-w-0">
-                <h1 className="truncate text-lg font-bold font-heading text-[#a23f00] tracking-tight md:text-xl">
-                  {getPageTitle()}
-                </h1>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 md:gap-3">
-              <LanguageSwitcher />
-              <div className="h-6 w-px bg-[#e8dfc8] hidden md:block" />
-              {user && (
-                <div className="relative" ref={dropdownRef}>
-                  <button
-                    onClick={() => setDropdownOpen((o) => !o)}
-                    className="w-10 h-10 rounded-full overflow-hidden border-2 border-[#e8dfc8] flex items-center justify-center hover:border-[#a23f00] transition-all cursor-pointer"
-                    title={tNav("account_settings")}
-                  >
-                    {user.avatarUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={user.avatarUrl} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={`https://api.dicebear.com/7.x/pixel-art/svg?seed=${user.id}&backgroundColor=ff6b35,fa7025,a23f00`}
-                        alt=""
-                        className="w-full h-full object-cover"
-                      />
-                    )}
-                  </button>
 
-                  {dropdownOpen && (
-                    <div className="absolute right-0 top-full mt-2 w-52 bg-white rounded-[24px] shadow-[0_8px_32px_rgba(86,67,55,0.12)] border border-[#e8dfc8] overflow-hidden z-50">
-                      <div className="px-4 py-3 border-b border-[#ede9cf]">
-                        <p className="text-sm font-semibold text-[#1d1c0d] font-body truncate">
-                          {user.name || user.email}
-                        </p>
-                        <p className="text-xs text-[#7a6a5a] font-body mt-0.5">{tNav("account_settings")}</p>
-                      </div>
-                      <div className="py-2">
-                        <Link
-                          href="/dashboard"
-                          className="flex items-center gap-3 px-4 py-2.5 text-sm text-[#564337] hover:bg-[#faf3d0] font-body transition-colors"
-                          onClick={() => setDropdownOpen(false)}
-                        >
-                      <DashboardIcon className="w-4 h-4" /> {tCommon("dashboard")}
-                    </Link>
-                        <Link
-                          href="/submit"
-                          className="flex items-center gap-3 px-4 py-2.5 text-sm text-[#564337] hover:bg-[#faf3d0] font-body transition-colors"
-                          onClick={() => setDropdownOpen(false)}
-                        >
-                      <SubmitIcon className="w-4 h-4" /> {tCommon("submit")}
-                    </Link>
-                        {user.role === "admin" && (
-                          <Link
-                            href="/admin"
-                            className="flex items-center gap-3 px-4 py-2.5 text-sm text-[#a23f00] hover:bg-[#faf3d0] font-body transition-colors font-semibold"
-                            onClick={() => setDropdownOpen(false)}
-                          >
-                        <AdminShieldIcon className="w-4 h-4" /> {tCommon("admin_panel")}
-                      </Link>
-                        )}
-                      </div>
-                      <div className="border-t border-[#ede9cf] py-2">
-                        <button
-                          onClick={async () => {
-                            setDropdownOpen(false);
-                            const from = `${pathname}${searchParams.toString() ? `?${searchParams.toString()}` : ""}`;
-                            const loginUrl = `/login?from=${encodeURIComponent(from)}`;
-                            window.dispatchEvent(new Event("clawplay:logout"));
-                            try {
-                              await fetch(`/api/auth/logout?from=${encodeURIComponent(from)}`, {
-                                method: "POST",
-                                redirect: "manual",
-                              });
-                            } catch {}
-                            window.location.href = loginUrl;
-                          }}
-                          className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 font-body transition-colors text-left"
-                        >
-                      <LogoutIcon className="w-4 h-4" /> {tNav("logout")}
-                    </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
+            <Link href="/" className="flex items-center gap-3">
+              <ShrimpLogoIcon className="h-14 w-14" />
+              <span className="text-[22px] font-bold tracking-tight text-[#1f2b45]">
+                ClawPlay
+              </span>
+            </Link>
+          </>
+        }
+        rightSlot={
+          <>
+            <LanguageSwitcher variant="home" />
+            <div className="hidden h-6 w-px bg-[#dbe5f7] md:block" />
+            <UserAvatarMenu
+              user={user}
+              loading={loading}
+              loginHref="/login"
+              loginLabel={tCommon("login")}
+              buttonTitle={tNav("account_settings")}
+              accountSettingsLabel={tNav("account_settings")}
+              anonymousLabel={tCommon("anonymous")}
+              logoutLabel={tNav("logout")}
+              onBeforeLogout={() => {
+                localStorage.removeItem("clawplay_draft_form");
+                localStorage.removeItem("clawplay_draft_mermaid");
+              }}
+              items={avatarMenuItems}
+            />
+          </>
+        }
+      />
+
+      <div className="flex">
+        <aside
+          ref={mobileNavRef}
+          className={`fixed inset-y-0 left-0 z-50 w-[180px] max-w-[72vw] bg-white px-3 py-3 shadow-[8px_0_28px_rgba(25,43,87,0.08)] transition-transform duration-200 md:hidden ${
+            mobileNavOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
+        >
+          <div className="flex items-center gap-2 border-b border-[#dbe5f7] px-1 pb-4">
+            <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#edf4ff] text-[#2d67f7]">
+              <ShrimpLogoIcon className="h-7 w-7" />
+            </span>
+            <div>
+              <p className="text-sm font-semibold text-[#2d67f7]">{tCommon("dashboard")}</p>
+              <p className="text-xs text-[#7c879f]">{t("admin_panel")}</p>
             </div>
           </div>
-        </header>
 
-        {/* Page content */}
-        <main className="flex-1 px-4 py-5 md:p-8">
-          <AdminUserContext.Provider value={{ currentUserId: user?.id ?? null }}>
-            <PendingCountContext.Provider value={{ count: pendingCount, decrement: () => setPendingCount((n) => Math.max(0, n - 1)) }}>
-              {children}
-            </PendingCountContext.Provider>
-          </AdminUserContext.Provider>
+          <div className="space-y-1.5 pt-3">
+            {navTop.map(({ label, href }) => {
+              const active =
+                href === "/" ? pathname === "/" : href === "/skills" ? pathname.startsWith("/skills") : pathname.startsWith("/community");
+              return (
+                <Link
+                  key={label}
+                  href={href}
+                  className={`flex items-center justify-between rounded-full px-2.5 py-2 text-[12px] font-semibold font-body transition-colors ${
+                    active
+                      ? "bg-[#edf4ff] text-[#2d67f7] shadow-[inset_0_0_0_1px_rgba(45,103,247,0.12)]"
+                      : "text-[#5f6c86] hover:bg-[#f7faff]"
+                  }`}
+                >
+                  <span>{label}</span>
+                  <ChevronRightIcon className="h-3 w-3" />
+                </Link>
+              );
+            })}
+          </div>
+
+          <div className="mt-4 border-t border-[#dbe5f7] pt-3.5">
+            <p className="px-1 pb-2.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#8aa0cb] font-body">
+              {t("admin_panel")}
+            </p>
+            <div className="space-y-1.5">
+              {navItems.map((item) => {
+                const active = isActive(item.href);
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`flex items-center justify-between rounded-full px-2.5 py-2 text-[12px] font-medium font-body transition-colors ${
+                      active
+                        ? "bg-[#2d67f7] text-white"
+                        : "text-[#5f6c86] hover:bg-[#f7faff]"
+                    }`}
+                  >
+                    <span className="flex items-center gap-3">
+                      <item.icon className="h-4 w-4 shrink-0" />
+                      <span className="truncate">{item.href === "/admin/review" ? `${t(item.labelKey)} (${displayCount(pendingCount)})` : t(item.labelKey)}</span>
+                    </span>
+                    <ChevronRightIcon className="h-3 w-3" />
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        </aside>
+
+        <aside className="hidden w-60 shrink-0 sticky top-[72px] h-[calc(100vh-72px)] overflow-y-auto md:block">
+          <div className="bg-white border-r border-[#dbe5f7] p-4 flex flex-col gap-1 min-h-full">
+            <div className="px-2.5 pb-4 border-b border-[#dbe5f7]">
+              <p className="text-[15px] font-semibold text-[#15213b]">{t("admin_panel")}</p>
+              <p className="text-xs text-[#7c879f] font-body mt-0.5">
+                {user?.role === "reviewer" ? t("reviewer") : t("admin")}
+              </p>
+            </div>
+
+            <div className="pt-2 flex flex-col gap-1">
+              {navItems.map((item) => {
+                const active = isActive(item.href);
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`flex items-center gap-3 px-4 py-2.5 rounded-[6px] text-[13px] font-medium font-body transition-colors ${
+                      active
+                        ? "bg-[#edf4ff] text-[#2d67f7] shadow-[inset_0_0_0_1px_rgba(45,103,247,0.12)]"
+                        : "text-[#5f6c86] hover:bg-[#f7faff]"
+                    }`}
+                  >
+                    <item.icon className="h-4 w-4 shrink-0" />
+                    <span className="min-w-0 truncate whitespace-nowrap">
+                      {item.href === "/admin/review" ? `${t(item.labelKey)} (${displayCount(pendingCount)})` : t(item.labelKey)}
+                    </span>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        </aside>
+
+        <main className="flex-1 min-w-0 overflow-x-clip">
+          <div className="px-4 py-5 sm:px-6 lg:px-8 lg:py-8">
+            <div className="mx-auto flex w-full max-w-[1360px] flex-col">
+              <AdminUserContext.Provider value={{ currentUserId: user?.id ?? null }}>
+                <PendingCountContext.Provider value={{ count: pendingCount, decrement: () => setPendingCount((n) => Math.max(0, n - 1)) }}>
+                  {children}
+                </PendingCountContext.Provider>
+              </AdminUserContext.Provider>
+            </div>
+          </div>
+          <footer className="border-t border-[#dbe5f7] bg-white/72 px-4 py-4 text-center text-[12px] text-[#7c879f] sm:px-6 lg:px-8">
+            © 2025 管理员面板. 保留所有权利.
+          </footer>
         </main>
       </div>
     </div>

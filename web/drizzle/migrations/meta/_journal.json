@@ -8,6 +8,13 @@
       "when": 1776439085987,
       "tag": "0000_mysterious_swarm",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1777697730016,
+      "tag": "0001_colossal_quentin_quire",
+      "breakpoints": true
     }
   ]
 }

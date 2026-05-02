@@ -17,7 +17,7 @@ run_script --lib "$LIB" --fn 'cmd_image generate'
 assert_contains "no prompt → error"  "--prompt is required" "$RS_STDERR"
 assert_exit     "no prompt → exit 1" "1" "$RS_EXIT"
 
-run_script --lib "$LIB" --fn 'cmd_image generate --prompt "hi"'
+run_script --lib "$LIB" --env "CLAWPLAY_TOKEN=" --fn 'cmd_image generate --prompt "hi"'
 assert_contains "no token → error"  "CLAWPLAY_TOKEN is not set" "$RS_STDERR"
 assert_exit     "no token → exit 1" "1" "$RS_EXIT"
 
@@ -75,6 +75,18 @@ run_script --lib "$LIB" \
 
 assert_exit "b64 response → exit 0"              "0"  "$RS_EXIT"
 assert_eq   "b64 response → nothing on stderr"   ""   "$RS_STDERR"
+
+echo ""
+echo "▶ image generate — relay error response"
+echo ""
+
+run_script --lib "$LIB" \
+  --env "CLAWPLAY_TOKEN=tok" \
+  --curl-response '{"error":"Token revoked."}' \
+  --fn 'cmd_image generate --prompt "x"'
+assert_contains "auth error → reconfigure hint shown" "重新配置后再试" "$RS_STDERR"
+assert_contains "auth error → setup hint shown" "clawplay setup" "$RS_STDERR"
+assert_exit     "auth error → exit 1"              "1" "$RS_EXIT"
 
 echo ""
 echo "▶ image generate — relay error response"

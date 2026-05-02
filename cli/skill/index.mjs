@@ -8,14 +8,16 @@
  * @module skill/index
  */
 
+import { t } from './i18n.mjs';
+
 const subcmd = process.argv[2];
 
 if (!subcmd) {
-  console.error('Usage: clawplay skill <lint|diagram> <path> [--json]');
+  console.error(t('indexUsage'));
   console.error('');
-  console.error('Commands:');
-  console.error('  lint     检查 SKILL.md 质量（frontmatter、phase、bash、prompt）');
-  console.error('  diagram  从 phase 标题生成 Mermaid stateDiagram-v2 代码块');
+  for (const line of t('indexCommands')) {
+    console.error(line);
+  }
   process.exit(1);
 }
 
@@ -27,7 +29,7 @@ if (subcmd === 'lint') {
   process.argv.splice(0, 3, 'node', 'diagram.mjs', ...process.argv.slice(3));
   await import('./diagram.mjs');
 } else {
-  console.error(`❌ Unknown subcommand: ${subcmd}`);
-  console.error('Usage: clawplay skill <lint|diagram> <path> [--json]');
+  console.error(t('indexUnknown', { value: subcmd }));
+  console.error(t('indexUsage'));
   process.exit(1);
 }

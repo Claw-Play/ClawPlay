@@ -32,6 +32,7 @@ fi
 
 source "${CLI_ROOT}/lib/api-env.sh"
 CLAWPLAY_TOKEN="${CLAWPLAY_TOKEN:-}"
+CLAWPLAY_LANG="${CLAWPLAY_LANG:-}"
 
 # Colors
 RED='\033[0;31m'
@@ -145,6 +146,7 @@ cmd_setup() {
   local token=""
   local open_browser=false
   local agent=false
+  export CLAWPLAY_LANG="$lang"
 
   # Parse flags
   while [[ $# -gt 0 ]]; do
@@ -274,7 +276,11 @@ cmd_setup() {
   local dashboard_url="${web_url}/dashboard"
 
   if [[ "$agent" == "true" && "$open_browser" == "true" ]]; then
-    echo "[clawplay] --agent cannot be combined with --open-browser" >&2
+    if [[ "$lang" == "zh" ]]; then
+      echo "[clawplay] --agent 不能与 --open-browser 同时使用" >&2
+    else
+      echo "[clawplay] --agent cannot be combined with --open-browser" >&2
+    fi
     return 1
   fi
 
@@ -510,7 +516,11 @@ EOF
     fi
   else
     echo ""
-    echo "[clawplay] Cannot detect shell profile."
+    if [[ "$lang" == "zh" ]]; then
+      echo "[clawplay] 无法检测 shell 配置文件。"
+    else
+      echo "[clawplay] Cannot detect shell profile."
+    fi
     echo " $(_msg manual_hint)"
     echo "  $export_line"
   fi

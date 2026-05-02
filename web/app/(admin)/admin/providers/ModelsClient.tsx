@@ -13,8 +13,8 @@ interface ModelConfigRecord {
 }
 
 const PROVIDER_GROUPS = [
-  { key: "ark", label: "Ark", color: "#fa7025", abilities: ["image", "llm", "vision"] },
-  { key: "gemini", label: "Gemini", color: "#a23f00", abilities: ["image", "llm", "vision"] },
+  { key: "ark", label: "Ark", color: "#2d67f7", abilities: ["image", "llm", "vision"] },
+  { key: "gemini", label: "Gemini", color: "#2d67f7", abilities: ["image", "llm", "vision"] },
 ];
 
 const ABILITY_LABELS: Record<string, string> = {
@@ -104,7 +104,7 @@ export default function ModelsClient() {
   };
 
   if (loading) {
-    return <div className="text-center py-12 text-[#a89070] font-body animate-pulse">{t("loading") || "Loading..."}</div>;
+    return <div className="text-center py-12 text-[#6d7891] font-body animate-pulse">{t("loading") || "Loading..."}</div>;
   }
 
   if (error) {
@@ -112,7 +112,7 @@ export default function ModelsClient() {
   }
 
   return (
-    <div className="bg-white rounded-[24px] md:rounded-[32px] shadow-[0_8px_24px_rgba(86,67,55,0.06)] overflow-hidden">
+    <div className="bg-white rounded-[24px] md:rounded-[32px] shadow-[0_8px_24px_rgba(25,43,87,0.04)] overflow-hidden">
       <div className="grid gap-3 p-4 md:hidden">
         {PROVIDER_GROUPS.flatMap((pg) =>
           pg.abilities.map((ability) => {
@@ -125,30 +125,30 @@ export default function ModelsClient() {
             const isResetting = !!resetting[key];
 
             return (
-              <div key={key} className="rounded-[24px] border border-[#e8dfc8] bg-[#faf5e8] p-4 space-y-3">
+              <div key={key} className="rounded-[24px] border border-[#dbe5f7] bg-[#f7faff] p-4 space-y-3">
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2 min-w-0">
-                    <div className="w-6 h-6 rounded bg-[#fa702510] flex items-center justify-center text-xs font-bold" style={{ color: pg.color }}>
+                    <div className="w-6 h-6 rounded bg-[#2d67f710] flex items-center justify-center text-xs font-bold" style={{ color: pg.color }}>
                       {pg.label.slice(0, 2)}
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm font-semibold text-[#564337]">{pg.label}</p>
-                      <p className="text-xs text-[#a89070]">{t(ABILITY_LABELS[ability])}</p>
+                      <p className="text-sm font-semibold text-[#15213b]">{pg.label}</p>
+                      <p className="text-xs text-[#6d7891]">{t(ABILITY_LABELS[ability])}</p>
                     </div>
                   </div>
-                  <span className="text-xs font-mono-custom text-[#a89070]">{envDefault || "—"}</span>
+                  <span className="text-xs font-mono-custom text-[#6d7891]">{envDefault || "—"}</span>
                 </div>
 
                 <input
                   type="text"
                   value={currentName}
                   onChange={(e) => setEditing((prev) => ({ ...prev, [key]: e.target.value }))}
-                  className="w-full px-3 py-2 rounded-xl border border-[#e8dfc8] text-sm font-mono-custom text-[#564337] focus:outline-none focus:ring-2 focus:ring-[#fa7025] bg-white"
+                  className="w-full px-3 py-2 rounded-[8px] border border-[#dbe5f7] text-sm font-mono-custom text-[#15213b] focus:outline-none focus:ring-2 focus:ring-[#2d67f7] bg-white"
                   placeholder={envDefault || t("type_here")}
                 />
 
                 {isCustom && (
-                  <span className="inline-flex w-fit px-1.5 py-0.5 rounded-full text-xs bg-[#fa702510] text-[#fa7025] whitespace-nowrap">
+                  <span className="inline-flex w-fit px-1.5 py-0.5 rounded-[8px] text-xs bg-[#2d67f710] text-[#2d67f7] whitespace-nowrap">
                     {t("custom_model")}
                   </span>
                 )}
@@ -157,14 +157,14 @@ export default function ModelsClient() {
                   <button
                     onClick={() => handleSave(pg.key, ability)}
                     disabled={isSaving || isResetting || currentName === config?.modelName}
-                    className="min-h-11 px-4 py-2 rounded-full text-xs font-semibold font-body text-white bg-[#fa7025] hover:bg-[#e8651f] transition-colors disabled:opacity-40"
+                    className="min-h-11 px-4 py-2 rounded-[8px] text-xs font-semibold font-body text-white bg-[#2d67f7] hover:bg-[#2457d4] transition-colors disabled:opacity-40"
                   >
                     {isSaving ? "..." : t("save")}
                   </button>
                   <button
                     onClick={() => handleReset(pg.key, ability)}
                     disabled={isResetting || isSaving || !config}
-                    className="min-h-11 px-4 py-2 rounded-full text-xs font-semibold font-body text-[#a89070] bg-[#f0e8d0] hover:bg-[#e8dfc8] transition-colors disabled:opacity-40"
+                    className="min-h-11 px-4 py-2 rounded-[8px] text-xs font-semibold font-body text-[#6d7891] bg-[#dbe5f7] hover:bg-[#dbe5f7] transition-colors disabled:opacity-40"
                   >
                     {isResetting ? "..." : t("reset")}
                   </button>
@@ -178,12 +178,12 @@ export default function ModelsClient() {
       <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-sm font-body">
           <thead>
-            <tr className="border-b border-[#e8dfc8] text-left">
-              <th className="px-4 py-3 text-xs text-[#a89070] font-semibold">{t("provider")}</th>
-              <th className="px-4 py-3 text-xs text-[#a89070] font-semibold">{t("ability")}</th>
-              <th className="px-4 py-3 text-xs text-[#a89070] font-semibold">{t("model_name")}</th>
-              <th className="px-4 py-3 text-xs text-[#a89070] font-semibold">{t("default_model")}</th>
-              <th className="px-4 py-3 text-xs text-[#a89070] font-semibold w-48">{t("actions")}</th>
+            <tr className="border-b border-[#dbe5f7] text-left">
+              <th className="px-4 py-3 text-xs text-[#6d7891] font-semibold">{t("provider")}</th>
+              <th className="px-4 py-3 text-xs text-[#6d7891] font-semibold">{t("ability")}</th>
+              <th className="px-4 py-3 text-xs text-[#6d7891] font-semibold">{t("model_name")}</th>
+              <th className="px-4 py-3 text-xs text-[#6d7891] font-semibold">{t("default_model")}</th>
+              <th className="px-4 py-3 text-xs text-[#6d7891] font-semibold w-48">{t("actions")}</th>
             </tr>
           </thead>
           <tbody>
@@ -198,20 +198,20 @@ export default function ModelsClient() {
                 const isResetting = !!resetting[key];
 
                 return (
-                  <tr key={key} className="border-b border-[#f0e8d0] hover:bg-[#faf5e8] transition-colors">
+                  <tr key={key} className="border-b border-[#dbe5f7] hover:bg-[#f7faff] transition-colors">
                     {/* Provider */}
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded bg-[#fa702510] flex items-center justify-center text-xs font-bold" style={{ color: pg.color }}>
+                        <div className="w-6 h-6 rounded bg-[#2d67f710] flex items-center justify-center text-xs font-bold" style={{ color: pg.color }}>
                           {pg.label.slice(0, 2)}
                         </div>
-                        <span className="text-sm font-semibold text-[#564337]">{pg.label}</span>
+                        <span className="text-sm font-semibold text-[#15213b]">{pg.label}</span>
                       </div>
                     </td>
 
                     {/* Ability */}
                     <td className="px-4 py-3">
-                      <span className="text-sm text-[#a89070]">
+                      <span className="text-sm text-[#6d7891]">
                         {(ABILITY_LABELS[ability] as unknown as string)}
                       </span>
                     </td>
@@ -223,11 +223,11 @@ export default function ModelsClient() {
                           type="text"
                           value={currentName}
                           onChange={(e) => setEditing((prev) => ({ ...prev, [key]: e.target.value }))}
-                          className="flex-1 px-3 py-1.5 rounded-xl border border-[#e8dfc8] text-sm font-mono-custom text-[#564337] focus:outline-none focus:ring-2 focus:ring-[#fa7025] bg-white"
+                          className="flex-1 px-3 py-1.5 rounded-[8px] border border-[#dbe5f7] text-sm font-mono-custom text-[#15213b] focus:outline-none focus:ring-2 focus:ring-[#2d67f7] bg-white"
                           placeholder={envDefault || t("type_here")}
                         />
                         {isCustom && (
-                          <span className="px-1.5 py-0.5 rounded-full text-xs bg-[#fa702510] text-[#fa7025] whitespace-nowrap">
+                          <span className="px-1.5 py-0.5 rounded-[8px] text-xs bg-[#2d67f710] text-[#2d67f7] whitespace-nowrap">
                             {t("custom_model")}
                           </span>
                         )}
@@ -236,7 +236,7 @@ export default function ModelsClient() {
 
                     {/* Default */}
                     <td className="px-4 py-3">
-                      <span className="text-xs font-mono-custom text-[#a89070]">{envDefault || "—"}</span>
+                      <span className="text-xs font-mono-custom text-[#6d7891]">{envDefault || "—"}</span>
                     </td>
 
                     {/* Actions */}
@@ -245,14 +245,14 @@ export default function ModelsClient() {
                         <button
                           onClick={() => handleSave(pg.key, ability)}
                           disabled={isSaving || isResetting || currentName === config?.modelName}
-                          className="px-3 py-1.5 rounded-full text-xs font-semibold font-body text-white bg-[#fa7025] hover:bg-[#e8651f] transition-colors disabled:opacity-40"
+                          className="px-3 py-1.5 rounded-[8px] text-xs font-semibold font-body text-white bg-[#2d67f7] hover:bg-[#2457d4] transition-colors disabled:opacity-40"
                         >
                           {isSaving ? "..." : t("save")}
                         </button>
                         <button
                           onClick={() => handleReset(pg.key, ability)}
                           disabled={isResetting || isSaving || !config}
-                          className="px-3 py-1.5 rounded-full text-xs font-semibold font-body text-[#a89070] bg-[#f0e8d0] hover:bg-[#e8dfc8] transition-colors disabled:opacity-40"
+                          className="px-3 py-1.5 rounded-[8px] text-xs font-semibold font-body text-[#6d7891] bg-[#dbe5f7] hover:bg-[#dbe5f7] transition-colors disabled:opacity-40"
                         >
                           {isResetting ? "..." : t("reset")}
                         </button>

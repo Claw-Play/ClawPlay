@@ -77,14 +77,35 @@ beforeAll(async () => {
   userCookie = user.cookie;
   reviewerCookie = reviewer.cookie;
 
-  // Seed some event data
-  const { eventLogs } = await import("@/lib/db/schema");
+  // Seed event data across different time ranges for period tests
+  const { eventLogs, skills } = await import("@/lib/db/schema");
   const now = Date.now();
+  const DAY_MS = 86400000;
   await db.insert(eventLogs).values([
+    // Recent events (within 7 days)
     { event: "skill.view", userId: user.user.id, targetType: "skill", targetId: "test-skill", metadata: "{}", createdAt: new Date(now) },
-    { event: "quota.use", userId: user.user.id, targetType: "quota", targetId: String(user.user.id), metadata: JSON.stringify({ ability: "llm.generate", cost: 10 }), createdAt: new Date(now) },
+    { event: "quota.use", userId: user.user.id, targetType: "quota", targetId: String(user.user.id), metadata: JSON.stringify({ ability: "llm.generate", totalTokens: 100 }), createdAt: new Date(now) },
     { event: "user.login", userId: admin.user.id, targetType: "user", targetId: String(admin.user.id), metadata: "{}", createdAt: new Date(now) },
+    { event: "quota.error", userId: user.user.id, targetType: "quota", targetId: String(user.user.id), metadata: JSON.stringify({ provider: "openai" }), createdAt: new Date(now) },
+    // Older events (3 months ago — for 1y/3m period tests)
+    { event: "skill.view", userId: user.user.id, targetType: "skill", targetId: "old-skill", metadata: "{}", createdAt: new Date(now - 95 * DAY_MS) },
+    { event: "quota.use", userId: user.user.id, targetType: "quota", targetId: String(user.user.id), metadata: JSON.stringify({ ability: "image.generate", totalTokens: 50 }), createdAt: new Date(now - 95 * DAY_MS) },
   ]);
+  // Seed an approved skill for topSkills query
+  await db.insert(skills).values({
+    id: "overview-test-skill",
+    slug: "test-skill",
+    name: "Test Skill",
+    summary: "Analytics test",
+    authorName: "User",
+    authorEmail: "user@example.com",
+    repoUrl: "https://example.com",
+    iconEmoji: "🔧",
+    moderationStatus: "approved",
+    moderationReason: "",
+    moderationFlags: "[]",
+    statsStars: 0,
+  });
 });
 
 afterAll(() => {
@@ -110,6 +131,45 @@ describe("GET /api/admin/analytics/overview", () => {
     expect(typeof json.totals.totalEvents).toBe("number");
     expect(typeof json.totals.totalQuotaUsed).toBe("number");
     expect(typeof json.totals.totalSkills).toBe("number");
+  });
+
+  it("supports 30d period → weekly aggregation", async () => {
+    cookieStore.token = adminCookie.replace("clawplay_token=", "");
+    const req = makeRequest("GET", "/api/admin/analytics/overview?period=30d");
+    const res = await GET_overview(req);
+    const json = await res.json();
+    expect(res.status).toBe(200);
+    expect(json.period).toBe("30d");
+    expect(json.trend.eventsByDay.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("supports 3m period → weekly aggregation", async () => {
+    cookieStore.token = adminCookie.replace("clawplay_token=", "");
+    const req = makeRequest("GET", "/api/admin/analytics/overview?period=3m");
+    const res = await GET_overview(req);
+    const json = await res.json();
+    expect(res.status).toBe(200);
+    expect(json.period).toBe("3m");
+    expect(json.trend.eventsByDay.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("supports 1y period → monthly aggregation", async () => {
+    cookieStore.token = adminCookie.replace("clawplay_token=", "");
+    const req = makeRequest("GET", "/api/admin/analytics/overview?period=1y");
+    const res = await GET_overview(req);
+    const json = await res.json();
+    expect(res.status).toBe(200);
+    expect(json.period).toBe("1y");
+    expect(json.trend.eventsByDay.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("supports event type filter", async () => {
+    cookieStore.token = adminCookie.replace("clawplay_token=", "");
+    const req = makeRequest("GET", "/api/admin/analytics/overview?period=7d&event=skill.view");
+    const res = await GET_overview(req);
+    const json = await res.json();
+    expect(res.status).toBe(200);
+    expect(json.eventType).toBe("skill.view");
   });
 
   it("reviewer → 403", async () => {

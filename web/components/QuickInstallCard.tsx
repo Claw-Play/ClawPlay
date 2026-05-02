@@ -6,33 +6,27 @@ interface QuickInstallCardProps {
   slug: string;
   repoUrl: string | null;
   auth: boolean;
+  className?: string;
 }
 
-export function QuickInstallCard({ slug, repoUrl, auth }: QuickInstallCardProps) {
+export function QuickInstallCard({ slug, repoUrl, auth, className = "" }: QuickInstallCardProps) {
   const t = useT("components");
   return (
-    <div className="space-y-5">
-      {/* Quick Install — dark card */}
-      <div
-        className="rounded-[24px] p-5 border border-[#464330]"
-        style={{ background: "#323120" }}
-      >
-        <h3 className="font-semibold font-heading mb-1" style={{ color: "#fefae0" }}>
+    <div className={`space-y-5 ${className}`}>
+      {/* Quick Install */}
+      <div className="rounded-[6px] border border-[#dbe5f7] bg-white p-5 shadow-[0_8px_20px_rgba(25,43,87,0.06)]">
+        <h3 className="mb-1 font-heading text-[18px] font-bold tracking-[-0.02em] text-[#15213b]">
           {t("quick_install")}
         </h3>
-        <p className="text-xs mb-4 font-body" style={{ color: "#a89888" }}>
+        <p className="mb-4 text-xs font-body text-[#7c879f]">
           {t("run_in_terminal")}
         </p>
-        <div
-          className="rounded-[16px] p-4 text-sm font-mono-custom leading-relaxed"
-          style={{ background: "#1d1c0d", color: "#fa7025" }}
-        >
+        <code className="block rounded-[6px] border border-[#dfe8f8] bg-[#f7faff] p-4 text-sm font-semibold leading-6 text-[#394766]">
           clawplay install {slug}
-        </div>
+        </code>
         <button
           onClick={() => navigator.clipboard.writeText(`clawplay install ${slug}`)}
-          className="mt-3 w-full py-2.5 rounded-[16px] text-sm font-semibold font-heading transition-all hover:opacity-90"
-          style={{ background: "linear-gradient(135deg, #a23f00 0%, #fa7025 100%)", color: "#fff" }}
+          className="mt-3 w-full rounded-[6px] bg-[#2d67f7] py-2.5 text-sm font-semibold font-heading text-white transition-colors hover:bg-[#2457d4]"
         >
           {t("copy_command")}
         </button>
@@ -41,8 +35,7 @@ export function QuickInstallCard({ slug, repoUrl, auth }: QuickInstallCardProps)
             href={repoUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-3 block text-center text-sm font-body hover:underline transition-all"
-            style={{ color: "#fa7025" }}
+            className="mt-3 block text-center text-sm font-body text-[#2d67f7] transition-colors hover:text-[#2457d4] hover:underline"
           >
             {t("view_source")}
           </a>
@@ -50,19 +43,19 @@ export function QuickInstallCard({ slug, repoUrl, auth }: QuickInstallCardProps)
       </div>
 
       {/* Quick setup */}
-      <div className="bg-[#fffdf7] card-radius p-5 border border-[#e8dfc8] card-shadow">
-        <h3 className="font-semibold font-heading text-[#564337] mb-3">{t("quick_setup")}</h3>
-        <p className="text-sm text-[#7a6a5a] mb-3 font-body">
+      <div className="rounded-[6px] border border-[#dbe5f7] bg-white p-5 shadow-[0_8px_20px_rgba(25,43,87,0.06)]">
+        <h3 className="mb-3 font-heading text-[18px] font-bold tracking-[-0.02em] text-[#15213b]">{t("quick_setup")}</h3>
+        <p className="mb-3 text-sm text-[#7c879f] font-body">
           {t("use_clawplay")}
         </p>
-        <div className="bg-[#faf3d0] rounded-[16px] p-3 text-xs font-mono-custom text-[#564337] space-y-1">
+        <code className="block space-y-1 rounded-[6px] border border-[#dfe8f8] bg-[#f7faff] p-4 text-sm font-semibold leading-6 text-[#394766]">
           <div>export CLAWPLAY_TOKEN=...</div>
           <div>clawplay image generate ...</div>
-        </div>
+        </code>
         {!auth && (
           <Link
             href="/login"
-            className="mt-3 block w-full text-center px-4 py-3 bg-gradient-to-r from-[#a23f00] to-[#fa7025] hover:opacity-90 text-white text-sm font-semibold rounded-[40px] shadow-[0_6px_24px_rgba(162,63,0,0.2)] transition-all font-heading"
+            className="mt-3 block w-full rounded-[6px] bg-[#2d67f7] px-4 py-3 text-center text-sm font-semibold font-heading text-white transition-colors hover:bg-[#2457d4]"
           >
             {t("get_free_token")}
           </Link>

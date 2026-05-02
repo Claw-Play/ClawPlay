@@ -15,18 +15,18 @@ export function Input({ label, error, className = "", id: providedId, bg, p = "p
   return (
     <div className="space-y-1.5">
       {label && (
-        <label htmlFor={inputId} className="block text-sm font-semibold text-[#564337]">
+        <label htmlFor={inputId} className="block text-sm font-semibold text-[#1f2b45]">
           {label}
         </label>
       )}
       <input
         id={inputId}
         className={`
-          w-full ${p} input-radius border text-[#564337]
-          ${bg ?? "bg-white"} placeholder-[#a89888]
-          focus:outline-none focus:ring-2 focus:ring-[#a23f00]/30 focus:border-[#a23f00]
+          w-full ${p} input-radius border text-[#1f2b45]
+          ${bg ?? "bg-white"} placeholder-[#6d7891]
+          focus:outline-none focus:ring-2 focus:ring-[#2d67f7]/30 focus:border-[#2d67f7]
           transition-colors disabled:opacity-50 disabled:cursor-not-allowed
-          ${error ? "border-red-400 focus:ring-red-300" : "border-[#e0d4bc]"}
+          ${error ? "border-red-400 focus:ring-red-300" : "border-[#c8d7f7]"}
           ${className}
         `}
         {...props}
@@ -50,18 +50,18 @@ export function Textarea({ label, error, className = "", id, bg, ...props }: Tex
   return (
     <div className="space-y-1.5">
       {label && (
-        <label htmlFor={textareaId} className="block text-sm font-semibold text-[#564337]">
+        <label htmlFor={textareaId} className="block text-sm font-semibold text-[#1f2b45]">
           {label}
         </label>
       )}
       <textarea
         id={textareaId}
         className={`
-          w-full px-8 py-3.5 rounded-[24px] border text-[#564337]
-          ${bg ?? "bg-white"} placeholder-[#a89888]
-          focus:outline-none focus:ring-2 focus:ring-[#a23f00]/30 focus:border-[#a23f00]
+          w-full px-8 py-3.5 rounded-[24px] border text-[#1f2b45]
+          ${bg ?? "bg-white"} placeholder-[#6d7891]
+          focus:outline-none focus:ring-2 focus:ring-[#2d67f7]/30 focus:border-[#2d67f7]
           transition-colors resize-none
-          ${error ? "border-red-400 focus:ring-red-300" : "border-[#e0d4bc]"}
+          ${error ? "border-red-400 focus:ring-red-300" : "border-[#c8d7f7]"}
           ${className}
         `}
         {...props}

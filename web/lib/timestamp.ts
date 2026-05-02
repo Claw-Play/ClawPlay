@@ -22,6 +22,17 @@ export function toUnixSec(ms: number): number {
 }
 
 /**
+ * Convert a `<input type="datetime-local">` value to Unix seconds.
+ * The input is interpreted in the user's local timezone.
+ */
+export function datetimeLocalToUnixSec(value: string): number | null {
+  if (!value) return null;
+  const timestamp = new Date(value).getTime();
+  if (Number.isNaN(timestamp)) return null;
+  return toUnixSec(timestamp);
+}
+
+/**
  * Format date part: "Apr 17, 2026"
  */
 export function formatDate(date: Date | null, locale = "en-US"): string {

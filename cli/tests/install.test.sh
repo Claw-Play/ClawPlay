@@ -41,6 +41,7 @@ run_install() {
   local mock_http="200"
   local mock_zip=""
   local skills_dir="${HOME}/.clawplay/skills"
+  local lang="en"
   local install_args=()
 
   while [[ $# -gt 0 ]]; do
@@ -48,6 +49,7 @@ run_install() {
       --mock-http)   mock_http="$2";   shift 2 ;;
       --mock-zip)    mock_zip="$2";    shift 2 ;;
       --skills-dir)  skills_dir="$2";  shift 2 ;;
+      --lang)        lang="$2";        shift 2 ;;
       --)            shift; install_args=("$@"); break ;;
       *)             install_args+=("$1"); shift ;;
     esac
@@ -71,6 +73,7 @@ CLI_DIR="${CLI_DIR}"
 MOCK_HTTP="${mock_http}"
 MOCK_ZIP="${mock_zip}"
 CLAWPLAY_SKILLS_DIR="${skills_dir}"
+CLAWPLAY_LANG="${lang}"
 
 info()  { echo "[info] \$*" >&2; }
 warn()  { echo "[warn] \$*" >&2; }
@@ -121,6 +124,9 @@ assert_contains "path traversal → error" "Invalid slug" "$RI_STDERR"
 
 run_install --mock-http 404 -- "has-no-spaces-but-UPPER"
 assert_contains "mixed case slug → error" "Invalid slug" "$RI_STDERR"
+
+run_install --lang zh --mock-http 404
+assert_contains "zh usage → printed in Chinese" "用法:" "$RI_STDERR"
 
 # ── Test: HTTP errors ─────────────────────────────────────────────────────────
 
@@ -251,7 +257,8 @@ captured=$(cat "$INSTALL_REPORT_FILE" 2>/dev/null || true)
 assert_contains "install report POST to /api/skills/rpt-skill/install" "/api/skills/rpt-skill/install" "$captured"
 assert_contains "install report includes Bearer token" "Authorization: Bearer ${INSTALL_TOKEN}" "$captured"
 
-rm -f "$INSTALL_REPORT_FILE" "$MOCK_ZIP_FILE2" "$MOCK_ZIP_DIR2"
+rm -f "$INSTALL_REPORT_FILE" "$MOCK_ZIP_FILE2"
+rm -rf "$MOCK_ZIP_DIR2"
 unset CLAWPLAY_TOKEN INSTALL_TOKEN
 
 # ── Test: --version flag ──────────────────────────────────────────────────────

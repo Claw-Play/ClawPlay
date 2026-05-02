@@ -31,9 +31,9 @@ export default function AdminAuditPage() {
     "skill.approve": { bg: "#dcfce7", text: "#166534", label: t("approve_skill") },
     "skill.reject": { bg: "#fee2e2", text: "#991b1b", label: t("reject_skill") },
     "skill.feature": { bg: "#ffedd5", text: "#9a3412", label: t("feature_skill") ?? t("approve_skill") },
-    "skill.unfeature": { bg: "#f0e8d0", text: "#7a6a5a", label: t("unfeature_skill") ?? "Unfeature" },
-    "user.login": { bg: "#ede9cf", text: "#586330", label: t("login") },
-    "user.register": { bg: "#ede9cf", text: "#586330", label: t("register") },
+    "skill.unfeature": { bg: "#edf4ff", text: "#52617d", label: t("unfeature_skill") ?? "Unfeature" },
+    "user.login": { bg: "#edf4ff", text: "#2d67f7", label: t("login") },
+    "user.register": { bg: "#edf4ff", text: "#2d67f7", label: t("register") },
   };
 
   const [entries, setEntries] = useState<AuditEntry[]>([]);
@@ -65,15 +65,15 @@ export default function AdminAuditPage() {
     <div className="max-w-6xl space-y-6 px-4 md:px-0">
       {/* Tabs */}
       <div className="flex items-start gap-2 md:items-center">
-        <div className="bg-[#ede9cf] rounded-full p-1 flex w-full gap-1 md:w-auto">
+        <div className="bg-[#eef4ff] rounded-full p-1 flex w-full gap-1 md:w-auto">
           {(["all", "skills"] as FilterTab[]).map((tabItem) => (
             <button
               key={tabItem}
               onClick={() => { setTab(tabItem); setPage(1); }}
               className={`flex-1 px-5 py-2 rounded-full text-sm font-medium transition-all font-body md:flex-none ${
                 tab === tabItem
-                  ? "bg-white text-[#a23f00] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)]"
-                  : "text-[#5c6834] hover:text-[#1d1c0d]"
+                  ? "bg-white text-[#2d67f7] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)]"
+                  : "text-[#52617d] hover:text-[#15213b]"
               }`}
             >
               {tabItem === "all" ? t("all_logs") : t("tab_skills")}
@@ -83,40 +83,40 @@ export default function AdminAuditPage() {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-[32px] md:rounded-[48px] card-shadow min-h-[980px] overflow-hidden">
+      <div className="bg-white rounded-[8px] border border-[#dbe5f7] shadow-[0_12px_32px_rgba(25,43,87,0.04)] min-h-[980px] overflow-hidden">
         {/* Table header */}
-        <div className="hidden bg-[rgba(237,233,207,0.5)] border-b border-[rgba(220,193,177,0.1)] md:block">
+        <div className="hidden bg-[#fbfdff] border-b border-[#dbe5f7] md:block">
           <div className="grid grid-cols-[170px_200px_1fr_180px_120px] gap-0">
-            <div className="px-6 py-4 text-[12px] font-semibold text-[#897365] uppercase tracking-widest font-body">{t("time")}</div>
-            <div className="px-6 py-4 text-[12px] font-semibold text-[#897365] uppercase tracking-widest font-body">{t("action")}</div>
-            <div className="px-6 py-4 text-[12px] font-semibold text-[#897365] uppercase tracking-widest font-body">{t("actor")}</div>
-            <div className="px-6 py-4 text-[12px] font-semibold text-[#897365] uppercase tracking-widest font-body">{t("target")}</div>
-            <div className="px-6 py-4 text-[12px] font-semibold text-[#897365] uppercase tracking-widest font-body text-right">{t("activity")}</div>
+            <div className="px-6 py-4 text-[12px] font-semibold text-[#6d7891] uppercase tracking-widest font-body">{t("time")}</div>
+            <div className="px-6 py-4 text-[12px] font-semibold text-[#6d7891] uppercase tracking-widest font-body">{t("action")}</div>
+            <div className="px-6 py-4 text-[12px] font-semibold text-[#6d7891] uppercase tracking-widest font-body">{t("actor")}</div>
+            <div className="px-6 py-4 text-[12px] font-semibold text-[#6d7891] uppercase tracking-widest font-body">{t("target")}</div>
+            <div className="px-6 py-4 text-[12px] font-semibold text-[#6d7891] uppercase tracking-widest font-body text-right">{t("activity")}</div>
           </div>
         </div>
 
         {/* Loading */}
         {loading && entries.length === 0 ? (
-          <div className="py-12 text-center text-[#7a6a5a] animate-pulse font-body">{tCommon("loading")}</div>
+          <div className="py-12 text-center text-[#7c879f] animate-pulse font-body">{tCommon("loading")}</div>
         ) : entries.length === 0 ? (
-          <div className="py-12 text-center text-[#7a6a5a] font-body">{t("no_entries")}</div>
+          <div className="py-12 text-center text-[#7c879f] font-body">{t("no_entries")}</div>
         ) : (
           <div className="relative">
             <div className="grid gap-3 px-4 py-4 md:hidden">
               {entries.map((entry, i) => {
-                const style = ACTION_STYLES[entry.event] ?? { bg: "#ede9cf", text: "#586330", label: entry.event };
+                const style = ACTION_STYLES[entry.event] ?? { bg: "#edf4ff", text: "#2d67f7", label: entry.event };
                 const ts = unixSecToDate(entry.timestamp ?? null);
                 const actorId = entry.actorId ?? entry.userId ?? "";
                 const actorStr = actorId !== "" && actorId !== null && actorId !== undefined ? String(actorId) : "";
                 const initials = actorStr.length >= 2 ? actorStr.slice(0, 2).toUpperCase() : actorStr.toUpperCase();
                 return (
-                  <article key={entry.id ?? i} className="rounded-[24px] border border-[#eadfc8] bg-white/90 p-4 shadow-[0_8px_20px_rgba(86,67,55,0.05)]">
+                  <article key={entry.id ?? i} className="rounded-[12px] border border-[#dbe5f7] bg-white p-4 shadow-[0_8px_20px_rgba(25,43,87,0.04)]">
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <p className="text-sm font-semibold text-[#1d1c0d] font-body">
+                        <p className="text-sm font-semibold text-[#15213b] font-body">
                           {formatDate(ts, "en-US")}
                         </p>
-                        <p className="text-xs text-[#564337] font-body">
+                        <p className="text-xs text-[#52617d] font-body">
                           {formatTime(ts)}
                         </p>
                       </div>
@@ -129,8 +129,8 @@ export default function AdminAuditPage() {
                     </div>
 
                     <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
-                      <div className="rounded-2xl bg-[#faf3d0] px-3 py-2">
-                        <p className="text-black/40">{t("actor")}</p>
+                      <div className="rounded-[10px] bg-[#f7faff] px-3 py-2">
+                        <p className="text-[#7c879f]">{t("actor")}</p>
                         <div className="mt-1 flex items-center gap-2">
                           <div
                             className="flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold font-body"
@@ -138,14 +138,14 @@ export default function AdminAuditPage() {
                           >
                             {initials || "?"}
                           </div>
-                          <p className="truncate font-semibold text-black">
+                          <p className="truncate font-semibold text-[#15213b]">
                             {actorStr ? `User ${actorStr}` : t("system")}
                           </p>
                         </div>
                       </div>
-                      <div className="rounded-2xl bg-[#faf3d0] px-3 py-2">
-                        <p className="text-black/40">{t("target")}</p>
-                        <p className="mt-1 truncate font-semibold text-black">
+                      <div className="rounded-[10px] bg-[#f7faff] px-3 py-2">
+                        <p className="text-[#7c879f]">{t("target")}</p>
+                        <p className="mt-1 truncate font-semibold text-[#15213b]">
                           {entry.targetId ? entry.targetId.slice(0, 12) + (entry.targetId.length > 12 ? "..." : "") : "—"}
                         </p>
                       </div>
@@ -153,14 +153,14 @@ export default function AdminAuditPage() {
 
                     <button
                       onClick={() => setExpanded(expanded === i ? null : i)}
-                      className="mt-4 inline-flex min-h-11 items-center justify-center rounded-full border border-[#eadfc8] bg-white px-4 text-sm font-semibold text-[#a23f00] shadow-[0_8px_20px_rgba(86,67,55,0.06)]"
+                      className="mt-4 inline-flex min-h-11 items-center justify-center rounded-full border border-[#dbe5f7] bg-white px-4 text-sm font-semibold text-[#2d67f7] shadow-[0_8px_20px_rgba(25,43,87,0.06)]"
                     >
                       {t("details")}
                     </button>
 
                     {expanded === i && (
-                      <div className="mt-4 rounded-[20px] bg-[#1d1c0d] px-4 py-4 text-left">
-                        <div className="max-h-56 overflow-auto rounded-[16px] bg-[#1d1c0d] font-mono-custom text-xs text-[#fefae0] whitespace-pre-wrap">
+                      <div className="mt-4 rounded-[20px] bg-[#1a1a2e] px-4 py-4 text-left">
+                        <div className="max-h-56 overflow-auto rounded-[16px] bg-[#1a1a2e] font-mono-custom text-xs text-[#f8faff] whitespace-pre-wrap">
                           {JSON.stringify(entry, null, 2)}
                         </div>
                       </div>
@@ -172,7 +172,7 @@ export default function AdminAuditPage() {
 
             <div className="hidden md:block">
             {entries.map((entry, i) => {
-              const style = ACTION_STYLES[entry.event] ?? { bg: "#ede9cf", text: "#586330", label: entry.event };
+              const style = ACTION_STYLES[entry.event] ?? { bg: "#edf4ff", text: "#2d67f7", label: entry.event };
               const ts = unixSecToDate(entry.timestamp ?? null);
               const actorId = entry.actorId ?? entry.userId ?? "";
               const actorStr = actorId !== "" && actorId !== null && actorId !== undefined ? String(actorId) : "";
@@ -182,17 +182,17 @@ export default function AdminAuditPage() {
               return (
                 <div key={entry.id ?? i}>
                   <div
-                    className={`grid grid-cols-[170px_200px_1fr_180px_120px] gap-0 items-center border-t border-[rgba(220,193,177,0.05)] ${
-                      isExpanded ? "bg-[#faf3d0]" : "hover:bg-[rgba(250,243,208,0.3)]"
+                    className={`grid grid-cols-[170px_200px_1fr_180px_120px] gap-0 items-center border-t border-[rgba(219,229,247,0.05)] ${
+                      isExpanded ? "bg-[#f7faff]" : "hover:bg-[#f7faff]"
                     } transition-colors cursor-pointer`}
                     onClick={() => setExpanded(isExpanded ? null : i)}
                   >
                     {/* Timestamp */}
                     <div className="px-6 py-5">
-                      <p className="text-sm font-medium text-[#1d1c0d] font-body">
+                      <p className="text-sm font-medium text-[#15213b] font-body">
                         {formatDate(ts, "en-US")}
                       </p>
-                      <p className="text-xs text-[#564337] font-body">
+                      <p className="text-xs text-[#52617d] font-body">
                         {formatTime(ts)}
                       </p>
                     </div>
@@ -215,21 +215,21 @@ export default function AdminAuditPage() {
                       >
                         {initials || "?"}
                       </div>
-                      <span className="text-sm font-medium text-[#1d1c0d] font-body truncate">
+                      <span className="text-sm font-medium text-[#15213b] font-body truncate">
                         {actorStr ? `User ${actorStr}` : t("system")}
                       </span>
                     </div>
 
                     {/* Target */}
                     <div className="px-6 py-5">
-                      <span className="inline-block bg-[#f8f4db] text-[#1d1c0d] px-2 py-0.5 rounded-[16px] text-xs font-mono-custom">
+                      <span className="inline-block bg-[#f0f6ff] text-[#15213b] px-2 py-0.5 rounded-[16px] text-xs font-mono-custom">
                         {entry.targetId ? entry.targetId.slice(0, 12) + (entry.targetId.length > 12 ? "..." : "") : "—"}
                       </span>
                     </div>
 
                     {/* Details */}
                     <div className="px-6 py-5 text-right">
-                      <span className="text-sm font-semibold text-[#a23f00] hover:text-[#c45000] transition-colors font-body">
+                      <span className="text-sm font-semibold text-[#2d67f7] hover:text-[#2457d4] transition-colors font-body">
                         {t("details")}
                       </span>
                     </div>
@@ -237,8 +237,8 @@ export default function AdminAuditPage() {
 
                   {/* Expanded detail */}
                   {isExpanded && (
-                    <div className="border-t border-[rgba(220,193,177,0.1)] bg-[#1d1c0d] px-8 py-6">
-                      <div className="bg-[#1d1c0d] rounded-[32px] p-6 font-mono-custom text-sm text-[#fefae0] whitespace-pre overflow-x-auto">
+                    <div className="border-t border-[#dbe5f7] bg-[#1a1a2e] px-8 py-6">
+                      <div className="bg-[#1a1a2e] rounded-[32px] p-6 font-mono-custom text-sm text-[#f8faff] whitespace-pre overflow-x-auto">
                         {JSON.stringify(entry, null, 2)}
                       </div>
                     </div>
@@ -250,8 +250,8 @@ export default function AdminAuditPage() {
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="bg-[rgba(237,233,207,0.3)] border-t border-[rgba(220,193,177,0.1)] px-4 py-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between md:px-6">
-                <p className="text-xs text-[#564337] font-body">
+              <div className="bg-[#fbfdff] border-t border-[#dbe5f7] px-4 py-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between md:px-6">
+                <p className="text-xs text-[#52617d] font-body">
                   {t("showing_range", { startItem: String(startItem), endItem: String(endItem), total: String(total.toLocaleString()) })}
                 </p>
                 <div className="flex flex-wrap items-center gap-2">
@@ -260,7 +260,7 @@ export default function AdminAuditPage() {
                   </PageBtn>
                   {pageNumbers(page, totalPages).map((n, i) =>
                     n === "..." ? (
-                      <span key={`ellipsis-${i}`} className="px-2 text-[#897365] font-body">...</span>
+                      <span key={`ellipsis-${i}`} className="px-2 text-[#6d7891] font-body">...</span>
                     ) : (
                       <PageBtn key={n} onClick={() => setPage(Number(n))} active={Number(n) === page}>{n}</PageBtn>
                     )
@@ -301,8 +301,8 @@ function PageBtn({
       disabled={disabled}
       className={`w-8 h-8 rounded-full text-xs font-semibold transition-all font-body ${
         active
-          ? "bg-[#a23f00] text-white"
-          : "bg-white text-[#1d1c0d] hover:bg-[#ede9cf] shadow-sm"
+          ? "bg-[#2d67f7] text-white"
+          : "bg-white text-[#15213b] hover:bg-[#eef4ff] shadow-sm"
       } disabled:opacity-40 disabled:cursor-not-allowed`}
     >
       {children}

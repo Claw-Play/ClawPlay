@@ -47,7 +47,7 @@ export function ReviewForm({ skillSlug }: Props) {
     <form onSubmit={handleSubmit} className="space-y-4">
       {/* Star rating */}
       <div>
-        <p className="text-sm font-medium text-[#564337] mb-2 font-heading">
+        <p className="mb-2 font-heading text-sm font-medium text-[#102040]">
           {t("your_rating")}
         </p>
         <div className="flex gap-1">
@@ -64,8 +64,8 @@ export function ReviewForm({ skillSlug }: Props) {
               <span
                 className={
                   s <= (hover || rating)
-                    ? "text-[#fa7025]"
-                    : "text-[#d4c8b8]"
+                    ? "text-[#2d67f7]"
+                    : "text-[#c8d7f7]"
                 }
               >
                 ★
@@ -82,7 +82,7 @@ export function ReviewForm({ skillSlug }: Props) {
           onChange={(e) => setComment(e.target.value)}
           placeholder={t("comment_placeholder")}
           rows={3}
-          className="w-full px-4 py-3 rounded-2xl border border-[#e8dfc8] bg-[#fffdf7] text-sm text-[#564337] placeholder-[#c8b898] focus:outline-none focus:border-[#a23f00] focus:ring-2 focus:ring-[#a23f00]/10 transition-colors resize-none font-body"
+          className="w-full resize-none rounded-[6px] border border-[#d9e4f7] bg-[#fbfdff] px-4 py-3 text-sm text-[#102040] placeholder-[#98a3bc] transition-colors focus:border-[#2d67f7] focus:outline-none focus:ring-2 focus:ring-[#2d67f7]/10 font-body"
         />
       </div>
 
@@ -91,12 +91,12 @@ export function ReviewForm({ skillSlug }: Props) {
         <button
           type="submit"
           disabled={rating === 0 || status === "loading"}
-          className="px-5 py-2.5 bg-gradient-to-r from-[#a23f00] to-[#fa7025] hover:opacity-90 disabled:opacity-50 text-white text-sm font-semibold btn-pill shadow-[0_4px_16px_rgba(162,63,0,0.2)] transition-all font-heading disabled:cursor-not-allowed"
+          className="rounded-[6px] bg-[#2d67f7] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#2457d4] disabled:cursor-not-allowed disabled:opacity-50 font-heading"
         >
           {status === "loading" ? t("submitting") : t("submit_review")}
         </button>
         {status === "success" && (
-          <span className="text-sm text-[#586330] font-body">{t("submitted")}</span>
+          <span className="text-sm text-[#2f6fdd] font-body">{t("submitted")}</span>
         )}
         {status === "error" && (
           <span className="text-sm text-[#c44] font-body">{t("failed")}</span>

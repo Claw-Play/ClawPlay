@@ -1,3 +1,5 @@
+@import "rsuite/dist/rsuite-no-reset.min.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -6,25 +8,25 @@
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Be+Vietnam+Pro:wght@400;500;600&family=Liberation+Serif&family=Liberation+Mono&display=swap');
 
 :root {
-  /* Warm Light Design System — Terracotta/Olive palette */
-  --background: #fefae0;
-  --background-2: #faf3d0;
-  --foreground: #564337;
-  --card: #fffdf7;
-  --card-foreground: #564337;
-  --primary: #a23f00;
-  --primary-light: #c45000;
+  /* Cool Blue Design System */
+  --background: #f8faff;
+  --background-2: #f0f6ff;
+  --foreground: #1f2b45;
+  --card: #ffffff;
+  --card-foreground: #1f2b45;
+  --primary: #2d67f7;
+  --primary-light: #4f82f7;
   --primary-foreground: #FFFFFF;
-  --secondary: #f0e8d0;
-  --secondary-foreground: #7a4a20;
-  --muted: #faf3d0;
-  --muted-foreground: #7a6a5a;
-  --accent: #fa7025;
-  --accent-light: #ff8f4a;
+  --secondary: #edf4ff;
+  --secondary-foreground: #2d67f7;
+  --muted: #f0f6ff;
+  --muted-foreground: #6d7891;
+  --accent: #2d67f7;
+  --accent-light: #6b8df7;
   --accent-foreground: #FFFFFF;
-  --border: #e8dfc8;
-  --input-border: #e0d4bc;
-  --ring: #a23f00;
+  --border: #dbe5f7;
+  --input-border: #c8d7f7;
+  --ring: #2d67f7;
   --radius-card: 48px;
   --radius-btn: 9999px;
   --radius-input: 40px;
@@ -39,6 +41,10 @@
   --font-mono: 'Liberation Mono', 'Courier New', monospace;
 }
 
+html {
+  overscroll-behavior-y: contain;
+}
+
 * {
   border-color: var(--border);
 }
@@ -49,9 +55,9 @@ body {
   font-family: var(--font-body), system-ui, sans-serif;
   min-height: 100vh;
   overflow-x: hidden;
+  overscroll-behavior-y: contain;
 }
 
-/* Warm card shadows */
 .card-shadow {
   box-shadow: var(--shadow-card);
 }
@@ -67,9 +73,9 @@ body {
     text-wrap: balance;
   }
 
-  /* Warm gradient backgrounds */
+  /* Cool gradient backgrounds */
   .bg-warm-gradient {
-    background: linear-gradient(135deg, #fefae0 0%, #faf3d0 50%, #f5ecb8 100%);
+    background: linear-gradient(135deg, #f8faff 0%, #f0f6ff 50%, #e8f0ff 100%);
   }
 
   .bg-warm-surface {
@@ -111,7 +117,136 @@ body {
 
   /* Gradient primary button */
   .btn-gradient {
-    background: linear-gradient(135deg, #a23f00 0%, #fa7025 100%);
+    background: linear-gradient(135deg, #2d67f7 0%, #4f82f7 100%);
     box-shadow: var(--shadow-btn);
   }
+}
+
+/* Events DateRangePicker tuning */
+.events-range-picker {
+  min-width: 0;
+}
+
+.events-range-picker .rs-input-group[data-size=lg] {
+  --rs-input-height-lg: 48px;
+  --rs-input-group-input-height-lg: 48px;
+  --rs-input-group-inside-btn-m-x-lg: 0px;
+  --rs-input-group-inside-btn-p-x-lg: 12px;
+  --rs-input-group-font-size-lg: 14px;
+  --rs-input-group-border-radius: 12px;
+  border-color: #dbe5f7;
+  --rs-input-focus-border: #2d67f7;
+}
+
+.events-range-picker .rs-input-group[data-size=lg],
+.events-range-picker .rs-picker-toggle[data-size=lg] {
+  height: 48px;
+  min-height: 48px;
+}
+
+.events-range-picker .rs-input-group[data-size=lg]:focus-within {
+  border-color: #2d67f7;
+  box-shadow: 0 0 0 2px rgba(45, 103, 247, 0.15);
+}
+
+.events-range-picker .rs-picker-toggle-value,
+.events-range-picker .rs-picker-toggle-placeholder {
+  font-family: var(--font-vietnam), system-ui, sans-serif;
+  font-size: 14px !important;
+  line-height: 1 !important;
+  font-weight: 500 !important;
+  color: #15213b !important;
+}
+
+.events-range-picker .rs-picker-toggle-placeholder {
+  color: #7c879f !important;
+}
+
+.events-range-picker .rs-picker-toggle-textbox {
+  font-family: var(--font-vietnam), system-ui, sans-serif;
+  font-size: 14px !important;
+  line-height: 1 !important;
+  font-weight: 500 !important;
+  color: #15213b !important;
+}
+
+.events-range-picker .rs-input {
+  font-family: var(--font-vietnam), system-ui, sans-serif !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  line-height: 1 !important;
+  color: #7c879f !important;
+  -webkit-text-fill-color: #7c879f;
+}
+
+.events-range-picker .rs-input:not(:placeholder-shown) {
+  color: #15213b !important;
+  -webkit-text-fill-color: #15213b;
+}
+
+.events-range-picker .rs-input::placeholder,
+.events-range-picker .rs-input::-webkit-input-placeholder,
+.events-range-picker .rs-input::-moz-placeholder {
+  font-family: var(--font-vietnam), system-ui, sans-serif !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  line-height: 1 !important;
+  color: #7c879f !important;
+  -webkit-text-fill-color: #7c879f;
+}
+
+.events-range-picker .rs-picker-toggle-indicator .rs-picker-caret-icon {
+  width: 50px !important;
+  height: 50px !important;
+  min-width: 50px;
+  min-height: 50px;
+  color: #7c879f !important;
+}
+
+.events-range-picker-popup.rs-picker-popup {
+  border: 1px solid #dbe5f7;
+  border-radius: 18px;
+  box-shadow: 0 24px 60px rgba(25, 43, 87, 0.14);
+  overflow: hidden;
+}
+
+.events-range-picker-popup .rs-picker-toolbar-ranges {
+  max-width: 100%;
+}
+
+.events-range-picker-popup.rs-picker-popup-daterange .rs-picker-daterange-predefined {
+  width: 160px;
+  height: auto;
+  padding: 10px 0;
+}
+
+.events-range-picker-popup.rs-picker-popup-daterange .rs-picker-daterange-predefined .rs-btn {
+  display: block;
+  width: calc(100% - 16px);
+  margin: 0 8px 6px;
+  border-radius: 10px;
+  text-align: left;
+  font-size: 14px;
+  font-weight: 500;
+  color: #52617d;
+}
+
+.events-range-picker-popup.rs-picker-popup-daterange .rs-picker-daterange-calendar-group {
+  min-width: 0;
+}
+
+.events-range-picker-popup.rs-picker-popup-daterange {
+  padding: 0;
+}
+
+.events-range-picker-popup.rs-picker-popup-daterange .rs-calendar {
+  height: 304px;
+}
+
+.events-range-picker-popup .rs-calendar-header {
+  text-align: center;
+}
+
+.events-range-picker-popup .rs-calendar-table-cell-content {
+  border-radius: 9999px;
 }

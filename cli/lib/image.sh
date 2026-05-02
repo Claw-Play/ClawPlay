@@ -105,7 +105,11 @@ _image_generate() {
   source "${__src_dir}/api.sh"
   local response
   response=$(api_call POST "/api/ability/image/generate" "$json") || {
-    echo "[clawplay image] ERROR: Request to ClawPlay relay failed." >&2
+    if api_is_auth_error_response "$response"; then
+      api_print_reconfigure_key_hint "[clawplay image]"
+    else
+      echo "[clawplay image] ERROR: Request to ClawPlay relay failed." >&2
+    fi
     exit 1
   }
 
@@ -125,7 +129,11 @@ _image_generate() {
   if [[ -n "$err" ]]; then
     local reason
     reason=$(echo "$response" | jq -r '.reason // empty' 2>/dev/null)
-    echo "[clawplay image] ERROR: ${err}${reason:+ — $reason}" >&2
+    if api_is_auth_error_response "$response"; then
+      api_print_reconfigure_key_hint "[clawplay image]"
+    else
+      echo "[clawplay image] ERROR: ${err}${reason:+ — $reason}" >&2
+    fi
     exit 1
   fi
 

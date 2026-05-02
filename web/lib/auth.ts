@@ -84,3 +84,11 @@ export function buildClearCookieHeader(): string {
 }
 
 export { COOKIE_NAME, COOKIE_MAX_AGE };
+
+/** Redirect to /skills instead of /dashboard when user already has a token */
+export function dashboardToSkills(redirectPath: string, hasToken: boolean): string {
+  if (hasToken && redirectPath === "/dashboard") {
+    return "/skills";
+  }
+  return redirectPath;
+}

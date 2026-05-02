@@ -63,6 +63,20 @@ test.describe("Submit skill page", () => {
     await expect(page).toHaveURL("/dashboard", { timeout: 15_000 });
   });
 
+  test("form: submitted draft is cleared when returning to /submit", async ({ page }) => {
+    await loginAs(page, TEST_EMAIL, "submitpass123");
+    await page.goto("/submit");
+
+    await page.getByLabel(/Skill.*名称|skill name/i).fill("Draft Clear Skill");
+    await page.getByLabel(/简介|summary/i).fill("Testing draft clearing");
+    await page.getByLabel(/SKILL.md 内容|SKILL.md content/i).fill(SAMPLE_SKILL_MD);
+    await page.getByRole("button", { name: /提交审核|submit for review/i }).click();
+    await expect(page).toHaveURL("/dashboard", { timeout: 15_000 });
+
+    await page.goto("/submit");
+    await expect(page.locator("textarea")).toHaveCount(0);
+  });
+
   test("'How it works' sidebar guide renders steps", async ({ page }) => {
     await loginAs(page, TEST_EMAIL, "submitpass123");
     await page.goto("/submit");

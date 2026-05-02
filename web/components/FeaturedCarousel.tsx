@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useT } from "@/lib/i18n/context";
+import { averageRating } from "@/lib/ratings";
 import { ChevronLeftIcon, ChevronRightIcon, StarIcon } from "@/components/icons";
 
 interface Skill {
@@ -37,33 +38,30 @@ export function FeaturedCarousel({ skills }: Props) {
   if (skills.length === 0) return null;
 
   const active = skills[current];
-  const avgRating =
-    active.statsRatingsCount > 0
-      ? Number((active.statsStars / active.statsRatingsCount).toFixed(1))
-      : null;
+  const avgRating = averageRating(active.statsStars, active.statsRatingsCount);
 
   return (
     <div className="space-y-5">
       {/* Main card */}
       <Link
         href={`/skills/${active.slug}`}
-        className="block bg-[#fffdf7] card-radius p-6 border border-[#e8dfc8] card-shadow card-shadow-hover transition-all duration-200"
+        className="block bg-[#ffffff] card-radius p-6 border border-[#dbe5f7] card-shadow card-shadow-hover transition-all duration-200"
       >
         <div className="flex flex-col gap-1">
             <div className="flex items-center gap-3 mb-1">
-              <h3 className="text-xl font-bold font-heading text-[#564337]">
+              <h3 className="text-xl font-bold font-heading text-[#1f2b45]">
                 {active.name}
               </h3>
               {avgRating !== null && (
-                <span className="inline-flex items-center gap-0.5 px-2 py-0.5 bg-[#fa7025]/10 text-[#fa7025] text-xs font-semibold rounded-full font-body">
+                <span className="inline-flex items-center gap-0.5 px-2 py-0.5 bg-[#4f82f7]/10 text-[#4f82f7] text-xs font-semibold rounded-full font-body">
                   <StarIcon className="w-3 h-3" /> {avgRating}
                 </span>
               )}
             </div>
-            <p className="text-sm text-[#7a6a5a] font-body line-clamp-2">
+            <p className="text-sm text-[#52617d] font-body line-clamp-2">
               {active.summary}
             </p>
-            <p className="text-xs text-[#a89888] mt-2 font-body">
+            <p className="text-xs text-[#6d7891] mt-2 font-body">
               {tGrid("by")} {active.authorName || tGrid("anonymous")}
             </p>
           </div>
@@ -79,8 +77,8 @@ export function FeaturedCarousel({ skills }: Props) {
               onClick={() => setCurrent(i)}
               className={`w-2 h-2 rounded-full transition-all focus:outline-none ${
                 i === current
-                  ? "bg-[#a23f00] w-5"
-                  : "bg-[#d4c8b8] hover:bg-[#a23f00]/50"
+                  ? "bg-[#2d67f7] w-5"
+                  : "bg-[#c8d7f7] hover:bg-[#2d67f7]/50"
               }`}
               aria-label={t("go_to_skill", { i: String(i + 1) })}
             />
@@ -92,14 +90,14 @@ export function FeaturedCarousel({ skills }: Props) {
           <div className="flex gap-2">
             <button
               onClick={() => setCurrent((c) => (c - 1 + skills.length) % skills.length)}
-              className="w-8 h-8 rounded-full border border-[#e8dfc8] bg-[#fffdf7] text-[#7a6a5a] hover:text-[#a23f00] hover:border-[#a23f00] transition-all flex items-center justify-center"
+              className="w-8 h-8 rounded-full border border-[#dbe5f7] bg-[#ffffff] text-[#52617d] hover:text-[#2d67f7] hover:border-[#2d67f7] transition-all flex items-center justify-center"
               aria-label={t("previous")}
             >
               <ChevronLeftIcon className="w-3 h-3" />
             </button>
             <button
               onClick={next}
-              className="w-8 h-8 rounded-full border border-[#e8dfc8] bg-[#fffdf7] text-[#7a6a5a] hover:text-[#a23f00] hover:border-[#a23f00] transition-all flex items-center justify-center"
+              className="w-8 h-8 rounded-full border border-[#dbe5f7] bg-[#ffffff] text-[#52617d] hover:text-[#2d67f7] hover:border-[#2d67f7] transition-all flex items-center justify-center"
               aria-label={t("next")}
             >
               <ChevronRightIcon className="w-3 h-3" />
@@ -116,8 +114,8 @@ export function FeaturedCarousel({ skills }: Props) {
             onClick={() => setCurrent(i)}
             className={`flex-shrink-0 w-10 h-10 rounded-full border-2 flex items-center justify-center transition-all focus:outline-none ${
               i === current
-                ? "border-[#a23f00] bg-[#fef0e8] shadow-sm"
-                : "border-[#e8dfc8] bg-[#fffdf7] hover:border-[#a23f00]/50"
+                ? "border-[#2d67f7] bg-[#fef0e8] shadow-sm"
+                : "border-[#dbe5f7] bg-[#ffffff] hover:border-[#2d67f7]/50"
             }`}
             aria-label={t("select_skill", { name: s.name })}
           />

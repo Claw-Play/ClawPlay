@@ -1,10 +1,14 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter, useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useT } from "@/lib/i18n/context";
-import { Button } from "@/components/Button";
-import { Input, Textarea } from "@/components/Input";
+import WorkflowIndicator from "@/components/submit/workflow-indicator";
+import SkillMdEditor, { clearSubmitDraft } from "@/components/submit/skill-md-editor";
+import SubmitSection from "@/components/submit/submit-section";
+import SubmitStepCard from "@/components/submit/submit-step-card";
+import VersionSubmitGateCard from "@/components/submit/version-submit-gate-card";
 
 interface SkillDetail {
   slug: string;
@@ -21,13 +25,24 @@ interface LatestVersion {
   moderationStatus: string;
 }
 
+const ICON_CHOICES = ["🧩", "✨", "🎯", "🎮", "🪄", "⚡", "🧠", "🎨"];
+
 function suggestNextVersion(current: string, type: "patch" | "minor" | "major"): string {
   const parts = current.split(".").map(Number);
-  if (parts.length < 3) return current;
+  if (parts.length < 3 || parts.some(Number.isNaN)) return current;
   const [major, minor, patch] = parts;
   if (type === "patch") return `${major}.${minor}.${patch + 1}`;
   if (type === "minor") return `${major}.${minor + 1}.0`;
   return `${major + 1}.0.0`;
+}
+
+function scrollToStep(targetId: string) {
+  const el = document.getElementById(targetId);
+  if (!el) return;
+  el.scrollIntoView({ behavior: "smooth", block: "start" });
+  if ("focus" in el) {
+    (el as HTMLElement).focus({ preventScroll: true });
+  }
 }
 
 export default function SubmitNewVersionPage() {
@@ -35,348 +50,367 @@ export default function SubmitNewVersionPage() {
   const params = useParams();
   const slug = params.slug as string;
   const t = useT("submit_version");
-  const tSkillVersions = useT("skill_versions");
+  const tSubmit = useT("submit");
 
   const [skill, setSkill] = useState<SkillDetail | null>(null);
   const [latestVersion, setLatestVersion] = useState<LatestVersion | null>(null);
-
-  const [form, setForm] = useState({
-    version: "",
-    changelog: "",
-    skillMdContent: "",
-  });
+  const [name, setName] = useState("");
+  const [summary, setSummary] = useState("");
+  const [repoUrl, setRepoUrl] = useState("");
+  const [iconEmoji, setIconEmoji] = useState("🧩");
+  const [version, setVersion] = useState("");
+  const [changelog, setChangelog] = useState("");
+  const [skillMdContent, setSkillMdContent] = useState("");
+  const [skillSaved, setSkillSaved] = useState(false);
+  const [diagramMermaid, setDiagramMermaid] = useState("");
+  const [diagramDone, setDiagramDone] = useState(false);
+  const [basicInfoOpen, setBasicInfoOpen] = useState(true);
+  const [versionInfoOpen, setVersionInfoOpen] = useState(true);
+  const [validationResult, setValidationResult] = useState<{
+    ok: boolean;
+    errors: string[];
+    warnings: string[];
+  } | null>(null);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [isDragOver, setIsDragOver] = useState(false);
-  const [fileError, setFileError] = useState("");
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [loading, setLoading] = useState(true);
+  const summaryRef = useRef<HTMLTextAreaElement>(null);
+  const versionTypeLabels = {
+    patch: t("version_type_patch"),
+    minor: t("version_type_minor"),
+    major: t("version_type_major"),
+  } as const;
+
+  const draftStorageKey = useMemo(() => `clawplay_version_draft:${slug}`, [slug]);
 
   useEffect(() => {
-    // Check auth
+    let active = true;
+
     fetch("/api/user/me")
       .then((r) => {
         if (!r.ok) throw new Error("not authed");
       })
       .catch(() => router.push("/login"));
 
-    // Load skill info
     Promise.all([
       fetch(`/api/skills/${slug}`).then((r) => r.json()),
       fetch(`/api/skills/${slug}/versions`).then((r) => r.json()),
-    ]).then(([skillData, versionsData]) => {
-      if (skillData.error) {
-        setError(skillData.error);
-        return;
-      }
-      setSkill(skillData.skill);
-      if (versionsData.versions?.length > 0) {
-        const latest = versionsData.versions[0];
-        setLatestVersion(latest);
-        // Pre-fill changelog with version
-        setForm((prev) => ({
-          ...prev,
-          version: suggestNextVersion(latest.version, "patch"),
-        }));
-      }
-    }).catch(() => {
-      setError("Failed to load skill.");
-    });
-  }, [slug, router]);
+    ])
+      .then(([skillData, versionsData]) => {
+        if (!active) return;
 
-  function update(field: string, value: string) {
-    setForm((prev) => ({ ...prev, [field]: value }));
-  }
+        if (skillData.error) {
+          setError(skillData.error);
+          return;
+        }
 
-  function loadFile(file: File) {
-    setFileError("");
-    if (!file.name.endsWith(".md") && !file.name.endsWith(".txt")) {
-      setFileError(t("file_type_error"));
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const text = e.target?.result;
-      if (typeof text === "string") update("skillMdContent", text);
-    };
-    reader.readAsText(file, "utf-8");
-  }
+        const loadedSkill = skillData.skill as SkillDetail;
+        setSkill(loadedSkill);
+        setName(loadedSkill.name ?? "");
+        setSummary(loadedSkill.summary ?? "");
+        setRepoUrl(loadedSkill.repoUrl ?? "");
+        setIconEmoji(loadedSkill.iconEmoji || "🧩");
 
-  function handleDrop(e: React.DragEvent) {
-    e.preventDefault();
-    setIsDragOver(false);
-    const file = e.dataTransfer.files[0];
-    if (file) loadFile(file);
-  }
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
-
-    try {
-      const res = await fetch(`/api/skills/${slug}/versions`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        const latest = versionsData.versions?.[0] as LatestVersion | undefined;
+        if (latest) {
+          setLatestVersion(latest);
+          setVersion(suggestNextVersion(latest.version, "patch"));
+        } else {
+          setVersion("1.0.0");
+        }
+      })
+      .catch(() => {
+        if (active) setError("Failed to load skill.");
+      })
+      .finally(() => {
+        if (active) setLoading(false);
       });
 
-      const data = await res.json();
+    return () => {
+      active = false;
+    };
+  }, [router, slug]);
 
-      if (!res.ok) {
-        setError(data.error ?? t("submission_failed"));
-        setLoading(false);
-        return;
-      }
+  const basicInfoDone = Boolean(skill) || Boolean(name.trim() && summary.trim() && repoUrl.trim() && iconEmoji.trim());
+  const versionInfoDone = Boolean(version.trim() && changelog.trim());
 
-      setSuccess(true);
-      setTimeout(() => router.push(`/skills/${slug}/versions`), 1800);
-    } catch {
-      setError(t("network_error"));
-    } finally {
-      setLoading(false);
-    }
-  }
+  const adjustSummaryHeight = useCallback(() => {
+    const el = summaryRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, []);
 
-  const isApproved = skill?.moderationStatus === "approved";
+  useEffect(() => {
+    adjustSummaryHeight();
+  }, [adjustSummaryHeight, summary]);
+
+  const workflowSteps = [
+    { label: t("workflow_step0"), done: basicInfoDone },
+    { label: t("workflow_step1"), done: versionInfoDone },
+    { label: t("workflow_step2"), done: skillSaved },
+    { label: t("workflow_step3"), done: diagramDone },
+    { label: t("workflow_step4"), done: false },
+  ];
 
   return (
-    <div className="min-h-screen bg-[#faf3d0]">
-      <div className="max-w-6xl mx-auto px-6 py-10">
-        {/* Breadcrumb */}
-        <div className="flex items-center gap-2 text-sm text-[#7a6a5a] mb-6 font-body">
-          <Link href="/dashboard" className="hover:text-[#a23f00]">
+    <div className="min-h-screen bg-[#fbfcfe]">
+
+      <div className="mx-auto min-h-screen max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="mb-6 flex items-center gap-2 text-sm text-[#667391]">
+          <Link href="/dashboard" className="font-medium text-[#2d67f7] transition-colors hover:text-[#2457d4]">
             {t("breadcrumb_dashboard")}
           </Link>
-          <span>/</span>
-          <Link href={`/skills/${slug}`} className="hover:text-[#a23f00]">
+          <span className="text-[#b3c0dd]">/</span>
+          <Link href={`/skills/${slug}`} className="font-medium text-[#2d67f7] transition-colors hover:text-[#2457d4]">
             {skill?.name ?? slug}
           </Link>
-          <span>/</span>
-          <span className="font-semibold text-[#564337]">
-            {t("breadcrumb_new_version")}
-          </span>
+          <span className="text-[#b3c0dd]">/</span>
+          <span className="min-w-0 truncate font-medium text-[#102040]">{t("breadcrumb_new_version")}</span>
         </div>
 
-        <h1 className="text-3xl md:text-[48px] font-extrabold font-heading text-[#564337] mb-8 leading-none tracking-tight">
-          {t("title")}
-        </h1>
+        <div className="mb-8 max-w-3xl">
+          <h1 className="font-heading text-[32px] font-bold tracking-[-0.03em] text-[#102040] leading-none md:text-[44px]">
+            {t("title")}
+          </h1>
+        </div>
 
-        {/* Auto-approval banner */}
         {skill && (
           <div
-            className={`mb-6 rounded-[24px] px-5 py-3.5 text-sm font-body ${
-              isApproved
-                ? "bg-[#586330]/10 text-[#586330] border border-[#586330]/20"
-                : "bg-[#a23f00]/10 text-[#a23f00] border border-[#a23f00]/20"
+            className={`mb-6 rounded-[6px] border px-5 py-3.5 text-sm font-body ${
+              skill.moderationStatus === "approved"
+                ? "border-[#586330]/20 bg-[#586330]/10 text-[#586330]"
+                : "border-[#2d67f7]/20 bg-[#2d67f7]/10 text-[#2d67f7]"
             }`}
           >
-            {isApproved
-              ? t("auto_approved_notice")
-              : t("pending_notice")}
+            {skill.moderationStatus === "approved" ? t("auto_approved_notice") : t("pending_notice")}
           </div>
         )}
 
-        <div className="grid lg:grid-cols-10 gap-8">
-          {/* Form — 65% */}
-          <div className="lg:col-span-6">
-            <div className="bg-[#fffdf7] rounded-[32px] p-6 md:p-8 border border-[#e8dfc8] card-shadow space-y-5">
-              {error && (
-                <div className="bg-red-50 border border-red-200 text-red-700 rounded-[24px] px-5 py-3.5 text-sm font-body">
-                  {error}
-                </div>
-              )}
+        {error && (
+          <div className="mb-6 rounded-[6px] border border-red-200 bg-red-50 px-5 py-3.5 text-sm font-body text-red-700">
+            {error}
+          </div>
+        )}
 
-              {success && (
-                <div className="bg-green-50 border border-green-200 text-green-700 rounded-[24px] px-5 py-3.5 text-sm font-body">
-                  {t("success_message")}
-                </div>
-              )}
+        <div className="mb-8">
+          <WorkflowIndicator
+            steps={workflowSteps}
+            ariaLabel={t("workflow_label")}
+            basicInfoDone={basicInfoDone}
+            abilitiesSelected={false}
+            skillSaved={skillSaved}
+            diagramDone={diagramDone}
+            submitted={false}
+          />
+        </div>
 
-              {/* Skill info (read-only) */}
-              {skill && (
-                <div className="flex items-center gap-3 p-4 bg-[#f8f4db] rounded-[20px]">
-                  <span className="text-2xl">{skill.iconEmoji}</span>
-                  <div>
-                    <p className="font-bold font-heading text-[#564337]">{skill.name}</p>
-                    <p className="text-xs text-[#7a6a5a] font-body">{skill.summary}</p>
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
+          <main className="min-w-0 space-y-6">
+            <SubmitStepCard
+              id="version-basic-info"
+              tabIndex={-1}
+              stepNumber={1}
+              open={basicInfoOpen}
+              onToggle={() => setBasicInfoOpen((v) => !v)}
+              title={t("wizard_basic_info_title")}
+              description={t("wizard_basic_info_desc")}
+            >
+              <div className="grid gap-5 md:grid-cols-2">
+                <div className="space-y-1.5">
+                  <label className="block text-sm font-semibold text-[#102040]">{tSubmit("skill_name")}</label>
+                  <div className="rounded-[6px] border border-[#dbe5f7] bg-[#f7faff] px-4 py-3 text-sm text-[#102040]">
+                    {name || "—"}
                   </div>
                 </div>
-              )}
 
-              <form onSubmit={handleSubmit} className="space-y-5">
-                {/* Version number */}
                 <div className="space-y-1.5">
-                  <label className="block text-sm font-semibold text-[#564337] font-body">
+                  <label className="block text-sm font-semibold text-[#102040]">Slug</label>
+                  <div className="rounded-[6px] border border-[#dbe5f7] bg-[#f7faff] px-4 py-3 text-sm text-[#102040]">
+                    {slug}
+                  </div>
+                </div>
+
+                <div className="space-y-1.5 md:col-span-2">
+                  <label className="block text-sm font-semibold text-[#102040]" htmlFor="version-summary">
+                    {tSubmit("one_line_summary")}
+                  </label>
+                  <textarea
+                    id="version-summary"
+                    ref={summaryRef}
+                    value={summary}
+                    onChange={(e) => {
+                      setSummary(e.target.value);
+                      requestAnimationFrame(adjustSummaryHeight);
+                    }}
+                    rows={1}
+                    className="min-h-[48px] w-full resize-none overflow-hidden rounded-[6px] border border-[#dbe5f7] bg-[#f7faff] px-4 py-3 text-sm leading-6 text-[#102040] placeholder-[#94a3b8] transition-colors focus:border-[#2d67f7] focus:outline-none focus:ring-2 focus:ring-[#2d67f7]/20"
+                    placeholder={tSubmit("summary_placeholder")}
+                  />
+                </div>
+
+                <div className="space-y-1.5 md:col-span-2">
+                  <label className="block text-sm font-semibold text-[#102040]" htmlFor="version-repo-url">
+                    {tSubmit("github_url")}
+                  </label>
+                  <input
+                    id="version-repo-url"
+                    type="url"
+                    value={repoUrl}
+                    onChange={(e) => setRepoUrl(e.target.value)}
+                    className="w-full rounded-[6px] border border-[#dbe5f7] bg-[#f7faff] px-4 py-3 text-sm text-[#102040] placeholder-[#94a3b8] transition-colors focus:border-[#2d67f7] focus:outline-none focus:ring-2 focus:ring-[#2d67f7]/20"
+                    placeholder={tSubmit("github_placeholder")}
+                  />
+                </div>
+
+                <div className="space-y-2 md:col-span-2">
+                  <label className="block text-sm font-semibold text-[#102040]">{tSubmit("icon_emoji")}</label>
+                  <div className="flex flex-wrap gap-2">
+                    {ICON_CHOICES.map((emoji) => {
+                      const active = iconEmoji === emoji;
+                      return (
+                        <button
+                          key={emoji}
+                          type="button"
+                          onClick={() => setIconEmoji(emoji)}
+                          className={`flex h-11 w-11 items-center justify-center rounded-[6px] border text-lg transition-colors ${
+                            active
+                              ? "border-[#2d67f7] bg-[#eff6ff] text-[#1d4ed8]"
+                              : "border-[#dbe5f7] bg-[#f7faff] text-[#102040] hover:border-[#cbd5e1] hover:bg-white"
+                          }`}
+                          aria-pressed={active}
+                        >
+                          {emoji}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </SubmitStepCard>
+
+            <SubmitStepCard
+              id="version-info"
+              tabIndex={-1}
+              stepNumber={2}
+              open={versionInfoOpen}
+              onToggle={() => setVersionInfoOpen((v) => !v)}
+              title={t("version_number")}
+              description={t("semver_hint")}
+            >
+              <div className="space-y-6">
+                <div className="space-y-1.5">
+                  <label className="block text-sm font-semibold text-[#102040]" htmlFor="version-number">
                     {t("version_number")}
                   </label>
-                  <Input
-                    value={form.version}
-                    onChange={(e) => update("version", e.target.value)}
+                  <input
+                    id="version-number"
+                    value={version}
+                    onChange={(e) => setVersion(e.target.value)}
                     placeholder="e.g. 1.1.0"
                     required
-                    bg="bg-[#e7e3ca]"
-                    disabled={loading || success}
-                    pattern="^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$"
+                    pattern="^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$"
+                    className="w-full rounded-[6px] border border-[#dbe5f7] bg-[#f7faff] px-4 py-3 text-sm text-[#102040] placeholder-[#94a3b8] transition-colors focus:border-[#2d67f7] focus:outline-none focus:ring-2 focus:ring-[#2d67f7]/20"
                   />
-                  {latestVersion && (
-                    <div className="flex gap-2 flex-wrap">
-                      {(["patch", "minor", "major"] as const).map((type) => (
+                </div>
+
+                {latestVersion && (
+                  <div className="flex flex-wrap gap-2">
+                    {(["patch", "minor", "major"] as const).map((type) => {
+                      const suggested = suggestNextVersion(latestVersion.version, type);
+                      return (
                         <button
                           key={type}
                           type="button"
-                          onClick={() =>
-                            update("version", suggestNextVersion(latestVersion.version, type))
-                          }
-                          className="px-3 py-1 text-xs font-semibold rounded-full border border-[#e8dfc8] bg-[#fffdf7] text-[#7a6a5a] hover:border-[#a23f00] hover:text-[#a23f00] transition-colors font-body"
+                          onClick={() => setVersion(suggested)}
+                          className="rounded-[6px] border border-[#dbe5f7] bg-white px-3 py-1 text-xs font-semibold text-[#52617d] transition-colors hover:border-[#2d67f7] hover:text-[#2d67f7]"
                         >
-                          {t("suggest")} {suggestNextVersion(latestVersion.version, type)}
-                          <span className="ml-1 opacity-60">({type})</span>
+                          {t("suggest")} {suggested}
+                          <span className="ml-1 opacity-60">({versionTypeLabels[type]})</span>
                         </button>
-                      ))}
-                    </div>
-                  )}
-                  <p className="text-xs text-[#a89070] font-body">
-                    {t("semver_hint")}
-                  </p>
-                </div>
-
-                {/* Changelog */}
-                <div>
-                  <Textarea
-                    label={t("changelog")}
-                    placeholder={t("changelog_placeholder")}
-                    value={form.changelog}
-                    onChange={(e) => update("changelog", e.target.value)}
-                    rows={3}
-                    bg="bg-[#e7e3ca]"
-                    disabled={loading || success}
-                    maxLength={1000}
-                  />
-                  <p className="text-xs text-[#a89070] mt-1 font-body text-right">
-                    {form.changelog.length}/1000
-                  </p>
-                </div>
-
-                {/* SKILL.md content */}
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <label className="block text-sm font-semibold text-[#564337] font-body">
-                      {t("skill_md_content")}
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="flex items-center gap-1.5 text-xs font-semibold text-[#a23f00] hover:text-[#fa7025] transition-colors font-body"
-                    >
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                        <polyline points="17 8 12 3 7 8"/>
-                        <line x1="12" y1="3" x2="12" y2="15"/>
-                      </svg>
-                      {t("select_file")}
-                    </button>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept=".md,.txt"
-                      className="hidden"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) loadFile(file);
-                        e.target.value = "";
-                      }}
-                    />
-                  </div>
-
-                  {fileError && (
-                    <p className="text-xs text-red-500 font-body">{fileError}</p>
-                  )}
-
-                  <div
-                    onDrop={handleDrop}
-                    onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
-                    onDragLeave={() => setIsDragOver(false)}
-                    className="relative"
-                  >
-                    {isDragOver && (
-                      <div className="absolute inset-0 z-10 rounded-[20px] bg-[rgba(162,63,0,0.07)] border-2 border-dashed border-[#a23f00] flex items-center justify-center pointer-events-none">
-                        <span className="text-sm font-semibold text-[#a23f00] font-body">{t("drop_to_import")}</span>
-                      </div>
-                    )}
-                    <Textarea
-                      rows={16}
-                      className="font-mono-custom text-sm"
-                      bg={isDragOver ? "bg-[#fdf5e6]" : "bg-[#e7e3ca]"}
-                      value={form.skillMdContent}
-                      onChange={(e) => update("skillMdContent", e.target.value)}
-                      placeholder={t("skill_md_placeholder")}
-                      required
-                    />
-                  </div>
-                </div>
-
-                {/* Review notice */}
-                {!isApproved && (
-                  <div className="bg-[#faf3d0] border border-[#e8dfc8] rounded-[24px] px-5 py-3.5 text-sm text-[#7a6a5a] font-body">
-                    {t("pending_review_notice")}
+                      );
+                    })}
                   </div>
                 )}
 
-                <Button type="submit" loading={loading} className="w-full">
-                  {t("submit_btn")}
-                </Button>
-              </form>
-            </div>
-          </div>
-
-          {/* Sidebar — 35% */}
-          <div className="lg:col-span-4 space-y-5">
-            {/* Version history */}
-            {latestVersion && (
-              <div className="bg-[#fffdf7] rounded-[24px] p-5 border border-[#e8dfc8] card-shadow">
-                <h3 className="font-semibold font-heading text-[#564337] mb-3 text-sm">
-                  {t("current_version")}
-                </h3>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-[#7a6a5a] font-body">v{latestVersion.version}</span>
-                    <span className="text-xs px-2 py-0.5 bg-[#586330]/10 text-[#586330] rounded-full font-body">
-                      {latestVersion.moderationStatus}
-                    </span>
-                  </div>
-                  {latestVersion.changelog && (
-                    <p className="text-xs text-[#7a6a5a] font-body">
-                      {latestVersion.changelog}
-                    </p>
-                  )}
+                <div className="space-y-1.5">
+                  <label className="block text-sm font-semibold text-[#102040]" htmlFor="version-changelog">
+                    {t("changelog")}
+                  </label>
+                  <textarea
+                    id="version-changelog"
+                    value={changelog}
+                    onChange={(e) => setChangelog(e.target.value)}
+                    rows={4}
+                    placeholder={t("changelog_placeholder")}
+                    className="w-full rounded-[6px] border border-[#dbe5f7] bg-[#f7faff] px-4 py-3 text-sm text-[#102040] placeholder-[#94a3b8] transition-colors focus:border-[#2d67f7] focus:outline-none focus:ring-2 focus:ring-[#2d67f7]/20"
+                  />
+                  <p className="text-right text-xs text-[#667391]">{changelog.length}/1000</p>
                 </div>
-                <Link
-                  href={`/skills/${slug}/versions`}
-                  className="mt-3 block text-center text-xs text-[#a23f00] hover:underline font-body"
-                >
-                  {tSkillVersions("title")} →
-                </Link>
               </div>
-            )}
+            </SubmitStepCard>
 
-            {/* Tips */}
-            <div className="bg-[#fffdf7] rounded-[24px] p-5 border border-[#e8dfc8] card-shadow">
-              <h3 className="font-semibold font-heading text-[#564337] mb-3 text-sm">
-                {t("tips_title")}
-              </h3>
-              <ul className="space-y-2">
-                {[t("tip_1"), t("tip_2"), t("tip_3")].map((tip, i) => (
-                  <li key={i} className="flex gap-2 text-xs text-[#7a6a5a] font-body">
-                    <span className="text-[#fa7025] flex-shrink-0">•</span>
-                    {tip}
-                  </li>
-                ))}
-              </ul>
+            <div id="version-skill-md" tabIndex={-1} className="scroll-mt-24 outline-none">
+              <SkillMdEditor
+                t={tSubmit}
+                value={skillMdContent}
+                onChange={(value) => {
+                  setSkillMdContent(value);
+                  setSkillSaved(false);
+                  setDiagramDone(false);
+                  setDiagramMermaid("");
+                  setValidationResult(null);
+                }}
+                validationResult={validationResult}
+                draftStorageKey={draftStorageKey}
+                onValidationResult={setValidationResult}
+                onSaveSuccess={() => {
+                  setSkillSaved(true);
+                }}
+              />
             </div>
-          </div>
+
+            <div id="version-diagram" tabIndex={-1} className="scroll-mt-24 outline-none">
+              <SubmitSection
+                t={tSubmit}
+                skillSaved={skillSaved}
+                skillMdContent={skillMdContent}
+                initialDiagramMermaid={diagramMermaid}
+                onDiagramSuccess={() => setDiagramDone(true)}
+                onDiagramGenerated={setDiagramMermaid}
+              />
+            </div>
+          </main>
+
+          <aside className="hidden lg:sticky lg:top-[102px] lg:flex lg:max-h-[calc(100vh-126px)] lg:self-start lg:justify-center lg:overflow-y-auto">
+            <div className="w-full max-w-[360px]">
+              <VersionSubmitGateCard
+                t={t}
+                slug={slug}
+                name={name}
+                version={version}
+                basicInfoDone={basicInfoDone}
+                versionInfoDone={versionInfoDone}
+                skillSaved={skillSaved}
+                diagramDone={diagramDone}
+                changelog={changelog}
+                skillMdContent={skillMdContent}
+                validationResult={validationResult}
+              onSubmitSuccess={() => {
+                clearSubmitDraft(draftStorageKey);
+              }}
+              onNavigateStep={scrollToStep}
+              />
+            </div>
+          </aside>
         </div>
       </div>
+      {loading && !skill && !error && (
+        <div className="fixed inset-0 pointer-events-none flex items-start justify-center pt-24">
+          <div className="rounded-[6px] border border-[#dbe5f7] bg-white px-4 py-2 text-sm text-[#667391] shadow-[0_8px_20px_rgba(25,43,87,0.06)]">
+            {tSubmit("loading")}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

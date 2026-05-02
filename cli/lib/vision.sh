@@ -124,7 +124,11 @@ _vision_analyze() {
     -H "Authorization: Bearer ${CLAWPLAY_TOKEN}" \
     -H "Content-Type: application/json" \
     -d "$json") || {
-    echo "[clawplay vision] ERROR: Request to ClawPlay relay failed." >&2
+    if api_is_auth_error_response "$response"; then
+      api_print_reconfigure_key_hint "[clawplay vision]"
+    else
+      echo "[clawplay vision] ERROR: Request to ClawPlay relay failed." >&2
+    fi
     exit 1
   }
 
@@ -134,7 +138,11 @@ _vision_analyze() {
   if [[ -n "$err" ]]; then
     local reason
     reason=$(echo "$response" | jq -r '.reason // empty' 2>/dev/null)
-    echo "[clawplay vision] ERROR: ${err}${reason:+ — $reason}" >&2
+    if api_is_auth_error_response "$response"; then
+      api_print_reconfigure_key_hint "[clawplay vision]"
+    else
+      echo "[clawplay vision] ERROR: ${err}${reason:+ — $reason}" >&2
+    fi
     exit 1
   fi
 

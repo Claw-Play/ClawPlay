@@ -47,21 +47,21 @@ function formatAbility(ability: string): string {
 }
 
 const ABILITY_COLORS: Record<string, string> = {
-  "llm.generate": "#a23f00",
-  "image.generate": "#fa7025",
-  "vision.analyze": "#586330",
-  "tts.synthesize": "#8a6040",
-  "voice.synthesize": "#5a7a4a",
+  "llm.generate": "#5b5ce2",
+  "image.generate": "#ff6b2c",
+  "vision.analyze": "#1b9a64",
+  "tts.synthesize": "#64748b",
+  "voice.synthesize": "#2d67f7",
 };
 
 const panelClassName =
-  "rounded-xl border border-[#eadfc8] bg-[radial-gradient(circle_at_top,_rgba(250,244,228,0.92),_rgba(255,252,246,0.98)_38%,_rgba(250,246,237,0.98)_100%)] shadow-[0_18px_44px_rgba(86,67,55,0.08)]";
+  "rounded-[8px] border border-[#dbe5f7] bg-white shadow-[0_12px_32px_rgba(25,43,87,0.04)]";
 const menuClassName =
-  "absolute left-0 top-full z-20 mt-2 min-w-[112px] rounded-xl border border-[#eadfc8] bg-[linear-gradient(180deg,#fffdf8_0%,#f7efe1_100%)] p-1 shadow-[0_16px_34px_rgba(86,67,55,0.16)] backdrop-blur-sm";
+  "absolute left-0 top-full z-20 mt-2 min-w-[112px] rounded-[10px] border border-[#dbe5f7] bg-white p-1 shadow-[0_16px_34px_rgba(25,43,87,0.12)] backdrop-blur-sm";
 const menuItemClassName =
-  "flex min-h-[30px] w-full items-center justify-between rounded-lg px-2.5 py-1 text-left text-xs font-semibold transition-colors";
+  "flex min-h-[30px] w-full items-center justify-between rounded-[8px] px-2.5 py-1 text-left text-xs font-semibold transition-colors";
 const headerCellClassName =
-  "px-3 py-2 text-[15px] font-semibold uppercase text-black";
+  "px-3 py-3 text-[13px] font-semibold text-[#15213b]";
 const bodyCellClassName = "px-3 py-2.5 align-middle";
 
 export default function UsersClient() {
@@ -206,8 +206,8 @@ export default function UsersClient() {
         aria-hidden="true"
         className={`ml-2 inline-flex h-7 w-7 items-center justify-center rounded-full transition-colors ${
           active
-            ? "bg-black/10 text-black shadow-[0_6px_16px_rgba(0,0,0,0.08)]"
-            : "text-black/30 hover:bg-black/5 hover:text-black"
+            ? "bg-[#edf4ff] text-[#2d67f7] shadow-[0_6px_16px_rgba(45,103,247,0.08)]"
+            : "text-[#7c879f] hover:bg-[#f7faff] hover:text-[#2d67f7]"
         }`}
       >
         <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
@@ -260,7 +260,7 @@ export default function UsersClient() {
       <button
         type="button"
         onClick={() => handleSortChange(field)}
-        className="rounded-full focus:outline-none focus:ring-2 focus:ring-black/15"
+        className="rounded-full focus:outline-none focus:ring-2 focus:ring-[#2d67f7]/20"
         aria-label={`Sort by ${label}`}
       >
         {renderSortIndicator(field)}
@@ -277,8 +277,8 @@ export default function UsersClient() {
         onClick={() => handleSortChange(field)}
         className={`inline-flex min-h-11 items-center gap-2 rounded-full border px-3 py-2 text-xs font-semibold transition-colors ${
           active
-            ? "border-[#a23f00] bg-[#f6e9d7] text-[#a23f00]"
-            : "border-[#eadfc8] bg-white text-black/60"
+            ? "border-[#2d67f7] bg-[#edf4ff] text-[#2d67f7]"
+            : "border-[#dbe5f7] bg-white text-[#52617d]"
         }`}
       >
         <span>{label}</span>
@@ -320,7 +320,7 @@ export default function UsersClient() {
       <div className={`${panelClassName} flex flex-col items-stretch gap-3 px-4 py-4 md:flex-row md:flex-wrap md:items-center`}>
         {/* Search */}
         <div className="relative w-full md:w-auto">
-          <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-black/30">
+          <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#7c879f]">
             <SearchIcon className="w-4 h-4" />
           </div>
           <input
@@ -328,12 +328,12 @@ export default function UsersClient() {
             value={search}
             onChange={(e) => { setSearch(e.target.value); setOffset(0); }}
             placeholder={t("search_users")}
-            className="w-full min-w-0 rounded-full border border-black/10 bg-white py-2.5 pl-10 pr-4 text-sm text-black placeholder:text-black/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_8px_20px_rgba(86,67,55,0.05)] transition-colors focus:border-black/30 focus:outline-none focus:ring-2 focus:ring-black/15 md:min-w-[220px]"
+            className="w-full min-w-0 rounded-[8px] border border-[#dbe5f7] bg-white py-2.5 pl-10 pr-4 text-sm text-[#15213b] placeholder:text-[#7c879f] shadow-[0_8px_20px_rgba(25,43,87,0.03)] transition-colors focus:border-[#2d67f7] focus:outline-none focus:ring-2 focus:ring-[#2d67f7]/15 md:min-w-[220px]"
             style={{ fontFamily: "var(--font-vietnam)" }}
           />
         </div>
 
-        <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-black/40 md:ml-auto">
+        <span className="text-[12px] font-medium text-[#6d7891] md:ml-auto">
           {t("users_count", { count: total.toLocaleString() })}
         </span>
       </div>
@@ -348,14 +348,14 @@ export default function UsersClient() {
       {/* Table */}
       <div className={`${panelClassName} min-h-[900px] overflow-hidden`}>
         {loading && users.length === 0 ? (
-          <div className="p-10 text-center font-body text-black/40 animate-pulse">{t("loading")}</div>
+          <div className="p-10 text-center font-body text-[#7c879f] animate-pulse">{t("loading")}</div>
         ) : error && users.length === 0 ? (
           <div className="p-10 text-center font-body text-red-600">{error}</div>
         ) : users.length === 0 ? (
-          <div className="p-10 text-center font-body text-black/40">{t("no_user_data")}</div>
+          <div className="p-10 text-center font-body text-[#7c879f]">{t("no_user_data")}</div>
         ) : (
           <>
-            <div className="flex flex-wrap gap-2 border-b border-[#e6dac2] px-4 py-3 md:hidden">
+            <div className="flex flex-wrap gap-2 border-b border-[#dbe5f7] px-4 py-3 md:hidden">
               {renderMobileSortButton("events", t("events"))}
               {renderMobileSortButton("token_used", t("quota_used"))}
               {renderMobileSortButton("last_active", t("last_active"))}
@@ -365,15 +365,15 @@ export default function UsersClient() {
               {users.map((u) => {
                 const displayRole = getDisplayRole(u);
                 return (
-                  <article key={u.userId} className="rounded-[24px] border border-[#eadfc8] bg-white/90 p-4 shadow-[0_8px_20px_rgba(86,67,55,0.05)]">
+                  <article key={u.userId} className="rounded-[12px] border border-[#dbe5f7] bg-white p-4 shadow-[0_8px_20px_rgba(25,43,87,0.04)]">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex min-w-0 items-center gap-3">
-                        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-[linear-gradient(135deg,#b45822_0%,#eb8747_100%)] text-[12px] font-bold text-white shadow-[0_8px_18px_rgba(178,88,34,0.2)]">
+                        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-[#2d67f7] text-[12px] font-bold text-white shadow-[0_8px_18px_rgba(45,103,247,0.2)]">
                           {(u.name || `U${u.userId}`).charAt(0).toUpperCase()}
                         </div>
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold text-black">{u.name || `User ${u.userId}`}</p>
-                          <p className="text-xs font-semibold text-black/40 [font-variant-numeric:tabular-nums]">#{u.userId.toLocaleString()}</p>
+                          <p className="truncate text-sm font-semibold text-[#15213b]">{u.name || `User ${u.userId}`}</p>
+                          <p className="text-xs font-semibold text-[#7c879f] [font-variant-numeric:tabular-nums]">#{u.userId.toLocaleString()}</p>
                         </div>
                       </div>
                       <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${getRoleChipClassName(displayRole)}`}>
@@ -382,27 +382,27 @@ export default function UsersClient() {
                     </div>
 
                     <div className="mt-4 grid grid-cols-3 gap-2 text-xs">
-                      <div className="rounded-2xl bg-[#faf3d0] px-3 py-2">
-                        <p className="text-black/40">{t("events")}</p>
-                        <p className="mt-1 font-semibold text-black [font-variant-numeric:tabular-nums]">{u.totalEvents.toLocaleString()}</p>
+                      <div className="rounded-[10px] bg-[#f7faff] px-3 py-2">
+                        <p className="text-[#7c879f]">{t("events")}</p>
+                        <p className="mt-1 font-semibold text-[#15213b] [font-variant-numeric:tabular-nums]">{u.totalEvents.toLocaleString()}</p>
                       </div>
-                      <div className="rounded-2xl bg-[#faf3d0] px-3 py-2">
-                        <p className="text-black/40">{t("quota_used")}</p>
-                        <p className="mt-1 font-semibold text-black [font-variant-numeric:tabular-nums]">{u.totalQuotaUsed.toLocaleString()}</p>
+                      <div className="rounded-[10px] bg-[#f7faff] px-3 py-2">
+                        <p className="text-[#7c879f]">{t("quota_used")}</p>
+                        <p className="mt-1 font-semibold text-[#15213b] [font-variant-numeric:tabular-nums]">{u.totalQuotaUsed.toLocaleString()}</p>
                       </div>
-                      <div className="rounded-2xl bg-[#faf3d0] px-3 py-2">
-                        <p className="text-black/40">{t("last_active")}</p>
-                        <p className="mt-1 text-[11px] font-semibold text-black [font-variant-numeric:tabular-nums]">
+                      <div className="rounded-[10px] bg-[#f7faff] px-3 py-2">
+                        <p className="text-[#7c879f]">{t("last_active")}</p>
+                        <p className="mt-1 text-[11px] font-semibold text-[#15213b] [font-variant-numeric:tabular-nums]">
                           {formatDate(u.lastActive ? new Date(u.lastActive) : null)}
                         </p>
                       </div>
                     </div>
 
                     <div className="mt-4">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-black/35">{t("top_abilities")}</p>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#7c879f]">{t("top_abilities")}</p>
                       <div className="mt-2 flex flex-wrap gap-1.5">
                         {u.topAbilities.length === 0 ? (
-                          <span className="text-xs font-medium text-black/40">—</span>
+                          <span className="text-xs font-medium text-[#7c879f]">—</span>
                         ) : (
                           u.topAbilities.slice(0, 3).map((a) => (
                             <span
@@ -436,8 +436,8 @@ export default function UsersClient() {
                 <col className="w-[240px]" />
               </colgroup>
               <thead>
-                <tr className="border-b border-[#e6dac2] bg-[linear-gradient(180deg,rgba(255,252,246,0.96),rgba(249,243,232,0.96))] text-left">
-                  <th className="pl-5 pr-3 py-2 text-[15px] font-semibold uppercase text-black">ID</th>
+                <tr className="border-b border-[#dbe5f7] bg-[#fbfdff] text-left">
+                  <th className="pl-5 pr-3 py-3 text-[13px] font-semibold text-[#15213b]">ID</th>
                   <th className={headerCellClassName}>{t("user_label")}</th>
                   <th className={headerCellClassName}>
                     <div ref={roleFilterRef} className="relative flex min-h-[44px] items-center">
@@ -445,10 +445,10 @@ export default function UsersClient() {
                       <button
                         type="button"
                         onClick={() => setIsRoleMenuOpen((prev) => !prev)}
-                        className={`ml-2 inline-flex h-6 w-6 items-center justify-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-black/15 ${
+                        className={`ml-2 inline-flex h-6 w-6 items-center justify-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[#2d67f7]/20 ${
                           roleFilter === "all"
-                            ? "text-black/30 hover:bg-black/5 hover:text-black focus:bg-black/5 focus:text-black"
-                            : "bg-black/10 text-black hover:bg-black/15 focus:bg-black/15"
+                            ? "text-[#7c879f] hover:bg-[#f7faff] hover:text-[#2d67f7] focus:bg-[#f7faff] focus:text-[#2d67f7]"
+                            : "bg-[#edf4ff] text-[#2d67f7] hover:bg-[#dceaff] focus:bg-[#dceaff]"
                         }`}
                         aria-haspopup="menu"
                         aria-expanded={isRoleMenuOpen}
@@ -479,8 +479,8 @@ export default function UsersClient() {
                                 }}
                                 className={`${menuItemClassName} ${
                                   selected
-                                    ? "bg-black/10 text-black"
-                                    : "text-black/60 hover:bg-black/5 hover:text-black"
+                                    ? "bg-[#edf4ff] text-[#2d67f7]"
+                                    : "text-[#52617d] hover:bg-[#f7faff] hover:text-[#2d67f7]"
                                 }`}
                                 style={{ fontFamily: "var(--font-vietnam)" }}
                                 role="menuitemradio"
@@ -490,7 +490,7 @@ export default function UsersClient() {
                                 <span
                                   aria-hidden="true"
                                   className={`inline-flex h-4 w-4 items-center justify-center ${
-                                    selected ? "text-black" : "text-transparent"
+                                    selected ? "text-[#2d67f7]" : "text-transparent"
                                   }`}
                                 >
                                   <CheckIcon className="w-3 h-3" />
@@ -518,13 +518,13 @@ export default function UsersClient() {
                 {users.map((u, _i) => {
                   const displayRole = getDisplayRole(u);
                   return (
-                    <tr key={u.userId} className="border-b border-[#efe4cf] transition-colors hover:bg-[linear-gradient(90deg,rgba(248,241,226,0.75),rgba(255,252,246,0.15))]">
-                      <td className="pl-5 pr-3 py-2.5 whitespace-nowrap text-[14px] font-semibold text-black [font-variant-numeric:tabular-nums]">
+                    <tr key={u.userId} className="border-b border-[#e8eef8] transition-colors hover:bg-[#f7faff]">
+                      <td className="pl-5 pr-3 py-2.5 whitespace-nowrap text-[14px] font-medium text-[#15213b] [font-variant-numeric:tabular-nums]">
                         {u.userId.toLocaleString()}
                       </td>
                       <td className={bodyCellClassName}>
                         <div className="flex items-center gap-3">
-                          <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-[linear-gradient(135deg,#b45822_0%,#eb8747_100%)] text-[12px] font-bold text-white shadow-[0_8px_18px_rgba(178,88,34,0.2)]">
+                          <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-[#2d67f7] text-[12px] font-bold text-white shadow-[0_8px_18px_rgba(45,103,247,0.2)]">
                             {(u.name || `U${u.userId}`).charAt(0).toUpperCase()}
                           </div>
                           <div className="min-w-0">
@@ -566,7 +566,7 @@ export default function UsersClient() {
                                 aria-hidden="true"
                                 className={`inline-flex h-5 w-5 items-center justify-center rounded-full transition-all ${
                                   getRoleChipClassName(displayRole)
-                                } ${openUserRoleMenuId === u.userId ? "rotate-180 shadow-[0_6px_16px_rgba(86,67,55,0.1)]" : ""}`}
+                                } ${openUserRoleMenuId === u.userId ? "rotate-180 shadow-[0_6px_16px_rgba(25,43,87,0.1)]" : ""}`}
                               >
                                 <ChevronDownIcon className="w-2.5 h-2.5" />
                               </span>
@@ -585,8 +585,8 @@ export default function UsersClient() {
                                       }}
                                       className={`${menuItemClassName} ${
                                         selected
-                                          ? "bg-[#eee0c9] text-[#75563f]"
-                                          : "text-[#8d745e] hover:bg-[#f5ede0] hover:text-[#a23f00]"
+                                          ? "bg-[#edf4ff] text-[#2d67f7]"
+                                          : "text-[#52617d] hover:bg-[#f7faff] hover:text-[#2d67f7]"
                                       }`}
                                       style={{ fontFamily: "var(--font-vietnam)" }}
                                       role="menuitemradio"
@@ -596,7 +596,7 @@ export default function UsersClient() {
                                       <span
                                         aria-hidden="true"
                                         className={`inline-flex h-4 w-4 items-center justify-center ${
-                                          selected ? "text-[#a23f00]" : "text-transparent"
+                                          selected ? "text-[#2d67f7]" : "text-transparent"
                                         }`}
                                       >
                                         <CheckIcon className="w-3 h-3" />
@@ -609,19 +609,19 @@ export default function UsersClient() {
                           </div>
                         )}
                       </td>
-                      <td className={`${bodyCellClassName} whitespace-nowrap text-[14px] font-semibold text-black [font-variant-numeric:tabular-nums]`}>
+                      <td className={`${bodyCellClassName} whitespace-nowrap text-[14px] font-medium text-[#15213b] [font-variant-numeric:tabular-nums]`}>
                         {u.totalEvents.toLocaleString()}
                       </td>
-                      <td className={`${bodyCellClassName} whitespace-nowrap text-[14px] font-semibold text-black [font-variant-numeric:tabular-nums]`}>
+                      <td className={`${bodyCellClassName} whitespace-nowrap text-[14px] font-medium text-[#15213b] [font-variant-numeric:tabular-nums]`}>
                         {u.totalQuotaUsed.toLocaleString()}
                       </td>
-                      <td className={`${bodyCellClassName} whitespace-nowrap text-[14px] font-semibold text-black [font-variant-numeric:tabular-nums]`}>
+                      <td className={`${bodyCellClassName} whitespace-nowrap text-[14px] font-medium text-[#15213b] [font-variant-numeric:tabular-nums]`}>
                         {formatDate(u.lastActive ? new Date(u.lastActive) : null)}
                       </td>
                       <td className={bodyCellClassName}>
                         <div className="flex flex-wrap gap-1.5 overflow-hidden">
                           {u.topAbilities.length === 0 ? (
-                            <span className="text-xs font-medium text-black/40">—</span>
+                            <span className="text-xs font-medium text-[#7c879f]">—</span>
                           ) : (
                             u.topAbilities.map((a) => (
                               <span
@@ -644,7 +644,7 @@ export default function UsersClient() {
               </tbody>
             </table>
             {loading && (
-              <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,253,248,0.24),rgba(247,240,226,0.14))] backdrop-blur-[1px]">
+              <div className="pointer-events-none absolute inset-0 bg-white/45 backdrop-blur-[1px]">
                 <div className="absolute inset-x-6 top-6 h-px bg-[linear-gradient(90deg,transparent,rgba(0,0,0,0.18),transparent)] animate-pulse" />
               </div>
             )}
@@ -659,11 +659,11 @@ export default function UsersClient() {
           <button
             disabled={offset === 0}
             onClick={() => setOffset(Math.max(0, offset - limit))}
-            className="rounded-lg border border-black/10 bg-white px-4 py-2 text-sm font-body text-black shadow-[0_8px_20px_rgba(86,67,55,0.06)] transition-colors hover:bg-black/5 disabled:opacity-40"
+            className="inline-flex items-center gap-1 rounded-[8px] border border-[#dbe5f7] bg-white px-4 py-2 text-sm font-body text-[#52617d] shadow-[0_8px_20px_rgba(25,43,87,0.04)] transition-colors hover:bg-[#f7faff] disabled:opacity-40"
           >
             <ChevronLeftIcon className="w-3 h-3" /> {t("pagination_prev")}
           </button>
-          <span className="px-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-black/40">
+          <span className="px-4 text-[12px] font-medium text-[#6d7891]">
             {t("pagination_status", {
               current: String(currentPage),
               total: String(totalPages),
@@ -672,7 +672,7 @@ export default function UsersClient() {
           <button
             disabled={offset + limit >= total}
             onClick={() => setOffset(offset + limit)}
-            className="rounded-lg border border-black/10 bg-white px-4 py-2 text-sm font-body text-black shadow-[0_8px_20px_rgba(86,67,55,0.06)] transition-colors hover:bg-black/5 disabled:opacity-40"
+            className="inline-flex items-center gap-1 rounded-[8px] border border-[#dbe5f7] bg-white px-4 py-2 text-sm font-body text-[#52617d] shadow-[0_8px_20px_rgba(25,43,87,0.04)] transition-colors hover:bg-[#f7faff] disabled:opacity-40"
           >
             {t("pagination_next")} <ChevronRightIcon className="w-3 h-3" />
           </button>

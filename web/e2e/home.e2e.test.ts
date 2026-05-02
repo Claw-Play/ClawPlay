@@ -37,6 +37,25 @@ test.describe("Home page", () => {
     await expect(page.getByRole("link", { name: /浏览.*技能|view all skills/i })).toBeVisible();
   });
 
+  test("home nav includes hot skills anchor, skills, and community links", async ({ page }) => {
+    await page.goto("/");
+    const hotLink = page.getByRole("link", { name: /热榜|hot/i });
+    await expect(hotLink).toHaveAttribute("href", "/#hot-skills");
+    await expect(page.getByRole("link", { name: /技能库|skills/i }).first()).toHaveAttribute(
+      "href",
+      "/skills"
+    );
+    await expect(page.getByRole("link", { name: /社区|community/i }).first()).toHaveAttribute(
+      "href",
+      "/community"
+    );
+    await hotLink.click();
+    await expect(page).toHaveURL(/#hot-skills$/);
+    const hotSection = page.locator("#hot-skills");
+    const box = await hotSection.boundingBox();
+    expect(box?.y ?? 0).toBeGreaterThan(140);
+  });
+
   test("footer renders with all four columns and links", async ({ page }) => {
     await page.goto("/");
     await expect(page.getByText("About").first()).toBeVisible();

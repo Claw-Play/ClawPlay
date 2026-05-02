@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { users, userIdentities } from "@/lib/db/schema";
-import { eq, and } from "drizzle-orm";
+import { users, userIdentities, userTokens } from "@/lib/db/schema";
+import { eq, and, isNull } from "drizzle-orm";
 import { exchangeDiscordCode, getDiscordUserInfo } from "@/lib/oauth";
 import { signJWT, buildSetCookieHeader } from "@/lib/auth";
 import { DEFAULT_QUOTA_FREE, ensureQuota } from "@/lib/redis";
 import { getPublicOrigin } from "@/lib/request-origin";
 
 const AVATAR_COLORS = [
-  "#586330", "#a23f00", "#fa7025", "#8a6040",
+  "#586330", "#2d67f7", "#4f82f7", "#8a6040",
   "#5a7a4a", "#4a7a8a", "#7a4a8a", "#8a4a5a",
 ];
 const randomAvatarColor = () =>
@@ -52,6 +52,18 @@ export async function GET(request: NextRequest) {
       userId = identity.userId;
       const user = await db.query.users.findFirst({ where: eq(users.id, userId) });
       role = (user?.role as "user" | "admin" | "reviewer") ?? "user";
+
+      // Returning user with a token → skip dashboard
+      if (redirectPath === "/dashboard") {
+        const existingToken = await db
+          .select({ id: userTokens.id })
+          .from(userTokens)
+          .where(and(eq(userTokens.userId, userId), isNull(userTokens.revokedAt)))
+          .limit(1);
+        if (existingToken.length > 0) {
+          redirectPath = "/skills";
+        }
+      }
     } else {
       const [user] = await db
         .insert(users)

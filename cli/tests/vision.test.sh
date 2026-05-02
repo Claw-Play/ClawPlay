@@ -35,6 +35,7 @@ assert_contains "no prompt → error"  "--prompt is required" "$RS_STDERR"
 assert_exit     "no prompt → exit 1" "1" "$RS_EXIT"
 
 run_script --lib "$LIB" \
+  --env "CLAWPLAY_TOKEN=" \
   --fn "cmd_vision analyze --image ${TEST_PNG} --prompt 'describe'"
 assert_contains "no token → error"  "CLAWPLAY_TOKEN is not set" "$RS_STDERR"
 assert_exit     "no token → exit 1" "1" "$RS_EXIT"
@@ -133,6 +134,18 @@ assert_eq   "URL image → text response" "A remote image." "$RS_STDOUT"
 assert_exit "URL image → exit 0"        "0"              "$RS_EXIT"
 
 # ── Error response ────────────────────────────────────────────────────────────
+
+echo ""
+echo "▶ vision analyze — relay error"
+echo ""
+
+run_script --lib "$LIB" \
+  --env "CLAWPLAY_TOKEN=tok" \
+  --curl-response '{"error":"Token revoked."}' \
+  --fn "cmd_vision analyze --image ${TEST_PNG} --prompt 'x'"
+assert_contains "auth error → reconfigure hint shown" "重新配置后再试" "$RS_STDERR"
+assert_contains "auth error → setup hint shown" "clawplay setup" "$RS_STDERR"
+assert_exit     "auth error → exit 1"              "1" "$RS_EXIT"
 
 echo ""
 echo "▶ vision analyze — relay error"

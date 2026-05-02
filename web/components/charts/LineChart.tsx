@@ -58,8 +58,8 @@ function formatDateLabel(date: string) {
 export default function LineChart({
   data,
   label,
-  color = "#a23f00",
-  height = 210,
+  color = "#2d67f7",
+  height = 390,
 }: LineChartProps) {
   const [tooltip, setTooltip] = useState<{
     point: { x: number; y: number; date: string; count: number };
@@ -69,14 +69,14 @@ export default function LineChart({
 
   if (!data || data.length === 0) {
     return (
-      <div className="flex items-center justify-center text-[#a89070] text-sm font-body" style={{ height }}>
+      <div className="flex items-center justify-center text-sm font-medium text-[#8aa0cb]" style={{ height }}>
         No data
       </div>
     );
   }
 
   const max = Math.max(...data.map((d) => d.count), 1);
-  const padding = { top: 12, right: 14, bottom: 28, left: 40 };
+  const padding = { top: 18, right: 18, bottom: 44, left: 50 };
   const width = 480;
   const chartWidth = width - padding.left - padding.right;
   const chartHeight = height - padding.top - padding.bottom;
@@ -93,7 +93,7 @@ export default function LineChart({
 
   return (
     <div
-      className="relative w-full overflow-hidden rounded-[24px] bg-[radial-gradient(circle_at_top,_rgba(255,253,248,0.96),_rgba(247,240,226,0.92)_100%)] p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]"
+      className="relative w-full overflow-hidden rounded-[24px] bg-[#f7faff] p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]"
       onMouseMove={(e) => {
         const rect = e.currentTarget.getBoundingClientRect();
         setTooltip((prev) =>
@@ -130,18 +130,18 @@ export default function LineChart({
                 y1={y}
                 x2={width - padding.right}
                 y2={y}
-                stroke={frac === 1 ? "#dcc9a8" : "#eadfc8"}
+                stroke={frac === 1 ? "#d4def0" : "#dfe7f5"}
                 strokeWidth="1"
                 strokeDasharray={frac === 1 ? undefined : "3 5"}
               />
               <text
-                x={padding.left - 10}
+                x={padding.left - 12}
                 y={y + 4}
                 textAnchor="end"
-                fontSize="11"
+                fontSize="12"
                 fontWeight="600"
-                fill="#b09a7a"
-                fontFamily="Be Vietnam Pro, sans-serif"
+                fill="#8aa0cb"
+                fontFamily="var(--font-geist-sans), sans-serif"
               >
                 {val >= 1000 ? `${(val / 1000).toFixed(1)}k` : val}
               </text>
@@ -158,7 +158,7 @@ export default function LineChart({
           strokeWidth="3"
           strokeLinejoin="round"
           strokeLinecap="round"
-          filter="drop-shadow(0 10px 16px rgba(162,63,0,0.14))"
+          filter="drop-shadow(0 10px 16px rgba(45,103,247,0.14))"
         />
 
         {points.map((p, i) => (
@@ -185,7 +185,7 @@ export default function LineChart({
               fill={color}
               opacity={tooltip?.point === p ? "0.3" : "0.12"}
             />
-            <circle cx={p.x} cy={p.y} r="4.2" fill="#fffdf8" stroke={color} strokeWidth="2" />
+            <circle cx={p.x} cy={p.y} r="4.2" fill="#ffffff" stroke={color} strokeWidth="2" />
             <circle cx={p.x} cy={p.y} r="1.9" fill={color} />
           </g>
         ))}
@@ -194,12 +194,12 @@ export default function LineChart({
           <text
             key={i}
             x={p.x}
-            y={padding.top + chartHeight + 22}
+            y={padding.top + chartHeight + 30}
             textAnchor="middle"
-            fontSize="10"
+            fontSize="12"
             fontWeight="600"
-            fill="#b09a7a"
-            fontFamily="Be Vietnam Pro, sans-serif"
+            fill="#7c879f"
+            fontFamily="var(--font-geist-sans), sans-serif"
           >
             {formatDateLabel(p.date)}
           </text>
@@ -208,7 +208,7 @@ export default function LineChart({
 
       {tooltip && (
         <div
-          className="pointer-events-none absolute z-10 rounded-xl bg-[#3d2c1a] px-3 py-2 text-center shadow-lg"
+          className="pointer-events-none absolute z-10 rounded-xl bg-[#15213b] px-3 py-2 text-center shadow-lg"
           style={{
             left: tooltip.containerX,
             top: tooltip.containerY,
@@ -219,8 +219,8 @@ export default function LineChart({
           }}
         >
           <div
-            className="text-xs font-bold text-[#f5d9a8]"
-            style={{ fontFamily: "Be Vietnam Pro, sans-serif" }}
+            className="text-xs font-bold text-white"
+            style={{ fontFamily: "var(--font-geist-sans), sans-serif" }}
           >
             {tooltip.point.count.toLocaleString()}
           </div>

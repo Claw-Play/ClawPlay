@@ -35,36 +35,35 @@ export default function EventTrendCard({
   }, [period, eventType]);
 
   return (
-    <div className="bg-white rounded-[32px] p-6 shadow-[0_8px_24px_rgba(86,67,55,0.06)]">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-semibold text-[#a23f00] font-heading">{t("event_trend")}</h3>
-        <div className="flex flex-wrap gap-1.5">
+    <div className="flex h-full min-h-[486px] flex-col rounded-[28px] border border-[#dbe5f7] bg-white p-5 shadow-[0_14px_32px_rgba(25,43,87,0.05)] sm:p-6">
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="text-[15px] font-semibold text-[#15213b]">{t("event_trend")}</h3>
+        <div className="flex flex-wrap justify-end gap-1.5">
           {EVENT_OPTIONS.map((opt) => (
             <button
               key={opt.value}
               type="button"
               onClick={() => setEventType(opt.value)}
-              className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
+              className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
                 eventType === opt.value
-                  ? "bg-[#a23f00] text-white"
-                  : "border border-[#eadfc8] text-[#8d745e] hover:border-[#d8b07d] hover:text-[#a23f00]"
+                  ? "bg-[#2d67f7] text-white shadow-[0_8px_16px_rgba(45,103,247,0.18)]"
+                  : "border border-[#dbe5f7] text-[#5f6c86] hover:border-[#bfd0f4] hover:text-[#2d67f7]"
               }`}
-              style={{ fontFamily: "var(--font-vietnam)" }}
             >
               {t(opt.labelKey)}
             </button>
           ))}
         </div>
       </div>
-      <div className="relative h-[220px]">
-        <LineChart data={data} color="#a23f00" height={220} />
+      <div className="relative mt-5 flex-1 min-h-[360px]">
+        <LineChart data={data} color="#2d67f7" height={390} />
         {loading && data.length > 0 && (
-          <div className="pointer-events-none absolute inset-0 rounded-[24px] bg-[linear-gradient(180deg,rgba(255,253,248,0.28),rgba(247,240,226,0.16))] backdrop-blur-[1px]">
-            <div className="absolute inset-x-6 top-6 h-px bg-[linear-gradient(90deg,transparent,rgba(162,63,0,0.2),transparent)] animate-pulse" />
+          <div className="pointer-events-none absolute inset-0 rounded-[24px] bg-[linear-gradient(180deg,rgba(247,250,255,0.24),rgba(231,238,252,0.18))] backdrop-blur-[1px]">
+            <div className="absolute inset-x-6 top-6 h-px bg-[linear-gradient(90deg,transparent,rgba(45,103,247,0.2),transparent)] animate-pulse" />
           </div>
         )}
         {loading && data.length === 0 && (
-          <div className="absolute inset-0 rounded-[24px] bg-[#f5ede0] animate-pulse" />
+          <div className="absolute inset-0 rounded-[24px] bg-[#f7faff] animate-pulse" />
         )}
       </div>
     </div>

@@ -10,8 +10,8 @@ import { getT } from "@/lib/i18n";
 
 const AVATAR_COLORS = [
   "#586330",
-  "#a23f00",
-  "#fa7025",
+  "#2d67f7",
+  "#4f82f7",
   "#8a6040",
   "#5a7a4a",
   "#4a7a8a",

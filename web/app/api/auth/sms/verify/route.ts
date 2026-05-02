@@ -20,7 +20,7 @@ function randomName(): string {
 }
 
 const AVATAR_COLORS = [
-  "#586330", "#a23f00", "#fa7025", "#8a6040",
+  "#586330", "#2d67f7", "#4f82f7", "#8a6040",
   "#5a7a4a", "#4a7a8a", "#7a4a8a", "#8a4a5a",
 ];
 const randomAvatarColor = () =>

@@ -3,6 +3,7 @@
  * Uses a real SQLite temp DB; Redis and analytics are mocked.
  */
 import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
+import { eq } from "drizzle-orm";
 import { tempDbPath, cleanupDb, seedUser, seedAdmin } from "../helpers/db";
 import { makeRequest } from "../helpers/request";
 
@@ -50,10 +51,13 @@ process.env.UPSTASH_REDIS_REST_TOKEN = "mock-token";
 let dbPath: string;
 let db: any;
 let GET_adminSkills: (req: any) => Promise<Response>;
+let GET_adminSkill: (req: any, ctx: any) => Promise<Response>;
+let GET_pendingCount: (req: any) => Promise<Response>;
 let PATCH_adminSkill: (req: any, ctx: any) => Promise<Response>;
 let adminCookie: string;
 let userCookie: string;
 let pendingSkillId: string;
+let newerPendingSkillId: string;
 
 beforeAll(async () => {
   dbPath = tempDbPath();
@@ -64,9 +68,13 @@ beforeAll(async () => {
   db = dbMod.db;
 
   const listMod = await import("@/app/api/admin/skills/route");
+  const detailMod = await import("@/app/api/admin/skills/[id]/route");
+  const pendingCountMod = await import("@/app/api/admin/skills/pending-count/route");
   const patchMod = await import("@/app/api/admin/skills/[id]/route");
 
   GET_adminSkills = listMod.GET;
+  GET_adminSkill = detailMod.GET;
+  GET_pendingCount = pendingCountMod.GET;
   PATCH_adminSkill = patchMod.PATCH;
 
   // Seed users
@@ -103,6 +111,41 @@ beforeAll(async () => {
     moderationStatus: "pending",
     moderationFlags: "[]",
   });
+
+  // Make the original pending skill clearly older than the next one.
+  const olderAt = new Date("2026-01-01T00:00:00.000Z");
+  await db.update(skills).set({ createdAt: olderAt, updatedAt: olderAt }).where(eq(skills.id, pendingSkillId));
+
+  newerPendingSkillId = "newer-pending-skill-id";
+  const newerAt = new Date("2026-01-01T00:10:00.000Z");
+  await db.insert(skills).values({
+    id: newerPendingSkillId,
+    slug: "newer-pending-skill",
+    name: "Newer Pending Skill",
+    summary: "Newest should appear first",
+    authorName: "author",
+    authorEmail: "author@example.com",
+    repoUrl: "",
+    iconEmoji: "🦐",
+    moderationStatus: "pending",
+    moderationReason: "",
+    moderationFlags: "[]",
+    latestVersionId: "v2",
+    statsStars: 0,
+    createdAt: newerAt,
+    updatedAt: newerAt,
+  });
+  await db.insert(skillVersions).values({
+    id: "v2",
+    skillId: newerPendingSkillId,
+    version: "1.0.0",
+    changelog: "",
+    content: "",
+    parsedMetadata: "{}",
+    moderationStatus: "pending",
+    moderationFlags: "[]",
+    createdAt: newerAt,
+  });
 });
 
 afterAll(() => {
@@ -123,6 +166,10 @@ describe("GET /api/admin/skills", () => {
     expect(res.status).toBe(200);
     const slugs = json.skills.map((s: any) => s.slug);
     expect(slugs).toContain("pending-skill");
+    expect(slugs).toContain("newer-pending-skill");
+    expect(slugs[0]).toBe("newer-pending-skill");
+    expect(json.pagination.total).toBeGreaterThanOrEqual(2);
+    expect(json.pagination.limit).toBe(10);
   });
 
   it("regular user → 403", async () => {
@@ -137,6 +184,32 @@ describe("GET /api/admin/skills", () => {
     const req = makeRequest("GET", "/api/admin/skills");
     const res = await GET_adminSkills(req);
     expect(res.status).toBe(401);
+  });
+});
+
+describe("GET /api/admin/skills/pending-count", () => {
+  it("admin → 200, returns pending count", async () => {
+    cookieStore.token = adminCookie.replace("clawplay_token=", "");
+    const req = makeRequest("GET", "/api/admin/skills/pending-count", { cookie: adminCookie });
+    const res = await GET_pendingCount(req);
+    const json = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(json.count).toBeGreaterThanOrEqual(2);
+  });
+});
+
+describe("GET /api/admin/skills/[id]", () => {
+  it("admin → 200, returns a single skill with latest version content", async () => {
+    cookieStore.token = adminCookie.replace("clawplay_token=", "");
+    const req = makeRequest("GET", `/api/admin/skills/${pendingSkillId}`, { cookie: adminCookie });
+    const res = await GET_adminSkill(req, { params: { id: pendingSkillId } });
+    const json = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(json.skill.id).toBe(pendingSkillId);
+    expect(json.skill.skillMdContent).toBeDefined();
+    expect(json.skill.workflowMd).toBeDefined();
   });
 });
 

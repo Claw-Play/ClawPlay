@@ -26,8 +26,8 @@ interface SkillSummary {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  approved: "bg-[#586330]/10 text-[#586330]",
-  pending: "bg-[#a23f00]/10 text-[#a23f00]",
+  approved: "bg-[#e9f8ef] text-[#379465]",
+  pending: "bg-[#edf4ff] text-[#2d67f7]",
   rejected: "bg-red-100 text-red-600",
 };
 
@@ -68,10 +68,10 @@ export function MySkillsClient() {
     return (
       <div className="space-y-4">
         {[1, 2].map((i) => (
-          <div key={i} className="bg-[#fffdf7] rounded-[24px] p-5 sm:p-6 border border-[#e8dfc8] animate-pulse">
-            <div className="h-5 bg-[#e8dfc8] rounded w-1/3 mb-3" />
-            <div className="h-4 bg-[#e8dfc8] rounded w-2/3 mb-4" />
-            <div className="h-4 bg-[#e8dfc8] rounded w-1/4" />
+          <div key={i} className="rounded-[24px] border border-[#dbe5f7] bg-white p-5 shadow-[0_12px_28px_rgba(25,43,87,0.04)] animate-pulse">
+            <div className="mb-3 h-5 w-1/3 rounded bg-[#e9eef8]" />
+            <div className="mb-4 h-4 w-2/3 rounded bg-[#e9eef8]" />
+            <div className="h-4 w-1/4 rounded bg-[#e9eef8]" />
           </div>
         ))}
       </div>
@@ -80,7 +80,7 @@ export function MySkillsClient() {
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 text-red-700 rounded-[24px] px-5 py-4 text-sm font-body">
+      <div className="rounded-[24px] border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700">
         {error}
       </div>
     );
@@ -88,12 +88,12 @@ export function MySkillsClient() {
 
   if (skills.length === 0) {
     return (
-      <div className="bg-[#fffdf7] rounded-[24px] p-8 sm:p-10 border border-[#e8dfc8] text-center space-y-3">
+      <div className="space-y-3 rounded-[14px] border border-[#dfe5ef] bg-white p-8 text-center shadow-[0_8px_18px_rgba(20,31,54,0.03)] sm:p-10">
         <div className="text-4xl">🌱</div>
-        <p className="text-[#7a6a5a] font-body">{t("empty")}</p>
+        <p className="text-[#7c879f]">{t("empty")}</p>
         <Link
           href="/submit"
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-gradient-to-r from-[#a23f00] to-[#fa7025] text-white text-sm font-semibold font-heading hover:opacity-90 transition-opacity"
+          className="inline-flex items-center gap-2 rounded-[7px] bg-[#2d67f7] px-5 py-2.5 text-sm font-medium text-white shadow-[0_10px_18px_rgba(45,103,247,0.18)] transition-colors hover:bg-[#2457d4]"
         >
           {t("submit_first")}
         </Link>
@@ -106,28 +106,28 @@ export function MySkillsClient() {
       {skills.map((skill) => (
         <div
           key={skill.id}
-          className="bg-[#fffdf7] rounded-[24px] p-5 sm:p-6 border border-[#e8dfc8] card-shadow"
+          className="rounded-[14px] border border-[#dfe5ef] bg-white px-6 py-5 shadow-[0_8px_18px_rgba(20,31,54,0.03)]"
         >
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-start gap-4 min-w-0">
-              <span className="text-3xl flex-shrink-0">{skill.iconEmoji}</span>
+              <span className="text-[30px] flex-shrink-0 leading-none">{skill.iconEmoji}</span>
               <div className="min-w-0">
-                <div className="flex items-center gap-2 mb-1 flex-wrap">
-                  <h3 className="text-lg font-bold font-heading text-[#564337] truncate">
+                <div className="mb-1 flex flex-wrap items-center gap-2">
+                  <h3 className="truncate text-[18px] font-semibold text-[#15213b]">
                     {skill.name}
                   </h3>
                   <StatusBadge status={skill.moderationStatus} />
                 </div>
                 {skill.summary && (
-                  <p className="text-sm text-[#7a6a5a] font-body mb-2 line-clamp-1">
+                  <p className="mb-2 line-clamp-1 text-[14px] text-[#7c879f]">
                     {skill.summary}
                   </p>
                 )}
                 {skill.latestVersion && (
-                  <p className="text-xs text-[#a89070] font-body">
+                  <p className="text-[12px] text-[#8aa0cb]">
                     {t("version")} {skill.latestVersion.version}
                     {skill.latestVersion.moderationStatus === "pending" && (
-                      <span className="ml-2 text-[#a23f00]">
+                      <span className="ml-2 text-[#c45f1d]">
                         — {t("pending_review")}
                       </span>
                     )}
@@ -142,14 +142,14 @@ export function MySkillsClient() {
             <div className="flex flex-wrap items-center gap-2 flex-shrink-0">
               <Link
                 href={`/skills/${skill.slug}/versions`}
-                className="inline-flex min-h-11 items-center px-3 py-1.5 text-xs font-semibold text-[#564337] bg-[#f0e8d0] rounded-full font-body hover:bg-[#e8dfc8] transition-colors"
+                className="inline-flex min-h-11 items-center rounded-[7px] border border-[#dbe3ef] bg-white px-4 py-1.5 text-[13px] font-medium text-[#5f6c86] transition-colors hover:bg-[#f7faff]"
               >
                 {t("versions")}
               </Link>
               {skill.moderationStatus === "approved" && (
                 <Link
                   href={`/skills/${skill.slug}/versions/new`}
-                  className="inline-flex min-h-11 items-center px-3 py-1.5 text-xs font-semibold text-white bg-gradient-to-r from-[#a23f00] to-[#fa7025] rounded-full font-heading hover:opacity-90 transition-opacity"
+                  className="inline-flex min-h-11 items-center rounded-[7px] bg-[#1f62e8] px-4 py-1.5 text-[13px] font-medium text-white shadow-[0_10px_18px_rgba(45,103,247,0.18)] transition-colors hover:bg-[#2457d4]"
                 >
                   {t("new_version")}
                 </Link>

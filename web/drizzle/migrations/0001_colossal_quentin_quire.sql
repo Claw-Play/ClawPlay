@@ -1,0 +1,1 @@
+CREATE INDEX `skills_pending_by_created` ON `skills` (`moderation_status`,`deleted_at`,`created_at`);

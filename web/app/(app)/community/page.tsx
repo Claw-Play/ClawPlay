@@ -10,12 +10,12 @@ export default async function CommunityPage() {
         <div className="text-6xl">🌱</div>
 
         {/* Title */}
-        <h1 className="text-4xl md:text-5xl font-extrabold font-heading text-[#564337] leading-tight">
+        <h1 className="text-4xl md:text-5xl font-extrabold font-heading text-[#1f2b45] leading-tight">
           {t("coming_soon_title")}
         </h1>
 
         {/* Description */}
-        <p className="text-lg text-[#7a6a5a] font-body leading-relaxed">
+        <p className="text-lg text-[#52617d] font-body leading-relaxed">
           {t("coming_soon_desc")}
         </p>
       </div>

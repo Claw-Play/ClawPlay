@@ -19,6 +19,19 @@ if [[ -z "${CLAWPLAY_API_URL:-}" ]]; then
   export CLAWPLAY_API_URL="$(_auto_detect_api_url)"
 fi
 
+clawplay_detect_lang() {
+  local locale="${CLAWPLAY_LANG:-}"
+  if [[ -z "$locale" ]]; then
+    locale="${LANG:-}${LC_ALL:-}"
+  fi
+
+  if [[ "$locale" =~ zh ]]; then
+    echo "zh"
+  else
+    echo "en"
+  fi
+}
+
 # Refresh CLAWPLAY_TOKEN using the refresh endpoint.
 # Returns 0 on success and prints the new token to stdout.
 # Returns 1 if refresh fails.
@@ -47,6 +60,37 @@ api_refresh_token() {
 
   echo "$new_token"
   return 0
+}
+
+# Return 0 when a response looks like an auth failure that should prompt the
+# user to reconfigure their key.
+api_is_auth_error_response() {
+  local response="${1:-}"
+  local err
+
+  if [[ -z "$response" ]]; then
+    return 1
+  fi
+
+  err=$(echo "$response" | jq -r '.error // empty' 2>/dev/null)
+  err=$(printf '%s' "$err" | tr '[:upper:]' '[:lower:]')
+
+  printf '%s' "$err" | grep -Eiq 'unauthorized|not authorized|invalid token|token revoked|token expired|token invalid|authentication required|未授权|令牌失效|密钥失效'
+}
+
+# Print a consistent guidance message for revoked/invalid keys.
+api_print_reconfigure_key_hint() {
+  local prefix="${1:-[clawplay]}"
+  local lang
+  lang="$(clawplay_detect_lang)"
+
+  if [[ "$lang" == "zh" ]]; then
+    echo "${prefix} ERROR: 你的 ClawPlay 密钥已失效或已被撤销，请重新配置后再试。" >&2
+    echo "${prefix} 运行 'clawplay setup' 重新绑定密钥，或前往 https://clawplay.shop/dashboard 重新生成。" >&2
+  else
+    echo "${prefix} ERROR: Your ClawPlay key has expired or been revoked. Please reconfigure it and try again." >&2
+    echo "${prefix} Run 'clawplay setup' to bind a new key, or visit https://clawplay.shop/dashboard to regenerate one." >&2
+  fi
 }
 
 # Perform an authenticated API call with auto token refresh on 401.

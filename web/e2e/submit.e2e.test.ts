@@ -61,6 +61,7 @@ test.describe("Skill submission flow", () => {
     await page.goto("/submit");
     // SKILL.md is required — browser prevents form submission if empty
     await page.getByLabel(/SKILL.md 内容|SKILL.md content/i).fill(SAMPLE_SKILL_MD);
+    await page.getByLabel(/简介|summary/i).fill("Testing validation");
     // Name is required — click submit without name
     await page.getByRole("button", { name: /提交审核|submit for review/i }).click({ force: true });
     // Browser native validation keeps user on the form

@@ -49,13 +49,13 @@ function StatItem({ value, label, unit, entered, delay, isLast }: StatItemProps)
       {/* Number + unit row */}
       <div className="flex items-baseline gap-1">
         <span
-          className="font-heading font-extrabold leading-none text-[#564337]"
+          className="font-heading font-extrabold leading-none text-[#1f2b45]"
           style={{ fontSize: "clamp(1.5rem, 3vw, 2.25rem)" }}
           aria-live="polite"
         >
           {formatted}
         </span>
-        <span className="text-[10px] font-semibold text-[#fa7025] font-body leading-tight">
+        <span className="text-[10px] font-semibold text-[#4f82f7] font-body leading-tight">
           {unit}
         </span>
       </div>
@@ -67,7 +67,7 @@ function StatItem({ value, label, unit, entered, delay, isLast }: StatItemProps)
       {/* Vertical divider (not after last) */}
       {!isLast && (
         <div
-          className="absolute right-0 top-1/4 bottom-1/4 w-px bg-[#e8dfc8]"
+          className="absolute right-0 top-1/4 bottom-1/4 w-px bg-[#dbe5f7]"
           aria-hidden="true"
         />
       )}
@@ -104,10 +104,10 @@ export function StatsSectionClient({ stats }: { stats: Stats }) {
   }));
 
   return (
-    <section ref={ref} className="px-6" style={{ background: "#fefae0" }}>
+    <section ref={ref} className="px-6" style={{ background: "#f8faff" }}>
       <div className="max-w-4xl mx-auto">
-        {/* White card container — creates clear contrast against #fefae0 page bg */}
-        <div className="flex items-stretch rounded-2xl overflow-hidden shadow-[0_2px_16px_rgba(86,67,55,0.08)]" style={{ background: "#fffdf7" }}>
+        {/* White card container — creates clear contrast against #f8faff page bg */}
+        <div className="flex items-stretch rounded-2xl overflow-hidden shadow-[0_2px_16px_rgba(25,43,87,0.08)]" style={{ background: "#ffffff" }}>
           {items.map((item, i) => (
             <div key={item.key} className="flex items-stretch flex-1 relative">
               <StatItem

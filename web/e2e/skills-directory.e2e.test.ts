@@ -5,7 +5,7 @@ test.describe("Skills directory", () => {
   test("page heading and count render", async ({ page }) => {
     await page.goto("/skills");
     await expect(
-      page.getByRole("heading", { name: /探索.*Skills|explore skills/i })
+      page.getByRole("heading", { name: /技能库|Skills/i })
     ).toBeVisible();
   });
 
